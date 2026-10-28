@@ -43,7 +43,7 @@ canvas{display:block;touch-action:none;outline:none;border:2.5px solid var(--ink
 .dpad .h{flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink);font-family:var(--f-display);font-size:18px;pointer-events:none}
 .dpad .h.l{border-right:1.5px solid var(--grid)}
 .dpad.left .h.l,.dpad.right .h.r{background:var(--gold)}
-.mini{width:38px;height:32px;border:2px solid var(--ink-soft);border-radius:6px;background:var(--paper);color:var(--ink);font-size:16px;line-height:1;padding:0;cursor:pointer}
+.mini{touch-action:manipulation;width:38px;height:32px;border:2px solid var(--ink-soft);border-radius:6px;background:var(--paper);color:var(--ink);font-size:16px;line-height:1;padding:0;cursor:pointer}
 .foot{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;color:var(--ink-soft);width:min(100%,var(--cw,100%));align-self:center}
 .foot .tools{display:flex;gap:8px}
 .keys{display:flex;gap:6px;align-items:center}
@@ -69,6 +69,8 @@ canvas{display:block;touch-action:none;outline:none;border:2.5px solid var(--ink
   h1,.foot{display:none}
   canvas{border:0;box-shadow:none}
   .side{display:flex;padding:8px 7px max(10px,env(safe-area-inset-bottom,0px))}
+  .mini{width:52px;height:44px;font-size:20px;border-width:2.5px;border-color:var(--ink)}
+  .mini.hit{background:var(--gold)}
 }
   .stage.below .side{position:absolute;top:0;bottom:0;z-index:2}
   .stage.below .side.l{left:0;align-items:flex-start} .stage.below .side.r{right:0;align-items:flex-end}
@@ -153,7 +155,13 @@ function buildGrid(){ grid.textContent = ''; const best = Math.max(prof.best || 
 function openPicker(){ buildGrid(); placePicker(); picker.classList.add('open'); paused = true; }
 function closePicker(){ picker.classList.remove('open'); paused = false; keys.left = keys.right = keys.jump = false; cv.focus(); }
 const togglePicker = () => picker.classList.contains('open') ? closePicker() : openPicker();
-document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', e => { e.currentTarget.blur(); if (b.dataset.act === 'restart') { if (picker.classList.contains('open')) closePicker(); restartLevel(); cv.focus(); } else togglePicker(); }));
+// these act the moment a finger or mouse goes down (a tap that drifts a little, or a page that is busy switching to full screen, can lose a click);
+// the click handler is only for keyboard activation
+const act = b => { if (b.dataset.act === 'restart') { if (picker.classList.contains('open')) closePicker(); restartLevel(); cv.focus(); } else togglePicker(); };
+document.querySelectorAll('[data-act]').forEach(b => {
+  b.addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); e.stopPropagation(); b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 160); act(b); });
+  b.addEventListener('click', e => { if (e.detail === 0) act(b); });
+});
 addEventListener('keydown', e => { if (e.code === 'KeyR' && !picker.classList.contains('open')) restartLevel(); else if (e.code === 'Escape' && picker.classList.contains('open')) closePicker(); });
 
 /* ================= world ================= */
