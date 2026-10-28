@@ -26,7 +26,8 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html manifest.webmanifest icon-192.png icon-512.png _site/
-          mkdir -p _site/next && cp next/index.html _site/next/ && cp manifest.webmanifest icon-192.png icon-512.png _site/next/
+          # the preview used to live at /next/; send old links to the game
+          mkdir -p _site/next && printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=../"><link rel="canonical" href="../"><title>Predictable</title><a href="../">Predictable</a>\n' > _site/next/index.html
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

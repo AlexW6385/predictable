@@ -4,8 +4,6 @@ A wordless troll platformer that watches how you play and sets its traps for the
 
 **▶ Play it in your browser: https://alexw6385.github.io/predictable/**
 
-The next version of the level set is being built chapter by chapter and can be played at **https://alexw6385.github.io/predictable/next/** (see [DESIGN.md](DESIGN.md)).
-
 100 levels, no text, no hints. Every trap is meant to be fair: you can always work out afterwards why you died, and the next level is built on what you just learned. Then it uses that against you.
 
 ## Play
@@ -24,6 +22,8 @@ The page always fits the window and never scrolls. On phones the game fills the 
 
 ## Design
 
+The game is being rebuilt chapter by chapter from the design document. The finished chapters are what you play; the rest are added as they are done. The first version of the game is kept in `legacy/` for reference and is not published.
+
 The full design (the bar every level has to clear, the ten chapters, the recurring cast and every level's idea) is in [DESIGN.md](DESIGN.md).
 
 ## How it works
@@ -34,7 +34,7 @@ The full design (the bar every level has to clear, the ten chapters, the recurri
 
 ## Tests
 
-Every level has scripted tests in `tests/levels/` that check three things:
+Every level has scripted tests in `tests/chapters/` (one file per chapter) that check three things:
 
 1. the naive approach dies,
 2. the "I've figured it out" approach dies to the next layer, and
@@ -42,9 +42,9 @@ Every level has scripted tests in `tests/levels/` that check three things:
 
 ```bash
 pip install playwright && python -m playwright install chromium
-python tests/run_tests.py            # all suites
-python tests/run_tests.py n o        # selected suites
-python tests/run_tests.py --robust 85,86   # random mash / jump-spam / hold-right bots (0-indexed levels)
+python tests/run_tests.py                 # all chapters
+python tests/run_tests.py ch1 ch2         # selected chapters
+python tests/run_tests.py --robust 0,1 150   # mash / jump-spam / hold-right / wandering bots on 0-indexed levels
 ```
 
 The robustness bots should almost never clear a level by accident.

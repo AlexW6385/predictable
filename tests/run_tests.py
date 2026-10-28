@@ -1,24 +1,26 @@
 """Run the level test suites (and optionally the robustness bots) in headless Chromium.
 
 Usage:
-  python tests/run_tests.py                 # every suite in tests/levels
-  python tests/run_tests.py --next ch1      # the preview in next/, suites in tests/next
-  python tests/run_tests.py n o             # only levels/n.js and levels/o.js
-  python tests/run_tests.py --robust 85,86  # mash / spam / hold bots on 0-indexed levels
+  python tests/run_tests.py                 # every suite in tests/chapters
+  python tests/run_tests.py ch1 ch2         # only chapters/ch1.js and chapters/ch2.js
+  python tests/run_tests.py --robust 0,1 150   # mash / spam / hold / wander bots on 0-indexed levels, 150 runs each
+  python tests/run_tests.py --legacy        # the first version (legacy/index.html) against tests/legacy
 """
 import asyncio, sys, pathlib
 from playwright.async_api import async_playwright
 
 HERE = pathlib.Path(__file__).resolve().parent
 GAME = (HERE.parent / 'index.html').as_uri() + '#debug'
-SUITES = HERE / 'levels'
+SUITES = HERE / 'chapters'
 
 async def main(args):
     global GAME, SUITES
-    if args and args[0] == '--next':
+    if args and args[0] == '--next':  # old name, kept so earlier commands still work
         args = args[1:]
-        GAME = (HERE.parent / 'next' / 'index.html').as_uri() + '#debug'
-        SUITES = HERE / 'next'
+    if args and args[0] == '--legacy':
+        args = args[1:]
+        GAME = (HERE.parent / 'legacy' / 'index.html').as_uri() + '#debug'
+        SUITES = HERE / 'legacy'
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
