@@ -21,7 +21,7 @@
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
   color-scheme:light;
 }
-*{touch-action:manipulation}
+*{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;-webkit-user-drag:none}
 html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:var(--paper);color:var(--ink)}
 body{
   position:fixed;inset:0;
@@ -1741,7 +1741,7 @@ addEventListener('pointerdown', () => {
 }, {passive:true});
 document.addEventListener('fullscreenchange', () => setTimeout(resize, 60));
 // no zooming on phones: double-tap is handled by touch-action above; this also stops pinch (iOS) and stray double-click zoom
-for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) document.addEventListener(ev, e => e.preventDefault(), {passive:false});
+for (const ev of ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu', 'selectstart', 'dragstart']) document.addEventListener(ev, e => e.preventDefault(), {passive:false});
 document.addEventListener('touchstart', e => { if (e.touches.length > 1 && !e.target.closest('.side')) e.preventDefault(); }, {passive:false});
 document.addEventListener('touchmove', e => { if (e.target === cv || e.target.closest('.side')) e.preventDefault(); }, {passive:false});
 function gridRect(x, y, w, h){
