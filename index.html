@@ -1,3 +1,13 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#E7ECF1">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Predictable</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,6 +45,19 @@ canvas{display:block;width:100%;aspect-ratio:16/9;touch-action:none;outline:none
 .keys .sep{width:10px}
 .btn{font-family:var(--f-mono);font-size:16px;line-height:1;border:1.5px solid var(--pencil);color:var(--pencil);background:transparent;padding:6px 10px;cursor:pointer}
 .btn:hover{background:var(--pencil);color:var(--paper)}
+/* full screen: the stage takes the whole viewport, the 16:9 canvas is letterboxed inside it */
+.fsbtn{font-size:18px}
+.fsx{display:none;position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:40px;height:28px;border:2px solid var(--ink);border-radius:6px;background:rgba(231,236,241,.7);color:var(--ink);font-size:16px;line-height:1;z-index:3;padding:0}
+.rot{display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(231,236,241,.9);z-index:4;pointer-events:none}
+.rot svg{width:96px;height:96px;animation:rot 2.4s ease-in-out infinite}
+@keyframes rot{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
+body.fs{overflow:hidden;padding:0}
+body.fs .stage{position:fixed;inset:0;z-index:10;border:0;box-shadow:none;display:flex;align-items:center;justify-content:center;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);background:var(--paper)}
+body.fs canvas{width:min(100%,calc((100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))*16/9));height:auto}
+body.fs .pad{padding:max(10px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px))}
+body.fs .fsx{display:block}
+@media (orientation:portrait){body.fs .rot{display:flex}}
 .btn:focus-visible,.pad button:focus-visible,canvas:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 </style>
 
@@ -42,6 +65,8 @@ canvas{display:block;width:100%;aspect-ratio:16/9;touch-action:none;outline:none
   <h1>PREDICTABLE</h1>
   <div class="stage">
     <canvas id="c" tabindex="0" aria-label="Predictable game"></canvas>
+    <button class="fsx" id="fsx" aria-label="Leave full screen" title="Leave full screen">✕</button>
+    <div class="rot" aria-hidden="true"><svg viewBox="0 0 96 96" fill="none" stroke="#1E2B47" stroke-width="4" stroke-linejoin="round"><rect x="30" y="12" width="36" height="72" rx="6"/><circle cx="48" cy="74" r="3" fill="#1E2B47"/><path d="M80 40a34 34 0 0 1-8 26" stroke="#E2A62A"/><path d="M66 62l6 5 6-7" stroke="#E2A62A"/></svg></div>
     <div class="pad">
       <div class="grp"><button data-k="left" aria-label="Left">◀</button><button data-k="right" aria-label="Right">▶</button></div>
       <div class="grp"><button data-k="jump" aria-label="Jump">▲</button></div>
@@ -49,7 +74,8 @@ canvas{display:block;width:100%;aspect-ratio:16/9;touch-action:none;outline:none
   </div>
   <div class="foot">
     <span class="keys" aria-label="Arrow keys move, up or space jumps"><kbd>←</kbd><kbd>→</kbd><span class="sep"></span><kbd>↑</kbd><kbd>␣</kbd></span>
-    <button class="btn" id="forget" aria-label="Reset all progress" title="Reset">↺</button>
+    <span class="keys"><button class="btn fsbtn" id="fs" aria-label="Full screen" title="Full screen">⛶</button>
+    <button class="btn" id="forget" aria-label="Reset all progress" title="Reset">↺</button></span>
   </div>
 </div>
 
@@ -1644,6 +1670,27 @@ function resize(){
   dark = document.createElement('canvas'); dark.width = W; dark.height = H;
 }
 addEventListener('resize', resize);
+addEventListener('orientationchange', () => setTimeout(resize, 120));
+if (window.visualViewport) visualViewport.addEventListener('resize', resize);
+// full screen: native where the browser allows it (Android, desktop, iPad), and a page-filling layout everywhere (iPhone)
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+function enterFS(){
+  document.body.classList.add('fs');
+  const el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (req) { try { Promise.resolve(req.call(el, {navigationUI:'hide'})).then(() => { try { const p = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (p && p.catch) p.catch(() => {}); } catch(e) {} }).catch(() => {}); } catch(e) {} }
+  setTimeout(resize, 60); setTimeout(resize, 400); cv.focus();
+}
+function exitFS(){
+  document.body.classList.remove('fs');
+  if (fsEl()) { const ex = document.exitFullscreen || document.webkitExitFullscreen; try { Promise.resolve(ex.call(document)).catch(() => {}); } catch(e) {} }
+  try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch(e) {}
+  setTimeout(resize, 60); setTimeout(resize, 400);
+}
+const onFsChange = () => { if (!fsEl() && document.body.classList.contains('fs') && !navigator.standalone) exitFS(); else resize(); };
+document.addEventListener('fullscreenchange', onFsChange); document.addEventListener('webkitfullscreenchange', onFsChange);
+document.getElementById('fs').addEventListener('click', () => document.body.classList.contains('fs') ? exitFS() : enterFS());
+document.getElementById('fsx').addEventListener('click', exitFS);
+if (navigator.standalone || matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) document.body.classList.add('fs');
 function gridRect(x, y, w, h){
   ctx.fillStyle = C.paper; ctx.fillRect(x, y, w, h); ctx.lineWidth = 1;
   for (let gx = Math.ceil(x/16)*16; gx < x+w; gx += 16) { ctx.strokeStyle = (gx/16)%4 === 0 ? C.grid2 : C.grid; ctx.beginPath(); ctx.moveTo(gx+.5, y); ctx.lineTo(gx+.5, y+h); ctx.stroke(); }
@@ -1835,3 +1882,4 @@ if (location.hash === '#debug') window.__pred = { get P(){return P;}, get S(){re
   nLevels: LV.length, keys, step, setLvl(n){ state = 'play'; startLevel(n, true); }, respawn(){ respawn(); state = 'play'; }, jump(){ jumpEdge = true; }, press(){ pressEdge = true; }, pause(v){ paused = v; }, draw };
 })();
 </script>
+</html>
