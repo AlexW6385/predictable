@@ -32,48 +32,71 @@ body{
 .wrap{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px;
   padding:max(14px,env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
 h1{font-family:var(--f-display);font-weight:400;font-size:clamp(22px,3.2vw,34px);line-height:1;margin:0;letter-spacing:.02em;width:min(100%,var(--cw,100%));align-self:center}
-.stage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.stage{position:relative;flex:1;min-height:0;display:flex;align-items:stretch;justify-content:center}
+.view{position:relative;flex:1;min-width:0;display:flex;align-items:center;justify-content:center}
 canvas{display:block;touch-action:none;outline:none;border:2.5px solid var(--ink);background:var(--paper);box-shadow:6px 6px 0 var(--ink)}
-.pad{position:absolute;inset:auto 0 0 0;display:none;justify-content:space-between;padding:10px;pointer-events:none;z-index:2}
-.pad .grp{display:flex;gap:10px}
-.pad button{pointer-events:auto;width:64px;height:64px;border-radius:50%;border:2.5px solid var(--ink);background:rgba(231,236,241,.82);color:var(--ink);font-family:var(--f-display);font-size:20px;touch-action:none;-webkit-user-select:none;user-select:none}
-.pad button:active{background:var(--gold)}
+.side{display:none;flex-direction:column;justify-content:space-between;align-items:center;flex:none}
+.side .grp{display:flex;gap:8px}
+.side [data-k]{width:54px;height:54px;border-radius:50%;border:2.5px solid var(--ink);background:var(--paper);color:var(--ink);font-family:var(--f-display);font-size:18px;touch-action:none;-webkit-user-select:none;user-select:none;padding:0}
+.side [data-k]:active{background:var(--gold)}
+.mini{width:38px;height:32px;border:2px solid var(--ink-soft);border-radius:6px;background:var(--paper);color:var(--ink);font-size:16px;line-height:1;padding:0;cursor:pointer}
 .foot{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;color:var(--ink-soft);width:min(100%,var(--cw,100%));align-self:center}
+.foot .tools{display:flex;gap:8px}
 .keys{display:flex;gap:6px;align-items:center}
 .keys kbd{font-family:var(--f-mono);font-size:14px;border:1.5px solid var(--ink-soft);border-bottom-width:3px;border-radius:4px;padding:1px 7px;color:var(--ink);background:var(--paper)}
 .keys .sep{width:10px}
-.btn{font-family:var(--f-mono);font-size:16px;line-height:1;border:1.5px solid var(--pencil);color:var(--pencil);background:transparent;padding:6px 10px;cursor:pointer}
-@media (hover:hover){.btn:hover{background:var(--pencil);color:var(--paper)}}
-.corner{display:none;position:absolute;top:0;left:0;z-index:2;background:rgba(231,236,241,.75);font-size:14px;padding:5px 8px}
+.btn{font-family:var(--f-mono);font-size:16px;line-height:1;border:1.5px solid var(--ink-soft);color:var(--ink);background:var(--paper);padding:6px 10px;cursor:pointer}
+@media (hover:hover){.btn:hover,.mini:hover{background:var(--ink);color:var(--paper)}}
+/* level picker: a 10x10 sheet of numbers over the game; only levels you have reached can be opened */
+.picker{position:absolute;z-index:4;display:none;flex-direction:column;gap:6px;padding:10px;background:rgba(231,236,241,.96);border:2.5px solid var(--ink);box-sizing:border-box}
+.picker.open{display:flex}
+.picker .top{display:flex;justify-content:space-between;align-items:center}
+.picker .grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);gap:4px}
+.picker .grid button{font-family:var(--f-mono);font-size:clamp(9px,1.6vmin,15px);border:1.5px solid var(--ink-soft);background:var(--paper);color:var(--ink);padding:0;cursor:pointer;min-height:0}
+.picker .grid button:disabled{opacity:.25;cursor:default;border-style:dashed}
+.picker .grid button.cur{background:var(--gold);border-color:var(--ink)}
+.picker .grid button:not(:disabled):active{background:var(--ink);color:var(--paper)}
+.picker .wipe{border-color:var(--pencil);color:var(--pencil)}
+.picker .wipe.arm{background:var(--pencil);color:var(--paper)}
 .rot{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:var(--paper);z-index:5;pointer-events:none}
 .rot svg{width:96px;height:96px;animation:rot 2.4s ease-in-out infinite}
 @keyframes rot{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
-/* touch devices: the game takes the whole screen, controls sit over its lower corners */
+/* touch devices: the game takes the whole screen; the controls get their own strips beside it, so they never cover it */
 @media (pointer:coarse){
-  .pad{display:flex}
   .wrap{gap:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
   h1,.foot{display:none}
   canvas{border:0;box-shadow:none}
-  .corner{display:block}
-  .pad{padding:10px max(12px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+  .side{display:flex;padding:8px 7px max(10px,env(safe-area-inset-bottom,0px))}
 }
+  .stage.below .side{position:absolute;top:0;bottom:0;z-index:2}
+  .stage.below .side.l{left:0;align-items:flex-start} .stage.below .side.r{right:0;align-items:flex-end}
+  .stage.below .view{align-items:flex-start}
 @media (pointer:coarse) and (orientation:portrait){.rot{display:flex}}
-.btn:focus-visible,.pad button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn:focus-visible,.mini:focus-visible,.side [data-k]:focus-visible,.picker button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 </style>
 
 <div class="wrap">
   <h1>PREDICTABLE</h1>
   <div class="stage" id="stage">
-    <canvas id="c" tabindex="0" aria-label="Predictable game"></canvas>
-    <button class="btn corner" id="forget2" aria-label="Reset all progress" title="Reset">↺</button>
-    <div class="pad">
+    <div class="side l" id="sideL">
+      <button class="mini" data-act="restart" aria-label="Restart this level" title="Restart this level">↺</button>
       <div class="grp"><button data-k="left" aria-label="Left">◀</button><button data-k="right" aria-label="Right">▶</button></div>
+    </div>
+    <div class="view" id="view">
+      <canvas id="c" tabindex="0" aria-label="Predictable game"></canvas>
+      <div class="picker" id="picker" role="dialog" aria-label="Levels">
+        <div class="top"><button class="mini wipe" id="wipe" aria-label="Forget everything" title="Forget everything (press twice)">✕</button><button class="mini" data-act="levels" aria-label="Close" title="Close">▦</button></div>
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+    <div class="side r" id="sideR">
+      <button class="mini" data-act="levels" aria-label="Levels" title="Levels">▦</button>
       <div class="grp"><button data-k="jump" aria-label="Jump">▲</button></div>
     </div>
   </div>
   <div class="foot">
-    <span class="keys" aria-label="Arrow keys move, up or space jumps"><kbd>←</kbd><kbd>→</kbd><span class="sep"></span><kbd>↑</kbd><kbd>␣</kbd></span>
-    <button class="btn" id="forget" aria-label="Reset all progress" title="Reset">↺</button>
+    <span class="keys" aria-label="Arrow keys move, up or space jumps, R restarts the level"><kbd>←</kbd><kbd>→</kbd><span class="sep"></span><kbd>↑</kbd><kbd>␣</kbd><span class="sep"></span><kbd>R</kbd></span>
+    <span class="tools"><button class="btn" data-act="levels" aria-label="Levels" title="Levels">▦</button><button class="btn" data-act="restart" aria-label="Restart this level" title="Restart this level">↺</button></span>
   </div>
 </div>
 <div class="rot" aria-hidden="true"><svg viewBox="0 0 96 96" fill="none" stroke="#1E2B47" stroke-width="4" stroke-linejoin="round"><rect x="30" y="12" width="36" height="72" rx="6"/><circle cx="48" cy="74" r="3" fill="#1E2B47"/><path d="M80 40a34 34 0 0 1-8 26" stroke="#E2A62A"/><path d="M66 62l6 5 6-7" stroke="#E2A62A"/></svg></div>
@@ -92,7 +115,7 @@ const predict = (h, def, a, b) => { if (!h || !h.length) return def; const l = h
 
 /* ================= memory ================= */
 const KEY = 'predictable.v5';
-const fresh = () => ({ level:0, deaths:0, wins:0, marks:{}, retry:[], spd:null, eyeLR:[], mem:null });
+const fresh = () => ({ level:0, best:0, deaths:0, wins:0, marks:{}, retry:[], spd:null, eyeLR:[], mem:null });
 let prof = fresh();
 try { const s = localStorage.getItem(KEY); if (s) prof = Object.assign(fresh(), JSON.parse(s)); } catch(e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prof)); } catch(e) {} };
@@ -103,14 +126,27 @@ const KM = {ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp
 addEventListener('keydown', e => { const k = KM[e.code]; if (k) { e.preventDefault(); if (!keys[k]) pressEdge = true; if (k==='jump' && !keys.jump) jumpEdge = true; keys[k] = true; } if (e.code === 'Enter') jumpEdge = true; });
 addEventListener('keyup', e => { const k = KM[e.code]; if (k) keys[k] = false; });
 addEventListener('blur', () => { keys.left = keys.right = keys.jump = false; });
-document.querySelectorAll('.pad button').forEach(b => {
+document.querySelectorAll('.side [data-k]').forEach(b => {
   const k = b.dataset.k;
   b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch(_){} if (!keys[k]) pressEdge = true; if (k==='jump' && !keys.jump) jumpEdge = true; keys[k] = true; });
   const up = () => { keys[k] = false; };
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
 });
 cv.addEventListener('pointerdown', () => { cv.focus(); if (state !== 'play' || (S && S.over)) jumpEdge = true; });
-for (const id of ['forget', 'forget2']) document.getElementById(id).addEventListener('click', e => { e.currentTarget.blur(); prof = fresh(); save(); state = 'title'; startLevel(0, true); cv.focus(); });
+// restart the level you are on (fresh level memory, no death counted); the level sheet jumps to any level you have reached
+function restartLevel(){ if (state === 'title') return; prof.mem = null; startLevel(lvl); state = 'play'; parts = []; flash = 0; shake = 0; }
+const picker = document.getElementById('picker'), grid = document.getElementById('grid'), wipe = document.getElementById('wipe');
+function placePicker(){ const r = cv.getBoundingClientRect(), v = document.getElementById('view').getBoundingClientRect(); Object.assign(picker.style, {left:(r.left - v.left) + 'px', top:(r.top - v.top) + 'px', width:r.width + 'px', height:r.height + 'px'}); }
+function buildGrid(){ grid.textContent = ''; const best = Math.max(prof.best || 0, prof.level || 0);
+  for (let i = 0; i < LV.length; i++) { const b = document.createElement('button'); b.textContent = String(i + 1).padStart(2, '0'); b.disabled = i > best; if (i === lvl && state !== 'title') b.className = 'cur';
+    b.addEventListener('click', () => { closePicker(); prof.mem = null; prof.level = i; startLevel(i); state = 'play'; parts = []; }); grid.appendChild(b); } }
+function openPicker(){ buildGrid(); placePicker(); picker.classList.add('open'); paused = true; wipe.classList.remove('arm'); }
+function closePicker(){ picker.classList.remove('open'); paused = false; keys.left = keys.right = keys.jump = false; cv.focus(); }
+const togglePicker = () => picker.classList.contains('open') ? closePicker() : openPicker();
+document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', e => { e.currentTarget.blur(); if (b.dataset.act === 'restart') { if (picker.classList.contains('open')) closePicker(); restartLevel(); cv.focus(); } else togglePicker(); }));
+wipe.addEventListener('click', () => { if (!wipe.classList.contains('arm')) { wipe.classList.add('arm'); setTimeout(() => wipe.classList.remove('arm'), 2500); return; }
+  closePicker(); prof = fresh(); save(); state = 'title'; startLevel(0, true); });
+addEventListener('keydown', e => { if (e.code === 'KeyR' && !picker.classList.contains('open')) restartLevel(); else if (e.code === 'Escape' && picker.classList.contains('open')) closePicker(); });
 
 /* ================= world ================= */
 let lvl = 0, lv = null, S = null, M = null, ents = [], P = null, state = 'title', deathT = 0, clearT = 0, frame = 0, camX = 0, parts = [], shake = 0, flash = 0, paused = false;
@@ -1528,7 +1564,7 @@ function spikeGrow(x, base){ E({t:'s', x, y:base, w:26, h:0, dir:'up', kill:true
 
 /* ================= life cycle ================= */
 function startLevel(n, quiet){
-  lvl = n; lv = LV[n];
+  lvl = n; lv = LV[n]; if (n > (prof.best || 0)) prof.best = n;
   if (!prof.mem || prof.mem.lvl !== n) prof.mem = {lvl:n, data:{}};
   M = prof.mem.data; S = null; respawn(); if (!quiet) save();
 }
@@ -1660,9 +1696,14 @@ function step(){
 /* ================= drawing ================= */
 let k = 1, hatch = null, dark = null;
 function resize(){
-  const st = document.getElementById('stage').getBoundingClientRect(), fine = !matchMedia('(pointer:coarse)').matches, pad = fine ? 11 : 0;
-  const cw = Math.max(160, Math.floor(Math.min(st.width - pad, (st.height - pad)*16/9)));
-  cv.style.width = cw + 'px'; cv.style.height = Math.round(cw*9/16) + 'px'; document.body.style.setProperty('--cw', (cw + pad) + 'px');
+  const fine = !matchMedia('(pointer:coarse)').matches, pad = fine ? 11 : 0, stg = document.getElementById('stage');
+  let cw;
+  if (fine) { stg.classList.remove('below'); const st = document.getElementById('view').getBoundingClientRect(); cw = Math.min(st.width - pad, (st.height - pad)*16/9); }
+  else { // phones: controls go beside the game, or under it when the screen is nearly 16:9 and there is more room below
+    const st = stg.getBoundingClientRect(), beside = Math.min(st.width - 198, st.height*16/9), under = Math.min(st.width - 8, (st.height - 74)*16/9);
+    stg.classList.toggle('below', under > beside); cw = Math.max(beside, under); }
+  cw = Math.max(160, Math.floor(cw));
+  cv.style.width = cw + 'px'; cv.style.height = Math.round(cw*9/16) + 'px'; document.body.style.setProperty('--cw', (cw + pad) + 'px'); if (typeof picker !== 'undefined' && picker.classList.contains('open')) placePicker();
   const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
   cv.width = Math.max(320, Math.round(r.width * dpr)); cv.height = Math.round(cv.width * 9/16); k = cv.width / W;
   const hc = document.createElement('canvas'); hc.width = hc.height = 12; const h = hc.getContext('2d');
@@ -1682,7 +1723,7 @@ addEventListener('pointerdown', () => {
   try { Promise.resolve(req.call(el, {navigationUI:'hide'})).then(() => { try { const p = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (p && p.catch) p.catch(() => {}); } catch(e) {} }).catch(() => {}); } catch(e) {}
 }, {passive:true});
 document.addEventListener('fullscreenchange', () => setTimeout(resize, 60));
-document.addEventListener('touchmove', e => { if (e.target === cv || e.target.closest('.pad')) e.preventDefault(); }, {passive:false});
+document.addEventListener('touchmove', e => { if (e.target === cv || e.target.closest('.side')) e.preventDefault(); }, {passive:false});
 function gridRect(x, y, w, h){
   ctx.fillStyle = C.paper; ctx.fillRect(x, y, w, h); ctx.lineWidth = 1;
   for (let gx = Math.ceil(x/16)*16; gx < x+w; gx += 16) { ctx.strokeStyle = (gx/16)%4 === 0 ? C.grid2 : C.grid; ctx.beginPath(); ctx.moveTo(gx+.5, y); ctx.lineTo(gx+.5, y+h); ctx.stroke(); }
