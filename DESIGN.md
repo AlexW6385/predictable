@@ -42,6 +42,7 @@ Every level should meet one rule: **you only get through if you understand it, a
   - no reaction faster than about 0.3 s;
   - tapping counts as walking;
   - jump windows of at least one tile.
+- **Complexity lives in the logic, never in the hands.** Later levels may take more thought, never more skill. If knowing the rule does not make a level easy, the level is wrong: no acting a fixed fraction of a second ahead, no narrow timing, no reading things mid-air.
 - **Every death is explainable** from what was on screen. Every prediction is shown before it lands, with a shadow, the Eye's pupil, a twitching lid or cracks.
 - **Every rule has a reason and a tell.** A rule follows from what the thing is (a gun leads its target; a sleeper wakes at noise), and it belongs to the chapter's theme. The screen shows the rule before it kills, so a careful, observant player can read the pattern with few deaths, or none. No hidden trap without a tell, and no trial and error for its own sake.
 - **Standing still never clears a level**, except level 1, which teaches it.
@@ -244,20 +245,20 @@ Several levels need more than one life on purpose: you spend a life to set up th
 
 ## VIII. Others (71–80)
 
-The world is full of others: laws, guards, guns, a queue, the people you were before. The predictions go a level deeper: it guesses what you will do because of what it did. Solutions are plans of several steps.
+The world is full of others: a law, a watchman, guns, a queue, liars, and the people you were before. They predict you, and some learn from being fooled; you have to predict their predictions. Solutions are plans of several steps.
 
 | # | Level | What is in it | The idea you need | Without it |
 | --- | --- | --- | --- | --- |
-| 71 | **Law** | Each kind of act (jumping, going left, stopping) may be done once. The second time, a bolt strikes. There is a moving lift. | Plan a route that uses each act at most once. | Doing what comes naturally. |
-| 72 | **Intention** | Spikes with eyes hurt you only while you are pressing a direction. A belt carries you. The door lets in only those who are leaving, facing away. | Let the belt carry you over them with your hands off; back in through the door. | Walking over; walking in. |
-| 73 | **Searchlight** | A searchlight shoots what it sees. When it loses you, it searches where you would have gone. | Hide behind a pillar, then go back the way you came. | Running ahead out of sight. |
-| 74 | **Two guns** | One gun fires at where you will be, the other at where you are. Shells that meet cancel. | Move so both aim at the same spot, and stand clear of it. | Dodging one gun at a time. |
-| 75 | **Queue** | Creatures cross a plank bridge that holds one at a time, each waiting their turn. Cut in and it breaks. | Wait at the back and cross on your turn. | Rushing; waiting at the edge. |
-| 76 | **Identity** | Every jump changes your colour, and you can stand only on tiles of your colour (and white). | Count your jumps so you arrive in the right colour. | Jumping as needed. |
-| 77 | **Relay** | Each life lasts a few seconds. The key stays where your last life dropped it, and echoes of your earlier lives repeat beside you. | Carry the key a little further each life. | Trying to do it in one life. |
-| 78 | **Babel** | Every row you climb past changes what your buttons mean. | Re-learn the controls at each height, and test before you jump. | Pressing what worked below. |
-| 79 | **Guessing ahead** | The bridge falls behind you at your usual speed; ahead, it crumbles where it guesses you will step. | Change speed against its guess, but stay ahead of the fall. | Your usual pace. |
-| 80 | **State** | The chapter together: one act each, a searchlight, a queue, two guns. | Obey the law, wait your turn, and let the guns cancel. | Any one rule alone. |
+| 71 | **Law** | Each kind of act (jumping, going left, stopping) may be done once; a tablet shows what you have used, and the second time a bolt strikes. A lift over a gap, a wall, and the door just past it. | Wait for the lift instead of jumping onto it, and spend your one jump on the wall. | Jumping onto the lift, then over the wall. |
+| 72 | **Intention** | Spikes with eyes hurt you only while you are pressing a direction. Belts and ice carry you. The door lets in only those who are leaving: it bites whoever faces it. | Let the belt and the ice carry you over the spikes with your hands off; turn round somewhere safe and ride in backwards. | Walking over; walking in. |
+| 73 | **Searchlight** | A watchman over a yard with three roofs. When it loses you, it searches where you would have gone. Once fooled, it learns and searches the other way. | First show it a retreat, then run while it looks behind you. Next time, show it an advance into cover, then run. | Running for cover; the same trick twice. |
+| 74 | **Two guns** | The gold gun fires at where you will be; the white one fires later, at where you are, so both land together. Two that land on one spot cancel. A brick wall in front of the door. | Head for the wall as the gold one fires, so its shell breaks the wall, and turn back. To let a volley pass, be still before it fires. | Running on, stopping, or dodging one gun at a time. |
+| 75 | **Queue** | Creatures cross a long plank one at a time, each in its turn, and two on it break it. They count you only once you have taken your place at the back of the line. | Stand behind the last one waiting, keep up, and cross in your turn. | Rushing; waiting at the edge or in the middle of the line. |
+| 76 | **Identity** | Every jump changes your colour, and you can stand only on your colour (and white). Three gaps; the door lets in only who you were at the start. | Count: hop on the white tiles until the jump over the next gap makes you the colour of the strip beyond it (once, not at all, twice). | Jumping each gap; hopping the same number each time. |
+| 77 | **Relay** | Each life lasts a few seconds. Run out of time on firm ground and the key stays there, and the next life starts there; anywhere else, it goes home. A slow lift takes longer than a life has left by the time you reach it. | Let one life run out at the lift's foot, ride it with the next, and finish with a third. | Riding the lift as soon as you reach it. |
+| 78 | **Babel** | The height you last stood at sets what your keys mean, and each band of rows means something else. | At each new height, try the keys before you jump. | Pressing what worked below. |
+| 79 | **Testimony** | Five doors, one real. Two creatures: one always tells the truth, one never does. They smile or frown at whatever you stand at, and the real door changes with every death. | Ask them about the spikes first, which you know are bad: the one who smiles is lying. Then believe the other. | Guessing; believing either one blindly. |
+| 80 | **State** | The law's tablet again, a watchman that reports what it sees, and a gun that punishes one offence where the watchman believes you are (a second offence brings the bolt). The door is behind a brick wall. | Offend on purpose in its sight, then vanish under the roof while heading for the wall: it believes you ran on, and its gun breaks the wall for you. | Never offending; offending at the wall; offending twice. |
 
 ## IX. Art and faith (81–90)
 

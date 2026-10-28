@@ -445,7 +445,7 @@ function drawHabit(){ const h = S.hab; if (!h || state !== 'play') return; const
 
 /* ---- the law: jumping, going left and stopping may each be done once; the second time, a bolt ---- */
 function lawInit(){ S.law = {jump:0, left:0, stop:0}; S.lawSt = 0; S.lawL = true; S.lawMoved = false; S.bolt = null; S.lawFl = null; }
-function lawAct(a){ if (S.law[a]) { S.law[a] = 2; S.bolt = {x:pcx(), f:frame}; die('law'); shake = 16; return true; } S.law[a] = 1; S.lawFl = {a, f:frame}; return false; }
+function lawAct(a){ if (S.law[a]) { S.law[a] = 2; S.lawFl = {a, f:frame}; if (lv.crime) { lv.crime(a); return state !== 'play'; } S.bolt = {x:pcx(), f:frame}; die('law'); shake = 16; return true; } S.law[a] = 1; S.lawFl = {a, f:frame}; return false; }
 // stopping is standing on still ground with your hands off; riding something that moves, or pushing against a wall, is not
 function lawStep(){
   if (keys.left && !S.lawL && lawAct('left')) return true; S.lawL = keys.left;
@@ -473,7 +473,7 @@ function lampLit(L, x, y){ const dx = x - L.x, dy = y - L.y, a = Math.atan2(dy, 
 function lampStep(L){ const pc = pcx(), see = state === 'play' && (lampLit(L, pc, P.y + 6) || lampLit(L, pc, P.y + 22));
   if (L.las) { if (--L.las.t <= 0) L.las = null; return false; }
   // seen: it keeps its eye on you (a watchman never lets you out of its sight; a sweeping light turns after you)
-  if (see) { L.seen++; L.mode = 'track'; L.last = {x:pc, vx:P.vx}; const to = Math.atan2(P.y + 14 - L.y, pc - L.x);
+  if (see) { L.seen++; L.mode = 'track'; L.vs = L.smooth ? (L.vs || 0)*0.9 + P.vx*0.1 : P.vx; L.last = {x:pc, vx:L.vs}; const to = Math.atan2(P.y + 14 - L.y, pc - L.x);
     if (L.post) { L.a = to; L.wd = 0.09; } else L.a += clamp(to - L.a, -0.025, 0.025);
     if (L.seen > L.see) { const r = ray(L.x, L.y, pc, P.y + 14); L.las = {x:r.x, y:r.y, t:12}; shake = 5; if (r.hit) { die('laser'); return true; } } return false; }
   L.seen = 0;
@@ -534,30 +534,35 @@ function drawGuns(gs){ for (const g of gs.gun) { const dir = g.x < lvW()/2 ? 1 :
 
 /* ---- a queue: the others cross one at a time and wait their turn; they count you only once you have taken your place at the back ---- */
 // x0: where they come from; edge: the near end of the bridge; x1: its far end; exit: where they go when they are over
-function queueMake(x0, edge, x1, exit, o){ return Object.assign({x0, edge, x1, exit, cr:[], line:[], gap:34, sp:1.8, every:96, t:0, wait:0, meX:false}, o || {}); }
-function queueAdd(q, x, st){ const c = {x, st:st || 'come', bob:(q.cr.length*1.7) % 6}; q.cr.push(c); if (c.st !== 'cross') q.line.push(c); return c; }
-function queueStep(q, bridge){ const pc = pcx(), onBr = P.on && P.stand === bridge, i = q.line.indexOf('me');
-  // you lose your place if you pass the one ahead of you, or drop behind the one after you
-  if (i >= 0) { const ah = q.line[i - 1], bh = q.line[i + 1];
-    if ((ah && pc > ah.x - 8) || (bh && pc < bh.x + 8)) q.line.splice(i, 1); }
-  // you take your place by standing still just behind the last one waiting
-  if (!q.line.includes('me') && !q.meX && P.on && Math.abs(P.vx) < 0.3 && pc < q.edge - 6 && pc > q.x0 && !onBr) { const last = q.line[q.line.length - 1];
-    if (last ? (last.st === 'wait' && pc < last.x - 8 && pc > last.x - 3*q.gap) : pc > q.edge - 3*q.gap) q.line.push('me'); }
-  let busy = q.cr.some(c => c.st === 'cross') || q.meX || q.wait > 0; if (q.wait > 0) q.wait--;
-  const f = q.line[0];
-  if (f === 'me' && onBr) { q.line.shift(); q.meX = true; }
-  else if (f && f !== 'me' && !busy && f.x >= q.edge - 16) { q.line.shift(); f.st = 'cross'; }
+function queueMake(x0, edge, x1, exit, o){ return Object.assign({x0, edge, x1, exit, cr:[], gap:34, sp:1.8, every:96, t:0, wait:0, me:false, meX:false}, o || {}); }
+function queueAdd(q, x, st){ const c = {x, st:st || 'come', bob:(q.cr.length*1.7) % 6}; q.cr.push(c); return c; }
+function queueStep(q, bridge){ const pc = pcx(), onBr = P.on && P.stand === bridge;
+  const line = q.cr.filter(c => c.st === 'come' || c.st === 'wait');
+  // your place: you keep it while you stay between the one ahead of you and the one behind
+  if (q.me) { const ah = line.filter(c => c.x > q.mx - 4).sort((a, b) => a.x - b.x)[0], bh = line.filter(c => c.x < q.mx + 4).sort((a, b) => b.x - a.x)[0];
+    if (onBr && !ah) { q.me = false; q.meX = true; }
+    else if ((ah && pc > ah.x - 8) || (bh && pc < bh.x + 8) || onBr || pc < q.x0) q.me = false; }
+  // you take a place by standing still at the back of the line, just behind the last one waiting
+  if (!q.me && !q.meX && P.on && Math.abs(P.vx) < 0.3 && pc < q.edge - 10 && pc > q.x0) {
+    const behind = line.some(c => c.x < pc && (c.st === 'wait' || c.x > pc - 2*q.gap)), ah = line.filter(c => c.x > pc).sort((a, b) => a.x - b.x)[0];
+    if (!behind && (ah ? ah.st === 'wait' && pc > ah.x - 3*q.gap : pc > q.edge - 3*q.gap)) q.me = true; }
+  if (q.me) q.mx = pc;
   if (q.meX && P.on && !onBr && pc > q.x1 - 4) { q.meX = false; q.wait = 10; }
+  if (q.meX && !P.on && pc > q.x1 + 40) { q.meX = false; q.wait = 10; }
+  // front first: the front one crosses when the bridge is free; the rest keep a step behind whoever is ahead of them
+  const order = line.map(c => ({c, x:c.x})); if (q.me) order.push({me:true, x:pc}); order.sort((a, b) => b.x - a.x);
+  const busy = q.cr.some(c => c.st === 'cross') || q.meX || q.wait > 0; if (q.wait > 0) q.wait--;
   let prev = q.edge - 14 + q.gap;
-  for (const m of q.line) { if (m === 'me') { prev = pc; continue; }
-    const tg = prev - q.gap; if (m.x < tg - 0.5) { m.x = Math.min(tg, m.x + q.sp); m.st = 'come'; } else m.st = 'wait'; prev = m.x; }
+  order.forEach((o, i) => { if (o.me) { prev = pc; return; } const c = o.c;
+    if (i === 0 && !busy && c.x >= q.edge - 16) { c.st = 'cross'; return; }
+    const tg = prev - q.gap; if (c.x < tg - 0.5) { c.x = Math.min(tg, c.x + q.sp); c.st = 'come'; } else c.st = 'wait'; prev = c.x; });
   for (const c of q.cr) if (c.st === 'cross' || c.st === 'off') { c.x += q.sp*1.3; if (c.st === 'cross' && c.x > q.x1 + 6) { c.st = 'off'; q.wait = 10; } }
   // and through the door they go
   q.cr = q.cr.filter(c => !(c.st === 'off' && c.x > q.exit));
   if (++q.t >= q.every) { q.t = 0; queueAdd(q, q.x0 - 30); }
   return q.cr.filter(c => c.st === 'cross').length + (onBr ? 1 : 0) >= 2; }
 function drawQueue(q){ for (const c of q.cr) { const mv = c.st !== 'wait', y = c.st === 'fall' ? GY - 25 + (c.fy || 0) : GY - 25 - (mv ? Math.abs(Math.sin(frame*0.25 + c.bob))*3 : 0); drawCreature(c.x - 12, y, false); }
-  if (q.line.includes('me') || q.meX) { ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(pcx(), P.y - 9, 3.5, 0, 7); ctx.fill(); } }
+  if (q.me || q.meX) { ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(pcx(), P.y - 9, 3.5, 0, 7); ctx.fill(); } }
 
 /* ================= the hundred ================= */
 const LV = [
@@ -1576,16 +1581,12 @@ const LV = [
 
 /* 71. whatever you do here, you may do once */
 { id:'law', was:[58], start:1.5,
-  build(){ Gd(0,5); Gd(10,29); R('b',15,15,12,13); S.lift = E({t:'b', lift:true, x:8*T, y:GY, w:2*T, h:12, solid:true}); S.lt = 130;
-    S.door = {x:25*T, y:0}; lawInit(); },
+  build(){ Gd(0,5); Gd(10,29); R('b',15,15,12,13); Door(17,14); S.lift = E({t:'b', lift:true, x:8*T, y:GY, w:2*T, h:12, solid:true}); S.lt = 130; lawInit(); },
   onJump(){ lawAct('jump'); },
   update(){ const L = S.lift; S.lt++; const ph = (S.lt % 260)/260, k = ph < 0.15 ? 0 : ph < 0.5 ? (ph - 0.15)/0.35 : ph < 0.65 ? 1 : 1 - (ph - 0.65)/0.35, nx = 6*T + 2*T*k;
     if (P.on && P.stand === L) P.x += nx - L.x; L.x = nx;
-    if (lawStep()) return;
-    // the door runs from whoever comes at it, bites whoever corners it face to face, and comes to whoever turns away
-    const d = S.door, dd = Math.sign(d.x + 18 - pcx()) || 1;
-    if (pcx() > 16*T && fleeDoor(d, 2.4, {min:16*T - 12, max:28*T - 4, noHop:true, noFollow:true, come: () => P.face !== dd})) { if (P.face === dd) { d.bite = true; return die('door'); } return levelClear(); } },
-  draw(){ drawShy(S.door); drawLaw(); } },
+    lawStep(); },
+  draw(){ drawLaw(); } },
 
 /* 72. it only hurts those who mean it, and it lets in only those who are leaving */
 { id:'intention', was:[52, 96], start:1.5,
@@ -1618,8 +1619,8 @@ const LV = [
 
 /* 75. one at a time, and everyone in their turn */
 { id:'queue', start:1.5,
-  build(){ Gd(0,11); S.br = R('pt',12,17,14,14,{h:16}); Gd(18,29); Door(27,14);
-    const q = S.q = queueMake(0, 12*T, 18*T, 27*T + 16); queueAdd(q, 14.5*T, 'cross'); for (let i = 0; i < 3; i++) queueAdd(q, 12*T - 14 - i*q.gap).st = 'wait'; q.t = 40; },
+  build(){ Gd(0,11); S.br = R('pt',12,19,14,14,{h:16}); Gd(20,29); Door(27,14);
+    const q = S.q = queueMake(0, 12*T, 20*T, 27*T + 16, {every:120}); queueAdd(q, 14.5*T, 'cross'); for (let i = 0; i < 3; i++) queueAdd(q, 12*T - 14 - i*q.gap).st = 'wait'; q.t = 40; },
   update(){ const q = S.q;
     if (S.broke) { for (const c of q.cr) if (c.st === 'fall') c.fy = (c.fy || 0) + 6; return; }
     // two on it at once, and the bridge goes, with everyone on it
@@ -1643,22 +1644,28 @@ const LV = [
 
 /* 77. no one gets there alone; each one carries it a little further */
 { id:'relay', was:[66], start:1.5,
-  build(){ Gd(0,6); Gd(10,17); Sp(13,13,13,'up'); for (let c = 18; c <= 23; c++) R('pt',c,c,14,14,{h:16, crumble:24}); Gd(24,29);
-    S.door = Door(28,14,{slots:1, fill:() => S.has ? 1 : 0, onEnter(){ if (S.has) levelClear(); }});
-    S.life = 0; S.span = 120; S.has = false; S.key = M.key ? Object.assign({}, M.key) : {x:3*T + 9, y:GY - 22}; if (M.spawn != null) P.x = M.spawn;
+  build(){ Gd(0,13); Sp(5,5,13,'up'); Sp(9,9,13,'up'); R('g',16,29,6,16); S.lift = E({t:'b', lift:true, x:14*T, y:GY, w:2*T, h:12, solid:true});
+    S.door = Door(27,6,{slots:1, fill:() => S.has ? 1 : 0, onEnter(){ if (S.has) levelClear(); }});
+    S.life = 0; S.span = 195; S.has = false; S.key = M.key ? Object.assign({}, M.key) : {x:2.5*T, y:GY - 22};
+    if (M.spawn) { P.x = M.spawn[0]; P.y = M.spawn[1]; }
     S.rec = []; S.echo = (M.legs || []).map(l => ({l, i:0, p:null})); },
   update(){ S.life++; if (S.rec.length < 400) S.rec.push([Math.round(P.x), Math.round(P.y)]);
     for (const e of S.echo) e.p = e.i < e.l.length ? e.l[e.i++] : null;
+    // the lift climbs slowly while someone stands on it
+    const L = S.lift, on = P.on && P.stand === L; if (on && L.y > 6*T) { const dy = Math.min(1.9, L.y - 6*T); L.y -= dy; P.y -= dy; }
     if (!S.has && ov(pbox(), {x:S.key.x, y:S.key.y, w:14, h:20})) { S.has = true; sparkle(S.key.x + 7, S.key.y + 10); }
     if (S.life >= S.span) return die('age'); },
-  // whoever runs out of time standing up passes the key on, right there; anyone else drops it, and it goes home
+  // whoever runs out of time standing on firm ground leaves the key right there, and the next one starts there;
+  // anywhere else (in the air, on the moving lift) the key falls, and goes home
   onDeath(c){ if (!S.has) return;
-    if (c === 'age' && P.on) { M.key = {x:P.x + 4, y:P.y + 8}; M.spawn = P.x; (M.legs || (M.legs = [])).push(S.rec); if (M.legs.length > 5) M.legs.shift(); }
+    const firm = c === 'age' && P.on && !(P.stand && P.stand.lift && P.stand.y > 6*T);
+    if (firm) { M.key = {x:P.x + 4, y:P.y + 8}; M.spawn = [P.x, P.y]; (M.legs || (M.legs = [])).push(S.rec); if (M.legs.length > 5) M.legs.shift(); }
     else { M.key = null; M.spawn = null; M.legs = []; } },
   drawPlayer(dx, dy, dw, dh){ const a = S.life/S.span, sh = Math.round(251 - 140*a); drawPlayerAt(dx, dy, dw, dh, P.face, `rgb(${sh},${sh + 1},${sh + 2})`, C.ink, false);
     ctx.fillStyle = C.grid2; ctx.fillRect(P.x - 2, P.y - 9, PW + 4, 4); ctx.fillStyle = a > 0.75 ? C.red : C.ink; ctx.fillRect(P.x - 2, P.y - 9, (PW + 4)*(1 - a), 4);
     if (S.has) drawKey(P.x + 4, P.y - 30); },
   draw(){ ctx.globalAlpha = 0.3; for (const e of S.echo) if (e.p) drawPlayerAt(e.p[0], e.p[1], PW, PH, 1, C.white, C.soft, false); ctx.globalAlpha = 1;
+    const L = S.lift; ctx.strokeStyle = 'rgba(30,43,71,.4)'; ctx.lineWidth = 2; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(L.x + T, 6*T); ctx.lineTo(L.x + T, GY); ctx.stroke(); ctx.setLineDash([]);
     if (!S.has) drawKey(S.key.x, S.key.y); } },
 
 /* 78. every line you climb past changes what your words mean */
@@ -1680,24 +1687,42 @@ const LV = [
     ctx.strokeStyle = 'rgba(30,43,71,.22)'; ctx.lineWidth = 2;
     for (let x = 60; x < W; x += 150) { ctx.beginPath(); ctx.moveTo(x, GY - 72); ctx.lineTo(x + 8, GY - 72); ctx.lineTo(x + 4, GY - 64); ctx.stroke(); } } },
 
-/* 79. everything behind you is gone; ahead, it guesses, and then it guesses your guess */
-{ id:'guess', was:[22], start:1.5, w:40,
-  build(){ Gd(0,3); S.br = []; for (let c = 4; c <= 35; c++) S.br.push(R('pt',c,c,14,14,{h:16, ti:c})); Gd(36,39); Door(38,14);
-    S.front = null; S.cp = 0; S.sp = clamp(prof.spd ?? 4, 3.4, 4.0); },
-  crack(x0, x1, t){ for (const e of S.br) if (e.x + e.w > x0 && e.x < x1 && e.ct == null && !e.fall) { e.crumble = t; e.ct = t; } },
-  // where a jump that starts now comes down, if you keep doing what you are doing
-  landing(){ let x = P.x, y = P.y, vx = P.vx, vy = P.vy; const ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), hold = keys.jump;
-    for (let i = 0; i < 90; i++) { if (ax) vx = clamp(vx + ax*0.6, -4.4, 4.4); else vx *= 0.97; if (!hold && vy < -3.5) vy = -3.5; vy = Math.min(vy + 0.55, 12); y += vy; x += vx; if (vy > 0 && y + PH >= GY) break; }
-    return x + PW/2; },
-  onJump(){ const pc = pcx();
-    if (S.cp === 2 && !S.j2) { S.j2 = pc; const l = this.landing(); this.crack(l - 26, l + 26, 6); }
-    if (S.cp === 3 && !S.j3 && S.off2 != null) { S.j3 = pc; const l = pc + S.off2; this.crack(l - 30, l + 30, 6); } },
-  onLand(){ if (S.j2 && S.off2 == null) S.off2 = pcx() - S.j2; },
+/* 79. one of them always tells the truth and one never does; ask them about something you already know */
+{ id:'testimony', start:1.5,
+  build(){ Gd(0,3); Sp(4,5,14,'up'); R('g',4,5,15,16); Gd(6,29);
+    // five doors: one is real and the rest bite, and which is which changes with every death; you knock by standing at one
+    const n = prof.deaths*7 + 3; S.real = n % 5; S.liar = (n >> 3) % 2;
+    S.ds = [13, 16, 19, 22, 25].map(c => Door(c, 14, {inert:true, knock:0}));
+    S.cr = [{x:8*T + 4}, {x:10*T + 4}]; S.topic = null; },
   update(){ const pc = pcx();
-    if (S.front == null && pc > 5*T && P.on) S.front = 2*T;
-    if (S.front != null && S.front < 36*T) { S.front += S.sp; for (const e of S.br) { if (!e.fall && e.x + T < S.front) e.fall = 1; e.shk = !e.fall && e.ct == null && e.x < S.front + 40; } }
-    // three times it opens the floor where you are going
-    for (const [k, c] of [[1, 9], [2, 18], [3, 27]]) if (S.cp < k && pc > c*T && P.on) { S.cp = k; const at = Math.floor(whereIn(26)/T)*T; this.crack(at, at + (k === 1 ? 2 : 1)*T, 8); } } }
+    // what you are asking about: the door you stand at, or the spikes at your feet
+    S.topic = null; S.ds.forEach((d, i) => { if (Math.abs(pc - (d.x + 18)) < 16) S.topic = {good: i === S.real, i}; });
+    if (pc > 2.6*T && pc < 4*T && P.face > 0) S.topic = {good:false};
+    for (const [i, d] of S.ds.entries()) { const at = P.on && Math.abs(pc - (d.x + 18)) < 16 && Math.abs(P.vx) < 0.3;
+      d.knock = at ? d.knock + 1 : 0; if (d.knock >= 45) { if (i === S.real) return levelClear(); d.bite = true; return die('door'); } } },
+  draw(){ for (const d of S.ds) if (d.knock > 0) { ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(d.x + 18, d.y - 10, 7, -Math.PI/2, -Math.PI/2 + Math.PI*2*d.knock/45); ctx.stroke(); }
+    S.cr.forEach((c, i) => { const y = GY - 25; drawCreature(c.x - 12, y, false); const t = S.topic; if (!t) return;
+      // the truthful one says what is so; the other one says the opposite
+      const yes = i === S.liar ? !t.good : t.good; ctx.strokeStyle = C.white; ctx.lineWidth = 2.5; ctx.beginPath();
+      if (yes) ctx.arc(c.x, y + 13, 6, 0.2*Math.PI, 0.8*Math.PI); else ctx.arc(c.x, y + 22, 6, 1.2*Math.PI, 1.8*Math.PI); ctx.stroke(); }); } },
+
+/* 80. the state: the law, the eye that keeps it, and the gun that punishes where the eye believes you are */
+{ id:'state', start:1.5,
+  build(){ Gd(0,29); R('b',8,8,12,13); R('b',17,19,12,12); R('bb',23,23,9,13,{hp:1}); Door(27,14); lawInit();
+    // the watchman reports what it sees; the gun fires where the watchman believes you are
+    S.L = lampMake(620, 40, 0, 0, {post:[3*T, 23*T], see:1e9, look:120}); S.gs = gunsMake({gun:[{x:22, y:GY - 250, pred:true}], t:1e9, br:72, F:60, G:0.25}); S.rep = null; },
+  onJump(){ lawAct('jump'); },
+  // one offence is reported (if it was seen); a second is struck down at once
+  crime(a){ S.crimes = (S.crimes || 0) + 1; if (S.crimes >= 2) { S.bolt = {x:pcx(), f:frame}; shake = 16; return die('law'); } if (S.L.seen > 0) S.rep = {t:30}; },
+  update(){ if (lawStep()) return; lampStep(S.L);
+    if (S.rep && --S.rep.t <= 0) { S.rep = null; const L = S.L, gn = S.gs.gun[0];
+      // seen: it aims at where you will be; lost: at where the watchman thinks you went
+      // (lost, it believes you kept going the way you were going until something stopped you)
+      const runOn = (x, d) => { let t = d > 0 ? lvW() - 12 : 12; for (const e of ents) if (e.solid && e.alive && e.t !== 'g' && e.y < GY - 2 && e.y + e.h > GY - PH) { if (d > 0 && e.x >= x) t = Math.min(t, e.x - PW/2); if (d < 0 && e.x + e.w <= x) t = Math.max(t, e.x + e.w + PW/2); } return t; };
+      const tx = L.seen > 0 ? gunsAhead(S.gs) : L.mode === 'search' && Math.abs(L.last.vx) > 0.5 ? runOn(L.last.x, Math.sign(L.last.vx)) : L.mode === 'search' ? L.last.x : pcx(), F = S.gs.F, ty = GY - 4;
+      S.gs.sh.push({x:gn.x, y:gn.y, vx:(tx - gn.x)/F, vy:(ty - gn.y)/F - S.gs.G*(F + 1)/2, t:0, F, tx, ty, pred:true}); gn.kick = 8; }
+    gunsStep(S.gs); },
+  draw(){ drawLamp(S.L); drawGuns(S.gs); drawLaw(); if (S.rep) { ctx.fillStyle = C.red; ctx.beginPath(); ctx.arc(S.gs.gun[0].x, S.gs.gun[0].y - 6, 4 + (30 - S.rep.t)/5, 0, 7); ctx.fill(); } } }
 ];
 
 // ground that remembers your feet and grows thorns there

@@ -8,13 +8,11 @@
   const ride71 = [S.R(7.0), S.U(() => g.S.lift.x > 8*T - 1, {}), S.R(10.6)];
   check('71 run, jump the gap, jump the wall', run(70, () => P => (P.on && (Math.abs(cx() - 5.5*T) < 5 || Math.abs(cx() - 13.6*T) < 5)) ? {jump:30, dir:1} : R(), {freshMem:true}), 'dead');
   check('71 run', run(70, () => R, {freshMem:true}), 'dead');
-  check('71 wait for the lift, jump the wall, chase the door', run(70, () => script([S.R(5.3), lift71(), ...ride71, S.R(13.6), S.J(30, 1), S.R(28)]), {freshMem:true, max:2000}), 'dead');
-  check('71 ... then wait for it', run(70, () => script([S.R(5.3), lift71(), ...ride71, S.R(13.6), S.J(30, 1), S.U(P => P.on, R().k), S.W(300)]), {freshMem:true, max:2000}), 'dead');
-  check('71 wait for the lift, jump the wall, turn your back', run(70, () => script([S.R(5.3), lift71(), ...ride71, S.R(13.6), S.J(30, 1), S.U(P => P.on, R().k), S.R(19), S.K({left:true}, 400)]), {freshMem:true, max:2000}), 'clear');
-  check('71 ... but turn your back on the lift as well', run(70, () => script([S.R(5.3), S.K({left:true}, 3), lift71(), ...ride71, S.R(13.6), S.J(30, 1), S.U(P => P.on, R().k), S.R(19), S.K({left:true}, 400)]), {freshMem:true, max:2000}), 'dead');
-  check('71 walk back to pass the time, then wait, then turn back', run(70, () => script([S.R(4.0), S.K({left:true}, 20), S.R(5.3), lift71(), ...ride71, S.R(13.6), S.J(30, 1), S.U(P => P.on, R().k), S.R(19), S.K({left:true}, 400)]), {freshMem:true, max:2000}), 'dead');
+  check('71 wait for the lift, jump the wall, come back to the door', run(70, () => script([S.R(5.3), lift71(), ...ride71, S.R(13.6), S.J(30, 1), S.U(P => P.on, R().k), S.L(17.6), S.W(30)]), {freshMem:true, max:2000}), 'clear');
+  check('71 ... but a step back before the lift', run(70, () => script([S.R(5.3), S.K({left:true}, 4), lift71(), ...ride71, S.R(13.6), S.J(30, 1), S.U(P => P.on, R().k), S.L(17.6), S.W(30)]), {freshMem:true, max:2000}), 'dead');
+  check('71 ... and a pause before the wall', run(70, () => script([S.R(5.3), lift71(), ...ride71, S.R(12.6), S.W(60), S.R(13.6), S.J(30, 1), S.U(P => P.on, R().k), S.L(17.6), S.W(30)]), {freshMem:true, max:2000}), 'dead');
   { const creep = {until: () => g.S.lift.x < 6*T + 12 && cx() > 5.0*T, rule: (P, k) => ({k:{right: cx() < 5.25*T && k % 15 < 4}})};
-    check('71 creep up to the lift so you never stop, then wait for the door', run(70, () => script([creep, ...ride71, S.R(13.6), S.J(30, 1), S.U(P => P.on, R().k), S.R(19), S.K({left:true}, 6), S.W(400)]), {freshMem:true, max:2000}), 'clear'); }
+    check('71 creep up to the lift so you never stop; then pause before the wall', run(70, () => script([creep, ...ride71, S.R(12.6), S.W(60), S.R(13.6), S.J(30, 1), S.U(P => P.on, R().k), S.L(17.6), S.W(30)]), {freshMem:true, max:2000}), 'clear'); }
   // ---- 72 intention
   const ice72 = [S.R(13.2), S.F(() => ({k:{right: cx() < 15.6*T}}), () => cx() > 15.6*T), S.U(() => cx() > 20.3*T, {})];
   check('72 walk', run(71, () => R, {freshMem:true}), 'dead');
@@ -48,5 +46,65 @@
     check('74 keep going when they fire, stop between', run(73, () => P => g.S.gs.sh.length || g.S.gs.t < 40 ? R() : N(), {freshMem:true, max:2000}), 'dead');
     check('74 turn back whenever they fire, far from the wall', run(73, () => script([S.W(250), S.R(8), S.F(P => g.S.gs.sh.length ? Lk() : (cx() < 8*T ? R() : N()), () => false)]), {freshMem:true, max:2000}), /timeout|dead/);
     for (const [x0, lead, d] of [[10, 30, 0], [13, 50, 20], [13, 30, 10]]) check(`74 head for the wall as they fire, turn back (from ${x0}, ${lead} early, ${d} late)`, run(73, feint(x0, lead, d), {freshMem:true, max:3000}), 'clear'); }
+  // ---- 75 queue: the others count you only once you have taken your place at the back
+  { const q = () => g.S.q;
+    const joiner = (dx) => () => { let st = 0; return P => { const Q = q(), line = Q.cr.filter(c => c.st === 'come' || c.st === 'wait');
+        if (st === 2 || cx() > Q.x1) { st = 2; return R(); }
+        if (st === 0) { const w = line.filter(c => c.st === 'wait').sort((a, b) => a.x - b.x)[0]; if (!w) return N(); const tx = w.x - (dx || 40); if (cx() < tx - 6) return R(); if (cx() > tx + 6) return Lk(); if (Q.me) st = 1; return N(); }
+        if (Q.meX) return R(); if (!Q.me) return N();
+        const ah = line.filter(c => c.x > cx()).sort((a, b) => a.x - b.x)[0];
+        if (!ah) { if (Q.cr.some(c => c.st === 'cross') || Q.wait > 0) return N(); return R(); } if (cx() < ah.x - 44) return R(); return N(); }; };
+    check('75 rush', run(74, () => R, {freshMem:true}), 'dead');
+    check('75 wait at the edge, go when the bridge is clear', run(74, () => script([S.R(11.4), S.U(() => !q().cr.some(c => c.st === 'cross'), {}), S.R(25)]), {freshMem:true, max:3000}), 'dead');
+    check('75 wait at the edge', run(74, () => script([S.R(11.4), S.W(3000)]), {freshMem:true, max:2000}), 'timeout');
+    check('75 stand in the middle of the line, then go when it is clear', run(74, () => script([S.R(10.0), S.W(60), S.U(() => !q().cr.some(c => c.st === 'cross'), {}), S.R(25)]), {freshMem:true, max:3000}), 'dead');
+    for (const dx of [40, 60, 90]) check(`75 take your place at the back (${dx} behind), keep up, go in your turn`, run(74, joiner(dx), {freshMem:true, max:3000}), 'clear'); }
+  // ---- 76 identity: every jump changes your colour; count the hops on the white tiles
+  { const hop = n => Array.from({length:n}, () => [S.J(30, 0), S.U(P => P.on, {}), S.W(4)]).flat();
+    const go = (h, long) => () => script([S.R(2.6), S.W(12), ...hop(h[0]), S.R(3.3), S.J(30, 1), S.U(P => P.on, R().k), S.R(11.6), S.W(12), ...hop(h[1]), S.R(12.3), S.J(30, 1), S.U(P => P.on, R().k), S.R(20.6), S.W(12), ...hop(h[2]), S.R(21.3), S.J(30, 1), S.U(P => P.on, R().k), S.R(28.5), S.W(30)]);
+    check('76 walk', run(75, () => R, {freshMem:true}), 'dead');
+    check('76 just jump each gap', run(75, go([0, 0, 0]), {freshMem:true, max:2000}), 'dead');
+    check('76 one hop before each gap (the first lesson as a habit)', run(75, go([1, 1, 1]), {freshMem:true, max:2000}), 'dead');
+    check('76 one, none, none', run(75, go([1, 0, 0]), {freshMem:true, max:2000}), 'dead');
+    check('76 one, none, two (count each time)', run(75, go([1, 0, 2]), {freshMem:true, max:2000}), 'clear');
+    check('76 four, three, five (the same, counted the long way)', run(75, go([4, 3, 5]), {freshMem:true, max:3000}), 'clear'); }
+  // ---- 77 relay: each life lasts a few seconds; the key stays where a life ran out on firm ground
+  { const leg = (plan) => life => plan[Math.min(life, plan.length - 1)]();
+    const toLift = [S.R(4.1), S.J(5, 1), S.U(P => P.on, R().k), S.R(8.1), S.J(5, 1), S.U(P => P.on, R().k), S.R(13.2)], ride = S.U(() => g.S.lift.y <= 6*T + 1, {});
+    check('77 one life, ride to the top', run(76, () => script([...toLift, S.R(14.6), ride, S.R(28)]), {freshMem:true, max:800}), 'dead');
+    check('77 every life, straight on', run(76, leg([() => script([...toLift, S.R(14.6), ride, S.R(28)]), () => script([S.R(14.6), ride, S.R(28)])]), {freshMem:true, lives:5, max:2000}), 'dead');
+    for (const w of [0, 40]) check(`77 run out of time at the foot of the lift; then ride it, step off, run out there; then run (waits ${w})`, run(76, leg([() => script([...toLift, S.W(400)]), () => script([S.W(w), S.R(14.6), ride, S.R(17), S.W(300)]), () => script([S.W(w), S.R(28)])]), {freshMem:true, lives:4, max:2000}), 'clear'); }
+  // ---- 78 babel: what your keys mean is set by the height you last stood at
+  { const climb = (dirs) => () => { const steps = [[4.6, 6.9, 384], [8.0, 9.9, 320], [11.0, 12.9, 256], [14.0, 15.9, 192], [17.0, 20.5, 128]]; let i = 0, air = false;
+      return P => { if (i >= steps.length) return {k:{right: dirs[4] > 0, left: dirs[4] < 0}}; const [from, to, y] = steps[i], d = dirs[i], k = {right: d > 0, left: d < 0};
+        if (P.on && air) { air = false; if (Math.abs(P.y + 28 - y) < 3) i++; return {k:{}}; }
+        if (!P.on) { air = true; const mv = g.P.vx > 0.5; return cx() < to*T ? {k:Object.assign({jump:true}, k)} : {k:{jump:true, right: mv && d < 0, left: mv && d > 0}}; }
+        if (cx() >= from*T - 4) return {jump:1, k}; return {k}; }; };
+    check('78 climb as you always would', run(77, climb([1, 1, 1, 1, 1]), {freshMem:true, max:900}), 'dead');
+    check('78 swap once you are up, and stay swapped', run(77, climb([1, 1, -1, -1, -1]), {freshMem:true, max:900}), 'dead');
+    check('78 at each new height, try the keys first, then climb', run(77, climb([1, 1, -1, -1, 1]), {freshMem:true, max:900}), 'clear'); }
+  // ---- 79 testimony: one always tells the truth, one never does; ask them about the spikes first
+  { const says = (i) => { const t = g.S.topic; if (!t) return null; return i === g.S.liar ? !t.good : t.good; };
+    const enter = (c) => [{until: () => Math.abs(cx() - (c + 0.5)*T) < 5, rule: () => cx() < (c + 0.5)*T ? R() : Lk()}, S.W(80)];
+    const crossPit = [S.R(3.3), S.W(10), S.J(30, 1), S.U(P => P.on, R().k)];
+    const wise = () => { let liar = null, pick = null, phase = 0, sc = null; return P => {
+        if (phase === 0) { if (cx() < 3.3*T) return R(); if (Math.abs(g.P.vx) > 0.2) return N(); liar = says(0) ? 0 : 1; phase = 1; sc = script(crossPit); }
+        if (phase === 1) { if (P.on && cx() > 7*T) phase = 2; else return sc(P); }
+        if (phase === 2) { for (const c of [13, 16, 19, 22, 25]) if (Math.abs(cx() - (c + 0.5)*T) < 12 && says(1 - liar)) pick = c; if (cx() < 25.8*T) return R(); phase = 3; sc = script(enter(pick)); }
+        return sc(P); }; };
+    const trusting = (who) => () => { let pick = null; return script([...crossPit, {until: () => cx() > 25.8*T, rule: () => { for (const c of [13, 16, 19, 22, 25]) if (Math.abs(cx() - (c + 0.5)*T) < 12 && says(who)) pick = c; return R(); }}, {until: () => pick != null && Math.abs(cx() - (pick + 0.5)*T) < 5, rule: () => pick == null ? R() : cx() < (pick + 0.5)*T ? R() : Lk()}, S.W(80)]); };
+    check('79 walk', run(78, () => R, {freshMem:true}), 'dead');
+    for (const who of [0, 1]) { let ok = 0; for (let k = 0; k < 6; k++) { const r = run(78, trusting(who), {freshMem:true, max:1500}); if (/clear|win/.test(r[r.length - 1])) ok++; g.prof.deaths++; }
+      check(`79 always believe the ${who ? 'right' : 'left'} one (6 times)`, [`${ok}/6`], /^[0-5]\//); }
+    let wins = 0; for (let k = 0; k < 8; k++) { const r = run(78, wise, {freshMem:true, max:1500}); if (/clear|win/.test(r[r.length - 1])) wins++; g.prof.deaths++; }
+    check('79 ask both about the spikes, then believe the honest one (8 times)', [`${wins}/8`], '8/8'); }
+  // ---- 80 state: one offence is reported if the watchman sees it, and the gun fires where it believes you are
+  { const wallUp = () => g.ents.some(e => e.t === 'bb' && e.alive), over8 = [S.R(6.4), S.J(30, 1), S.U(P => P.on, R().k)];
+    check('80 jump the wall, run', run(79, () => script([...over8, S.R(29), S.W(300)]), {freshMem:true, max:900}), 'timeout');
+    check('80 stand', run(79, () => N, {freshMem:true, max:900}), 'timeout');
+    check('80 jump at the brick wall', run(79, () => script([...over8, S.R(22.5), S.J(10, 1), S.U(P => P.on, R().k), S.W(200)]), {freshMem:true, max:900}), 'dead');
+    check('80 jump everything', run(79, () => P => P.on && (Math.abs(cx() - 6.4*T) < 5 || g.P.vx > 4) ? {jump:30, dir:1} : R(), {freshMem:true, max:900}), 'dead');
+    check('80 offend where it cannot see (under the roof)', run(79, () => script([...over8, S.R(18.2), S.W(10), S.J(4, 0), S.U(P => P.on, {}), S.W(200), S.R(29), S.W(60)]), {freshMem:true, max:1200}), 'timeout');
+    for (const x of [10, 12, 14, 15.5]) check(`80 offend in its sight at ${x}, run in under the roof, let it fire at where you were going`, run(79, () => script([...over8, S.R(x), S.J(4, 1), S.U(P => P.on, R().k), S.R(18.2), S.W(150), S.R(28), S.W(30)]), {freshMem:true, max:1200}), /clear|win/); }
   return out;
 })()
