@@ -274,7 +274,7 @@ function fleeDoor(d, approach, o){
   if (toward && Math.abs(dist) < 320 && !o.noFlee) {
     d.x += dir*Math.min(5.4, Math.abs(P.vx) + 0.9); d.walk = true;
     if (d.x < lo || d.x > hi) { d.x = clamp(d.x, lo, hi); if (Math.abs(dist) < 96) d.hop = {from:d.x, to:clamp(pc - dir*240 - 18, lo, hi), t:0}; }
-  } else if (S.stillT > (o.wait ?? 40)) { d.x = clamp(d.x - dir*Math.min(approach, Math.abs(dist)), lo, hi); d.walk = Math.abs(dist) > 1; }
+  } else if (o.come ? o.come() : S.stillT > (o.wait ?? 40)) { d.x = clamp(d.x - dir*Math.min(approach, Math.abs(dist)), lo, hi); d.walk = Math.abs(dist) > 1; }
   else if (away && !o.noFollow) { d.x = clamp(d.x - dir*1.7, lo, hi); d.walk = true; }
   return Math.abs(dist) < 12 && P.on && P.y + PH > GY - 56;
 }
@@ -354,6 +354,82 @@ function drawBomb(b, boom){
   const fl = b.fuse/150; ctx.strokeStyle = C.door; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy - 16); ctx.quadraticCurveTo(cx + 8, cy - 26, cx + 4 + 10*fl, cy - 22 - 10*fl); ctx.stroke();
   if (b.near) { const sx = cx + 4 + 10*fl, sy = cy - 22 - 10*fl; for (let i = 0; i < 3; i++) { ctx.fillStyle = i % 2 ? C.gold : C.red; ctx.beginPath(); ctx.arc(sx + (Math.random() - .5)*6, sy + (Math.random() - .5)*6, 2, 0, 7); ctx.fill(); } }
   else { ctx.fillStyle = 'rgba(30,43,71,.5)'; ctx.beginPath(); ctx.arc(cx + 4 + 10*fl, cy - 22 - 10*fl, 1.5, 0, 7); ctx.fill(); } }
+
+// soil and seeds: stand still on one and a vine grows under you, carrying you up to `top` (or to just under whatever hangs above)
+function vineGarden(soils, top){ return {beds: soils.map(s => ({x:s.x, w:s.w, vine:null})), top, st:0, on:null}; }
+function plantSeed(vg, x){ if (vg.beds.some(b => Math.abs(b.x + b.w/2 - x) < 24)) return; vg.beds.push({x:x - 14, w:28, vine:null, seed:true, t:0}); dust(x, GY); }
+function vineStep(vg){
+  const pc = pcx(), bed = vg.beds.find(b => pc > b.x - 2 && pc < b.x + b.w + 2);
+  const on = bed && P.on && (P.stand === bed.vine || P.y + PH >= GY - 1) ? bed : null;
+  vg.st = on && still() && !keys.left && !keys.right ? vg.st + 1 : 0;
+  // it starts once you have been still a while, and keeps growing while you stay on it
+  if (on && (vg.st > 25 || (on.vine && P.stand === on.vine))) { let v = on.vine; if (!v) v = on.vine = E({t:'vine', x:on.x + 2, y:GY, w:on.w - 4, h:2, solid:true, idle:0});
+    let cap = vg.top; for (const o of ents) if (o.t === 'b' && o.alive && o.y + o.h <= GY - 40 && v.x < o.x + o.w && v.x + v.w > o.x) cap = Math.max(cap, o.y + o.h + PH + 2);
+    if (v.y > cap) { v.y = Math.max(cap, v.y - 1.2); v.h = GY - v.y + 2; P.y = v.y - PH; } }
+  for (const b of vg.beds) { const v = b.vine; if (b.seed) b.t++; if (!v) continue; v.idle = P.stand === v ? 0 : v.idle + 1;
+    if (v.idle > 150) { v.y += 2; v.h = GY - v.y + 2; if (v.y >= GY) { v.alive = false; b.vine = null; } } } }
+function drawVines(vg){ for (const b of vg.beds) { const x = b.x;
+    ctx.fillStyle = '#8B5A3C'; ctx.fillRect(x + 2, GY - (b.seed ? 4 : 0), b.w - 4, b.seed ? 4 : 6);
+    ctx.strokeStyle = '#4E6B3A'; ctx.lineWidth = 1.5; const sh = b.seed ? Math.min(7, 2 + b.t*0.1) : 7; ctx.beginPath(); ctx.moveTo(x + b.w/2, GY - 2); ctx.lineTo(x + b.w/2, GY - 2 - sh); ctx.moveTo(x + b.w/2, GY - sh*0.6); ctx.lineTo(x + b.w/2 + 5, GY - sh - 1); ctx.stroke();
+    const v = b.vine; if (!v || !v.alive) continue; ctx.fillStyle = '#4E6B3A'; ctx.fillRect(v.x + v.w/2 - 5, v.y, 10, v.h); ctx.fillStyle = '#6B8E4E'; for (let y = v.y + 6; y < GY; y += 16) { ctx.beginPath(); ctx.ellipse(v.x + (y/16 % 2 ? 3 : v.w - 3), y, 6, 3, 0.4, 0, 7); ctx.fill(); } ctx.fillStyle = '#4E6B3A'; ctx.fillRect(v.x, v.y, v.w, 5); } }
+
+// a flock perched in a row over a pit: they hold you up, until something frightens them
+function flockOf(c0, c1){ const birds = []; for (let c = c0; c <= c1; c++) birds.push(E({t:'b', x:c*T + 3, y:GY, w:26, h:10, solid:true, hidden:true, bird:true, hx:c*T + 3, k:c - c0})); return {birds, away:0}; }
+function flockScare(fl){ if (fl.away) return; fl.away = 260; for (const b of fl.birds) { b.ghost = true; b.vx = ((b.k*37) % 7 - 3)*0.6; b.vy = -2.5 - (b.k % 3)*0.6; } shake = Math.max(shake, 3); }
+function flockLand(fl){ if (P.stand && P.stand.bird && P.landV > 6) flockScare(fl); }
+function flockStep(fl){
+  fl.runG = P.on && Math.abs(P.vx) >= 3.2 ? (fl.runG || 0) + 1 : 0;
+  if (!fl.away && fl.runG > 10 && fl.birds.some(b => Math.abs(b.x + 13 - pcx()) < 140)) flockScare(fl);
+  if (!fl.away) return;
+  fl.away--;
+  for (const b of fl.birds) { if (fl.away > 50) { b.x += b.vx; b.y += b.vy; b.vy = Math.max(b.vy - 0.02, -3.5); }
+    else { b.x += (b.hx - b.x)*0.08; b.y += (GY - b.y)*0.08; if (fl.away <= 1) { b.x = b.hx; b.y = GY; b.ghost = false; } } } }
+function drawFlock(fl){ for (const b of fl.birds) { const fly = !!fl.away && fl.away > 50, w = fly ? Math.sin(frame*0.6 + b.k)*6 : 0, x = b.x + 13, y = b.y + (fly ? 0 : -6);
+    ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.ellipse(x, y, 11, 6, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x - 4, y - 2); ctx.lineTo(x - 13, y - 6 - w); ctx.lineTo(x + 2, y - 3); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 9, y - 4, 4, 0, 7); ctx.fill(); ctx.fillStyle = C.gold; ctx.beginPath(); ctx.moveTo(x + 12, y - 5); ctx.lineTo(x + 17, y - 3); ctx.lineTo(x + 12, y - 2); ctx.fill();
+    ctx.fillStyle = C.white; ctx.fillRect(x + 9, y - 6, 2, 2); } }
+
+// a ghost: the pale one moves while you look away from it, the dark one while you look at it
+function drawGhost(b){ const y = GY - 28 + Math.sin(frame*0.1 + b.x)*2; ctx.fillStyle = b.shy ? C.white : C.ink2; ctx.strokeStyle = C.ink; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(b.x + 12, y + 12, 12, Math.PI, 0); ctx.lineTo(b.x + 24, y + 26); ctx.lineTo(b.x + 18, y + 22); ctx.lineTo(b.x + 12, y + 26); ctx.lineTo(b.x + 6, y + 22); ctx.lineTo(b.x, y + 26); ctx.closePath(); ctx.fill(); ctx.stroke();
+  const moving = b.shy ? !b.watched : b.watched; ctx.fillStyle = b.shy ? C.ink : C.white;
+  if (b.shy && b.watched) { ctx.fillRect(b.x + 5, y + 10, 5, 2); ctx.fillRect(b.x + 14, y + 10, 5, 2); } else { ctx.fillRect(b.x + 6, y + 8, 4, 5); ctx.fillRect(b.x + 14, y + 8, 4, 5); }
+  if (moving) { ctx.fillStyle = C.red; ctx.fillRect(b.x + 9, y + 17, 6, 3); } }
+
+// sleepers: guards and their noise
+function drawNoise(rs){ for (const r of rs) { ctx.strokeStyle = `rgba(207,62,50,${1 - r.t/24})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r.x, GY, r.r*(0.3 + r.t/34), Math.PI, 0); ctx.stroke(); } }
+function drawGuard(g){ ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(g.x + 12, g.y + 14, 13, 11, 0, 0, 7); ctx.fill();
+  if (g.awake) { ctx.fillStyle = C.red; ctx.fillRect(g.x + 5, g.y + 8, 5, 5); ctx.fillRect(g.x + 14, g.y + 8, 5, 5); }
+  else { ctx.strokeStyle = C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(g.x + 5, g.y + 11); ctx.lineTo(g.x + 10, g.y + 11); ctx.moveTo(g.x + 14, g.y + 11); ctx.lineTo(g.x + 19, g.y + 11); ctx.stroke();
+    const z = (frame >> 4) % 3; txt('z', g.x + 22 + z*3, g.y - 2 - z*6, `${10 + z*3}px ${FD}`, C.soft); } }
+function drawCarpets(){ for (const e of ents) if (e.carpet) { ctx.fillStyle = C.red; ctx.fillRect(e.x + 1, e.y - 3, e.w - 2, 6); ctx.fillStyle = C.gold; for (let i = 0; i < e.w/8 - 1; i++) ctx.fillRect(e.x + 3 + i*8, e.y - 2, 3, 3); } }
+
+// the bull: asleep until it hears you, then it winds up and charges at where you will be, and breaks bricks
+function bullStep(b){ const by = GY - b.h;
+  if (b.st === 'wind') { b.dir = Math.sign(pcx() - (b.x + b.w/2)) || 1; if (--b.t <= 0) { b.st = 'charge'; b.tx = pcx() + P.vx*18; b.dir = Math.sign(b.tx - (b.x + b.w/2)) || 1; } }
+  else if (b.st === 'charge') { b.x += b.dir*9;
+    const front = {x:b.dir > 0 ? b.x + b.w - 4 : b.x, y:by, w:4, h:b.h}; let hit = null; for (const o of ents) if (isSolid(o) && o.t !== 'g' && ov(front, o)) { hit = o; break; }
+    if (hit) { b.x = b.dir > 0 ? hit.x - b.w : hit.x + hit.w; shake = 10; b.st = 'stun'; b.t = 55;
+      if (hit.t === 'bb') { const col = hit.x; for (const o of ents) if (o.t === 'bb' && o.alive && o.x === col) { o.alive = false; for (let i = 0; i < 5; i++) parts.push({x:o.x + 16, y:o.y + 16, vx:b.dir*Math.random()*6, vy:-Math.random()*5, life:30, r:3, col:C.ink2, sq:true}); } } }
+    else if ((b.x + b.w/2 - b.tx)*b.dir > 70 || b.x < 0 || b.x > W - b.w) { b.x = clamp(b.x, 0, W - b.w); b.st = 'stun'; b.t = 25; } }
+  else if (b.st === 'stun') { if (--b.t <= 0) { b.st = 'wind'; b.t = 45; } }
+  return ov(pbox(3), {x:b.x + 4, y:by + 4, w:b.w - 8, h:b.h - 4}); }
+function drawBull(b){ const y = GY - b.h, f = b.dir; ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(b.x + b.w/2, y + 22, b.w/2, 18, 0, 0, 7); ctx.fill();
+  ctx.fillRect(b.x + 6, y + 34, 6, 6); ctx.fillRect(b.x + b.w - 12, y + 34, 6, 6);
+  const hx = f > 0 ? b.x + b.w - 6 : b.x + 6; ctx.beginPath(); ctx.arc(hx, y + 14, 11, 0, 7); ctx.fill();
+  ctx.strokeStyle = C.white; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(hx - 6*f, y + 6); ctx.quadraticCurveTo(hx + 4*f, y - 2, hx + 10*f, y + 2); ctx.stroke();
+  if (b.st === 'sleep') { ctx.strokeStyle = C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(hx + 2*f - 3, y + 12); ctx.lineTo(hx + 2*f + 3, y + 12); ctx.stroke(); const z = (frame >> 4) % 3; txt('z', b.x + b.w/2 + z*3, y - 4 - z*6, `${11 + z*3}px ${FD}`, C.soft); }
+  else { ctx.fillStyle = b.st === 'stun' ? C.white : C.red; ctx.fillRect(hx + 2*f - 2, y + 10, 4, 4); }
+  if (b.st === 'wind' && b.t < 30 && (frame >> 2) % 2) { ctx.fillStyle = C.soft; ctx.beginPath(); ctx.arc(b.x + (f > 0 ? 0 : b.w), GY - 4, 4, 0, 7); ctx.fill(); }
+  if (b.st === 'stun') for (let i = 0; i < 3; i++) { const a = frame*0.2 + i*2.1; ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(hx + Math.cos(a)*12, y - 6 + Math.sin(a)*4, 2.5, 0, 7); ctx.fill(); } }
+
+// a crate; a mimic breathes (br 0..1) and, when it bites, shows its teeth
+function drawCrate(x, y, w, h, br, bite){ const g = br ? br*1.6 : 0;
+  ctx.fillStyle = C.door; ctx.fillRect(x - g/2, y - g, w + g, h + g); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.strokeRect(x + 1 - g/2, y + 1 - g, w - 2 + g, h - 2 + g);
+  ctx.lineWidth = 2; for (let yy = y + 32; yy < y + h; yy += 32) { ctx.beginPath(); ctx.moveTo(x - g/2, yy); ctx.lineTo(x + w + g/2, yy); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(x + 3, y + 3 - g); ctx.lineTo(x + w - 3, y + 29); ctx.moveTo(x + w - 3, y + 3 - g); ctx.lineTo(x + 3, y + 29); ctx.stroke();
+  if (bite) { ctx.fillStyle = C.ink; ctx.fillRect(x, y - 2, w, 10); ctx.fillStyle = C.white; ctx.beginPath(); for (let i = 0; i < w/8; i++) { ctx.moveTo(x + i*8, y - 2); ctx.lineTo(x + i*8 + 4, y + 7); ctx.lineTo(x + i*8 + 8, y - 2); } ctx.fill(); } }
 
 /* ================= the hundred ================= */
 const LV = [
@@ -1090,6 +1166,132 @@ const LV = [
   drawOver(){ ctx.strokeStyle = 'rgba(190,205,225,.35)'; ctx.lineWidth = 1; ctx.beginPath(); for (const r of S.rain) { ctx.moveTo(r.x, r.y); ctx.lineTo(r.x + 2, r.y - 9); } ctx.stroke();
     drawCones(); ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(28*T + 25, GY - 22, 3, 0, 7); ctx.fill();
     if (S.flash > 20) { ctx.strokeStyle = C.white; ctx.lineWidth = 3; ctx.beginPath(); let x = 300 + (S.lt*37) % 400, y = 0; ctx.moveTo(x, y); while (y < 200) { x += (Math.random() - .5)*40; y += 25; ctx.lineTo(x, y); } ctx.stroke(); } } },
+
+/* ===================== VI. Living ===================== */
+
+/* 51. the path you walk grows thorns behind you, and stillness grows a vine under you */
+{ id:'garden', was:[17, 43], start:6,
+  build(){ S.tiles = [...Gt(0,26,{life:true}), ...Gt(28,29,{life:true})]; S.soil = R('g',27,27,14,16,{soil:true});
+    for (const [a,b] of [[5,8],[10,13],[15,18],[20,23],[24,26]]) R('b',a,b,10,10);
+    E({t:'key', x:28*T + 9, y:13*T + 6, w:14, h:20}); Door(2,14,{slots:1, onEnter(){ if (S.keys > 0) levelClear(); }});
+    S.vg = vineGarden([S.soil], 320); },
+  update(){ grow(S.tiles, 150); vineStep(S.vg); },
+  draw(){ drawVines(S.vg); } },
+
+/* 52. what you want runs from you; what you fear comes to you */
+{ id:'hunger', was:[25], start:2,
+  build(){ Gd(0,29); Door(27,14,{slots:3, onEnter(){ if (S.coins >= 3) levelClear(); }});
+    S.cs = [9, 15, 21].map(c => ({x:c*T + 8, y:GY - 20, vx:0, alive:true, hop:null}));
+    S.balls = [[5*T, 180], [24*T, 180]].map(([x,y]) => ({x, y})); },
+  update(){ const pc = pcx();
+    for (const c of S.cs) { if (!c.alive) continue;
+      if (c.hop) { const h = c.hop; h.t++; const k = Math.min(1, h.t/22); c.x = h.from + (h.to - h.from)*k; c.y = GY - 20 - Math.sin(k*Math.PI)*70; if (k >= 1) { c.hop = null; c.y = GY - 20; } continue; }
+      const dx = c.x + 8 - pc;
+      c.warn = (c.x <= 9 || c.x >= W - 25) && Math.abs(dx) < 100 && running();
+      if (Math.abs(dx) < 110) { c.vx = Math.sign(dx || 1)*(Math.abs(P.vx)*0.85 + 0.7); const nx = clamp(c.x + c.vx, 8, W - 24); const cornered = nx === 8 || nx === W - 24;
+        if (cornered && Math.abs(dx) < 46 && running()) c.hop = {from:c.x, to:clamp(pc - Math.sign(dx)*150 - 8, 8, W - 24), t:0}; else c.x = nx; }
+      if (ov(pbox(), {x:c.x, y:c.y, w:16, h:20})) { c.alive = false; S.coins++; sparkle(c.x + 8, c.y + 10); } }
+    for (const b of S.balls) { const dx = pc - b.x, dy = P.y + 14 - b.y, d = Math.hypot(dx, dy) || 1; b.x += dx/d*0.6; b.y += dy/d*0.6; if (d < 22) return die('ball'); } },
+  draw(){ for (const c of S.cs) if (c.alive) drawCoin(c.x + (c.warn ? ((frame >> 1) % 2 ? 2 : -2) : 0), c.y - (c.warn ? (frame >> 2) % 2 * 3 : 0));
+    for (const b of S.balls) { ctx.fillStyle = C.ink; ctx.beginPath(); for (let i = 0; i < 16; i++) { const a = i/16*Math.PI*2 + frame*0.03, r = i%2 ? 7 : 14; ctx.lineTo(b.x + Math.cos(a)*r, b.y + Math.sin(a)*r); } ctx.fill(); } } },
+
+/* 53. one comes when you look away, one comes when you look; and the door comes when you look away */
+{ id:'gaze', was:[44], start:2,
+  build(){ Gd(0,29); S.gate = R('b',18,18,10,13,{cond:() => !S.open}); S.gt = 0;
+    S.b1 = {x:-60, shy:true}; S.b2 = {x:22*T, shy:false}; S.door = {x:28*T - 2, y:0}; },
+  update(){ S.gt = (S.gt + 1) % 420; S.open = S.gt >= 330; S.gate.shk = S.gt > 306 && S.gt < 330;
+    if (pcx() > 5*T) S.act = true;
+    if (S.act) for (const b of [S.b1, S.b2]) { const side = Math.sign(b.x + 12 - pcx()) || 1, watched = P.face === side;
+      if (S.open) S.woke = true; if (!b.shy && !S.woke) continue;
+      if (b.shy ? !watched : watched) b.x -= side*(b.shy ? 3.0 : 1.6);
+      b.watched = watched; if (ov(pbox(3), {x:b.x + 2, y:GY - 26, w:20, h:22})) return die('boo'); }
+    // the door runs from whoever heads at it, and comes to whoever looks away from it
+    const d = S.door, dd = Math.sign(d.x + 18 - pcx()) || 1;
+    if (fleeDoor(d, 2.4, {min:19*T + 4, noFollow:true, come: () => P.face !== dd && pcx() > 19*T})) return levelClear(); },
+  draw(){ for (const b of [S.b1, S.b2]) drawGhost(b); drawShy(S.door); } },
+
+/* 54. they sleep until you make a sound; what charges at you can break what you cannot */
+{ id:'sleepers', was:[38, 67], start:1.5,
+  build(){ Gd(0,29); for (const c of [7, 13]) R('g',c,c + 1,14,16,{carpet:true}); for (let r = 0; r <= 13; r++) R('bb',24,24,r,r); Door(27.5,14);
+    S.gd = [5, 11].map(c => ({x:c*T + 4, y:GY - 24, awake:false})); S.rings = [];
+    S.bull = {x:18*T, w:48, h:40, st:'sleep', t:0, dir:-1}; },
+  noise(x, r){ if (r <= 0) return; S.rings.push({x, r, t:0}); for (const g of S.gd) if (Math.abs(g.x + 12 - x) < r) g.awake = true;
+    const b = S.bull; if (b.st === 'sleep' && Math.abs(b.x + b.w/2 - x) < r + 20) { b.st = 'wind'; b.t = 60; } },
+  onLand(){ const carpet = ents.some(e => e.carpet && pcx() > e.x + 2 && pcx() < e.x + e.w - 2); this.noise(pcx(), carpet ? 0 : 40 + 10*P.landV); },
+  update(){ S.runG = P.on && Math.abs(P.vx) >= 3.2 ? (S.runG || 0) + 1 : 0; if (S.runG > 10 && frame % 14 === 0) this.noise(pcx(), 80);
+    for (const g of S.gd) { if (g.awake) g.x += Math.sign(pcx() - g.x - 12)*5.6; if (ov(pbox(3), {x:g.x + 2, y:g.y + 2, w:20, h:20})) return die('guard'); }
+    for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 24);
+    if (bullStep(S.bull)) return die('bull'); },
+  draw(){ drawNoise(S.rings); for (const g of S.gd) drawGuard(g); drawCarpets(); drawBull(S.bull); } },
+
+/* 55. asleep, you walk on what you dreamed; a jump wakes you */
+{ id:'dream', was:[47], start:2,
+  build(){ Gd(0,4); R('g',12,13,14,16); R('g',18,22,14,16); Sp(18,18,13,'up'); Gd(25,29); Door(27,14);
+    for (const [a,b] of [[5,11],[14,24]]) R('cloud',a,b,14,14,{h:12, dream:true, solid:true, cond:() => S.sleep}); S.still = 0; S.sleep = false; S.zt = 0; },
+  update(){ S.still = still() ? S.still + 1 : 0; if (S.still > 70 && !S.sleep) { S.sleep = true; S.zt = 0; } if (S.sleep) S.zt++; },
+  onJump(){ if (S.sleep) { S.sleep = false; S.still = 0; shake = 3; } },
+  alpha(e){ if (e.dream) return S.sleep ? 1 : 0; if (e.t === 'door') return 1; return S.sleep ? 0.3 : 1; },
+  drawBack(){ if (!S.sleep) return; ctx.fillStyle = 'rgba(110,90,170,.16)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(110,90,170,.5)'; for (let i = 0; i < 24; i++) { const x = (i*173) % W, y = 30 + (i*97) % 260, r = 1.5 + (i % 3)*0.6 + Math.sin(frame*0.05 + i)*0.5; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); } },
+  draw(){ if (S.still > 20 && !S.sleep) { ctx.globalAlpha = Math.min(1, (S.still - 20)/50); txt('z', pcx() + 10, P.y - 6, `12px ${FD}`, C.soft); ctx.globalAlpha = 1; }
+    if (S.sleep) for (let i = 0; i < 3; i++) { const t = (S.zt*0.6 + i*20) % 60; ctx.globalAlpha = 1 - t/60; txt('z', pcx() + 8 + t*0.3, P.y - 4 - t*0.6, `${11 + i*3}px ${FD}`, 'rgb(110,90,170)'); ctx.globalAlpha = 1; } } },
+
+/* 56. it follows exactly where you went, a little after you */
+{ id:'snake', start:15,
+  build(){ Gd(0,29); R('b',5,25,10,10); R('b',2,3,12,12); Door(28,14,{slots:1, onEnter(){ if (S.keys > 0) levelClear(); }});
+    E({t:'key', x:1*T + 9, y:13*T + 6, w:14, h:20}); S.path = []; S.go = false; },
+  update(){ if (!S.go && (Math.abs(P.vx) > 0.5 || !P.on)) S.go = true; if (!S.go) return;
+    S.path.push([P.x, P.y]);
+    const head = S.path.length - 70; if (head < 0) return;
+    for (let i = Math.max(0, head - 44); i <= head; i += 4) { const [x, y] = S.path[i]; if (ov(pbox(4), {x:x + 4, y:y + 6, w:PW - 8, h:PH - 8})) return die('snake'); } },
+  draw(){ const head = S.path.length - 70; if (head < 0) return;
+    for (let i = Math.max(0, head - 44), k = 0; i <= head; i += 4, k++) { const [x, y] = S.path[i]; const last = i + 4 > head; ctx.fillStyle = last ? C.ink : (k % 2 ? '#4E6B3A' : '#6B8E4E'); ctx.beginPath(); ctx.ellipse(x + PW/2, y + PH - 9, last ? 11 : 9, last ? 9 : 7, 0, 0, 7); ctx.fill();
+      if (last) { ctx.fillStyle = C.gold; ctx.fillRect(x + PW/2 - 5, y + PH - 13, 3, 3); ctx.fillRect(x + PW/2 + 2, y + PH - 13, 3, 3); } } } },
+
+/* 57. the sky sows where it aims, and stillness makes it grow */
+{ id:'seed', start:2,
+  build(){ Gd(0,29); R('b',20,29,7,7); Door(25,7); S.vg = vineGarden([], 224); S.armed = true; },
+  update(){ const pc = pcx();
+    if (S.armed && pc > 13.8*T && P.vx > 0.5) { S.armed = false; drop(whereIn(40), 40, {onLand: c => plantSeed(S.vg, c.x)}); }
+    if (!S.armed && pc < 11*T) S.armed = true;
+    vineStep(S.vg); updCones(); },
+  drawBack(){ ctx.strokeStyle = C.red; ctx.lineWidth = 2; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(13.8*T, GY); ctx.lineTo(13.8*T, GY - 30); ctx.stroke(); ctx.setLineDash([]); },
+  draw(){ drawVines(S.vg); drawCones(); } },
+
+/* 58. they are the bridge, as long as you are no threat */
+{ id:'flock', start:2,
+  build(){ Gd(0,7); Gd(22,29); Sp(8,21,14,'up'); R('g',8,21,15,16); Door(27,14); S.fl = flockOf(8, 21); },
+  onLand(){ flockLand(S.fl); },
+  update(){ flockStep(S.fl); },
+  draw(){ drawFlock(S.fl); } },
+
+/* 59. one of them is breathing */
+{ id:'mimic', start:2,
+  build(){ Gd(0,29); R('b',16,29,8,13); S.mim = E({t:'b', x:11*T, y:GY - 64, w:T, h:64, solid:true, hidden:true, mimic:true, bite:0});
+    S.box = [E({t:'b', x:8*T, y:GY - 64, w:2*T, h:64, solid:true, hidden:true}), E({t:'b', x:13*T, y:GY - 128, w:2*T, h:128, solid:true, hidden:true})];
+    S.d1 = Door(20,8,{onEnter(d){ d.bite = true; die('mimic'); }}); S.d2 = Door(25,8); },
+  update(){ const m = S.mim; if (m.bite > 0) m.bite--;
+    if (P.on && P.stand === m) { m.bite = 20; return die('mimic'); } },
+  draw(){ for (const b of S.box) drawCrate(b.x, b.y, b.w, b.h, 0);
+    const br = (Math.sin(frame*0.07) + 1)*0.5; drawCrate(S.mim.x, S.mim.y, S.mim.w, S.mim.h, br, S.mim.bite);
+    const d = S.d1, s = 1 + br*0.03; ctx.save(); ctx.translate(d.x + 18, d.y + 56); ctx.scale(s, 1 + br*0.04); ctx.translate(-d.x - 18, -d.y - 56); drawDoor(d.x, d.y, {bite:d.bite}); ctx.restore(); },
+  alpha(e){ return e === S.d1 ? 0 : 1; } },
+
+/* 60. everything alive, each in its turn */
+{ id:'life', start:1,
+  build(){ Gd(0,9); Gd(16,29); R('g',6,7,14,16,{carpet:true}); Sp(10,15,14,'up'); R('g',10,15,15,16); R('b',25,29,7,7); Door(27,7);
+    S.gd = [{x:4*T + 4, y:GY - 24, awake:false}]; S.rings = []; S.fl = flockOf(10, 15); S.vg = vineGarden([], 224); S.armed = true; },
+  noise(x, r){ if (r <= 0) return; S.rings.push({x, r, t:0}); for (const g of S.gd) if (Math.abs(g.x + 12 - x) < r) g.awake = true; },
+  onLand(){ const carpet = ents.some(e => e.carpet && pcx() > e.x + 2 && pcx() < e.x + e.w - 2); this.noise(pcx(), carpet ? 0 : 40 + 10*P.landV); flockLand(S.fl); },
+  update(){ const pc = pcx(); S.runG = P.on && Math.abs(P.vx) >= 3.2 ? (S.runG || 0) + 1 : 0; if (S.runG > 10 && frame % 14 === 0) this.noise(pc, 80);
+    for (const g of S.gd) { if (g.awake) g.x += Math.sign(pc - g.x - 12)*5.6; if (ov(pbox(3), {x:g.x + 2, y:g.y + 2, w:20, h:20})) return die('guard'); }
+    for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 24);
+    flockStep(S.fl); if (state !== 'play') return;
+    if (S.armed && pc > 18.5*T && P.vx > 0.5) { S.armed = false; drop(whereIn(40), 40, {onLand: c => plantSeed(S.vg, c.x)}); }
+    if (!S.armed && pc < 17*T) S.armed = true;
+    vineStep(S.vg); updCones(); },
+  drawBack(){ ctx.strokeStyle = C.red; ctx.lineWidth = 2; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(18.5*T, GY); ctx.lineTo(18.5*T, GY - 30); ctx.stroke(); ctx.setLineDash([]); },
+  draw(){ drawNoise(S.rings); for (const g of S.gd) drawGuard(g); drawCarpets(); drawFlock(S.fl); drawVines(S.vg); drawCones(); } },
 
 ];
 
