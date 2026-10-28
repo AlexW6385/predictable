@@ -1722,7 +1722,235 @@ const LV = [
       const tx = L.seen > 0 ? gunsAhead(S.gs) : L.mode === 'search' && Math.abs(L.last.vx) > 0.5 ? runOn(L.last.x, Math.sign(L.last.vx)) : L.mode === 'search' ? L.last.x : pcx(), F = S.gs.F, ty = GY - 4;
       S.gs.sh.push({x:gn.x, y:gn.y, vx:(tx - gn.x)/F, vy:(ty - gn.y)/F - S.gs.G*(F + 1)/2, t:0, F, tx, ty, pred:true}); gn.kick = 8; }
     gunsStep(S.gs); },
-  draw(){ drawLamp(S.L); drawGuns(S.gs); drawLaw(); if (S.rep) { ctx.fillStyle = C.red; ctx.beginPath(); ctx.arc(S.gs.gun[0].x, S.gs.gun[0].y - 6, 4 + (30 - S.rep.t)/5, 0, 7); ctx.fill(); } } }
+  draw(){ drawLamp(S.L); drawGuns(S.gs); drawLaw(); if (S.rep) { ctx.fillStyle = C.red; ctx.beginPath(); ctx.arc(S.gs.gun[0].x, S.gs.gun[0].y - 6, 4 + (30 - S.rep.t)/5, 0, 7); ctx.fill(); } } },
+
+/* ===================== IX. Art and faith ===================== */
+
+/* 81. every landing splashes the tiles beside it; the picture is in where you land */
+{ id:'canvas', was:[72], start:1.5,
+  build(){ Gd(0,5); S.cv = []; for (let c = 6; c <= 12; c++) S.cv.push(R('g', c, c, 14, 16, {paint:0, fl:0})); Gd(13,29);
+    S.target = [1,0,1,1,1,0,0];
+    S.door = Door(27,14,{inert:true}); },
+  onLand(){ const i = Math.floor(pcx()/T) - 6; if (i < 0 || i > 6) return;
+    for (const j of [i - 1, i, i + 1]) if (j >= 0 && j < 7) { S.cv[j].paint ^= 1; S.cv[j].fl = 14; } },
+  update(){ for (const t of S.cv) if (t.fl) t.fl--;
+    const ok = S.cv.every((t, i) => t.paint === S.target[i]); S.door.inert = !ok; S.door.open = ok; },
+  draw(){ for (const t of S.cv) { ctx.fillStyle = t.paint ? C.red : C.white; ctx.fillRect(t.x + 2, t.y + 2, t.w - 4, 12); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.strokeRect(t.x + 2, t.y + 2, t.w - 4, 12);
+      if (t.fl) { ctx.fillStyle = `rgba(207,62,50,${t.fl/28})`; for (let k = 0; k < 5; k++) ctx.fillRect(t.x + 4 + k*5, t.y - 4 - (k % 2)*3, 3, 3); } }
+    // the picture on the wall
+    const fx = 17*T, fy = 6*T; ctx.fillStyle = C.gold; ctx.fillRect(fx - 8, fy - 8, 7*18 + 12, 36); ctx.fillStyle = C.white; ctx.fillRect(fx - 2, fy - 2, 7*18, 24);
+    S.target.forEach((v, i) => { ctx.fillStyle = v ? C.red : C.white; ctx.fillRect(fx + i*18, fy, 16, 20); ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.strokeRect(fx + i*18, fy, 16, 20); });
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(fx + 20, fy - 8); ctx.lineTo(fx + 56, fy - 40); ctx.lineTo(fx + 92, fy - 8); ctx.stroke(); } },
+
+/* 82. a round: your voice comes back a little after you, and stands where you stood */
+{ id:'round', was:[75], start:2,
+  build(){ Gd(0,29); E({t:'g', x:18*T, y:336, w:4*T, h:GY - 336, solid:true}); E({t:'g', x:22*T, y:224, w:8*T, h:GY - 224, solid:true}); Door(27, 224/T); S.rec = [];
+    S.echo = E({t:'echo', x:-99, y:-99, w:PW, h:PH, solid:true, oneway:true, cond:() => S.held}); S.held = false; },
+  update(){ S.rec.push([P.x, P.y]); if (S.rec.length > 200) S.rec.shift();
+    const n = S.rec.length, p = S.rec[n - 91], e = S.echo; if (p) { e.x = p[0]; e.y = p[1]; } else { e.x = -99; e.y = -99; }
+    // it is solid only while it holds a note: where you stood still, it stands still
+    S.held = !!p && [92, 98, 104, 110, 116, 122].every(k => { const q = S.rec[n - k]; return q && Math.abs(q[0] - p[0]) < 0.5 && Math.abs(q[1] - p[1]) < 0.5; }); },
+  draw(){ const e = S.echo; if (e.x < 0) return; ctx.globalAlpha = S.held ? 0.7 : 0.3; drawPlayerAt(e.x, e.y, PW, PH, 1, S.held ? C.grid2 : C.paper, C.ink2, false); ctx.globalAlpha = 1;
+    ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(e.x + 7, e.y - 6, 3, 0, 7); ctx.fill(); ctx.fillRect(e.x + 9, e.y - 16, 1.5, 10); } },
+
+/* 83. the dancer faces you; then it turns its back */
+{ id:'dancer', was:[74], start:1.5,
+  build(){ Gd(0,29); S.my = [4, 6, 8].map(c => ({x:c*T})); S.dn = [20, 22, 24].map(c => ({x:c*T}));
+    // facing you, its steps are mirrored in yours; with its back to you, they are the same
+    S.ph = 0; S.seqs = [[0, 2, 1], [1, 0, 2]]; S.got = 0; S.dt = 0; S.dx = 22*T; S.turn = false; S.pit = null;
+    S.door = Door(14,14,{inert:true}); },
+  onLand(){ if (!S.turn || S.pit) return; const i = S.my.findIndex(p => Math.abs(pcx() - (p.x + 16)) < 14); if (i < 0) return;
+    const j = S.seqs[S.ph][S.got], want = S.ph === 0 ? 2 - j : j;
+    if (i === want) { sparkle(S.my[i].x + 16, GY - 4); if (++S.got === 3) { S.got = 0; S.turn = false; S.dt = 0; if (++S.ph === 2) { S.door.inert = false; S.door.open = true; } } }
+    else { S.pit = S.my[i]; const c = Math.floor(S.pit.x/T); for (const e of ents) if (e.t === 'g' && e.alive && e.x <= S.pit.x && e.x + e.w > S.pit.x) { e.alive = false; Gd(0, c - 2); Gd(c + 2, 29); } shake = 8; } },
+  update(){ if (S.ph >= 2) return; S.dt++;
+    // it shows the dance, then waits for you to dance it back
+    if (!S.turn) { const k = Math.floor(S.dt/50); if (k < 3) { const tp = S.dn[S.seqs[S.ph][k]]; S.dx += clamp(tp.x - S.dx, -6, 6); S.hop = (S.dt % 50) < 14; } else { S.turn = true; S.dx += clamp(22*T - S.dx, -4, 4); S.hop = false; } } },
+  draw(){ for (const [i, p] of S.my.entries()) { ctx.fillStyle = S.turn ? C.gold : C.grid2; ctx.fillRect(p.x + 2, GY - 4, T - 4, 5); }
+    for (const p of S.dn) { ctx.fillStyle = C.gold; ctx.fillRect(p.x + 2, GY - 4, T - 4, 5); }
+    for (let i = 0; i < 3; i++) { ctx.fillStyle = i < S.got ? C.gold : C.grid2; ctx.beginPath(); ctx.arc(14*T + 16 + (i - 1)*10, GY - 70, 3.5, 0, 7); ctx.fill(); }
+    if (S.ph < 2) { const bob = S.hop ? 10 : Math.abs(Math.sin(S.dt*0.08))*2, face = S.ph === 0 ? -1 : 1; drawPlayerAt(S.dx + 5, GY - 28 - bob, PW, PH, face, C.gold, C.ink, false);
+      if (S.turn) { ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(S.dx + 16, GY - 48, 3, 0, 7); ctx.fill(); } } } },
+
+/* 84. when the curtain falls, the stage is changed; the curtain shows what it will be */
+{ id:'curtain', was:[79], start:1,
+  build(){ Gd(0,3); R('g',4,25,16,16); Sp(4,25,15,'up'); Gd(26,29); Door(27,14); R('b',10,11,12,12); R('b',18,19,11,11);
+    S.A = [[5,7,13],[13,15,11]].map(([a, b, r]) => R('b',a,b,r,r,{prop:'A', cond:() => S.act === 'A'}));
+    S.B = [[6,8,11],[14,16,13],[22,24,10]].map(([a, b, r]) => R('b',a,b,r,r,{prop:'B', cond:() => S.act === 'B'})); S.t = 0; S.act = 'A'; },
+  cur(){ const t = S.t % 300; return t < 220 ? 0 : t < 245 ? (t - 220)/25 : t < 285 ? 1 : 1 - (t - 285)/15; },
+  update(){ S.t++; if (S.t % 300 === 265) S.act = S.act === 'A' ? 'B' : 'A'; },
+  draw(){ for (const e of ents) if (e.prop && isSolid(e)) { ctx.strokeStyle = C.door; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(e.x + 8, e.y + e.h); ctx.lineTo(e.x + 4, e.y + e.h + 18); ctx.moveTo(e.x + e.w - 8, e.y + e.h); ctx.lineTo(e.x + e.w - 4, e.y + e.h + 18); ctx.stroke(); ctx.fillStyle = C.door; ctx.fillRect(e.x, e.y, e.w, 5); } },
+  drawOver(){ const k = this.cur(); if (k > 0) { const w = W/2*k;
+      ctx.fillStyle = '#8E2A22'; ctx.fillRect(camX, 0, w, H); ctx.fillRect(camX + W - w, 0, w, H); ctx.strokeStyle = '#5E1B16'; ctx.lineWidth = 3;
+      for (let x = 16; x < w; x += 28) { ctx.beginPath(); ctx.moveTo(camX + x, 0); ctx.lineTo(camX + x, H); ctx.stroke(); ctx.beginPath(); ctx.moveTo(camX + W - x, 0); ctx.lineTo(camX + W - x, H); ctx.stroke(); }
+      // the curtain is painted with the next scene
+      if (k > 0.6) { const next = S.act === 'A' && (S.t % 300) < 265 || S.act === 'B' && (S.t % 300) >= 265 ? S.B : S.A; ctx.globalAlpha = (k - 0.6)/0.4*0.8; ctx.fillStyle = C.gold;
+        for (const e of next) ctx.fillRect(e.x, e.y + 2, e.w, 6); ctx.fillRect(10*T, 12*T + 2, 2*T, 6); ctx.fillRect(18*T, 11*T + 2, 2*T, 6); ctx.globalAlpha = 1; } }
+    ctx.fillStyle = '#8E2A22'; ctx.fillRect(camX, 0, W, 18); ctx.fillStyle = C.gold; for (let x = 0; x < W; x += 24) { ctx.beginPath(); ctx.arc(camX + x + 12, 18, 7, 0, Math.PI); ctx.fill(); } } },
+
+/* 85. the only way through the veil is to die in it; then take out the stone that holds it all, and fall with it */
+{ id:'keystone', was:[83, 76], start:1.5,
+  build(){ Gd(0,9); Gd(24,29); R('g',10,23,16,16); Sp(10,14,15,'up'); Sp(19,23,15,'up'); Door(16.5,16);
+    S.veil = {x:6*T, w:20};
+    S.deck = []; for (let c = 10; c <= 23; c++) S.deck.push(E({t:'b', x:c*T, y:GY, w:T, h:12, solid:true, deck:true, key:c === 16 || c === 17, c})); S.fallT = null;
+    if (M.rise) { P.x = M.rise.x; P.y = M.rise.y; P.vy = 0; M.rise = null; } },
+  update(){ const v = S.veil;
+    // the veil kills whoever enters it, and they rise on the far side
+    if (ov(pbox(2), {x:v.x, y:0, w:v.w, h:GY})) { M.rise = {x: P.face > 0 ? v.x + v.w + 8 : v.x - PW - 8, y: P.on ? P.y : P.y - 4}; return die('veil'); }
+    if (S.fallT == null && P.on && P.stand && P.stand.key) S.fallT = 0;
+    if (S.fallT != null) { S.fallT++; for (const d of S.deck) { const delay = 30 + Math.abs(d.c - 16.5)*6; d.shk = S.fallT > delay - 18 && S.fallT < delay; if (S.fallT === Math.round(delay)) d.fall = 1; } } },
+  drawBack(){ const v = S.veil; for (let i = 0; i < 6; i++) { ctx.fillStyle = `rgba(207,62,50,${0.08 + 0.05*Math.sin(frame*0.1 + i)})`; ctx.fillRect(v.x - 6 + i*5, 0, 6, GY); } ctx.fillStyle = C.red; ctx.fillRect(v.x + v.w/2 - 1, 0, 2, GY);
+    ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(17*T, GY + 150, 7.6*T, Math.PI*1.12, Math.PI*1.88); ctx.stroke(); },
+  draw(){ for (const d of S.deck) if (d.key && d.alive && !d.fall) { ctx.fillStyle = C.gold; ctx.fillRect(d.x + 2, d.y + 2, d.w - 4, d.h - 4); } } },
+
+/* 86. it holds whoever walks off the edge and keeps walking */
+{ id:'leap', start:1.5,
+  build(){ Gd(0,6); Gd(23,29); Door(27,14); S.br = E({t:'b', x:7*T, y:GY, w:16*T, h:12, solid:true, cond:() => S.faith}); S.faith = false; S.st = 0; S.prints = []; S.fe = {x:15*T, y:-20, t:0}; },
+  onJump(){ S.faith = false; },
+  update(){ const pc = pcx(), over = pc > 7*T && pc < 23*T;
+    // you are held while you walked on from the edge, and only while you keep going; a jump, or a stop, and it is not there for you
+    // faith is a decision: stand at the edge a moment first; whoever runs off blind finds nothing
+    if (!over && P.on) { S.st = 0; S.edgeT = pc > 6*T && Math.abs(P.vx) < 0.3 ? (S.edgeT || 0) + 1 : (pc > 6*T ? S.edgeT || 0 : 0); S.faith = S.edgeT > 30; }
+    else if (S.faith) { S.st = Math.abs(P.vx) < 1 ? S.st + 1 : 0; if (S.st > 8) S.faith = false; }
+    if (S.faith && P.on && over && frame % 6 === 0) S.prints.push({x:pc, t:120});
+    for (const p of S.prints) p.t--; S.prints = S.prints.filter(p => p.t > 0);
+    // a feather comes down every so often, and rests on what you cannot see
+    const f = S.fe; if (f.y < GY - 6) { f.y += 0.9; f.x += Math.sin(frame*0.05)*0.6; } else if (++f.t > 150) { f.y = -20; f.t = 0; f.x = (9 + (frame % 11))*T; } },
+  alpha(e){ return e === S.br ? 0 : 1; },
+  draw(){ for (const p of S.prints) { ctx.fillStyle = `rgba(226,166,42,${p.t/120})`; ctx.fillRect(p.x - 6, GY - 2, 12, 3); }
+    if (S.faith && pcx() < 7*T) { ctx.fillStyle = `rgba(226,166,42,${0.3 + 0.2*Math.sin(frame*0.1)})`; ctx.fillRect(7*T, GY, T, 4); }
+    const f = S.fe; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(f.x, f.y, 7, 2.5, -0.3, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(f.x - 8, f.y + 3); ctx.lineTo(f.x + 7, f.y - 2); ctx.stroke(); } },
+
+/* 87. to pass through walls, leave your body; to come back, find room for it */
+{ id:'spirit', was:[82], start:2,
+  build(){ Gd(0,29); R('b',9,9,0,13); R('b',15,17,0,13); R('b',23,23,0,13); Sp(18,21,13,'up'); Door(27,14); S.sp = 0; S.still = 0; S.ghost = false; },
+  update(){ if (!S.ghost) { S.still = still() && !keys.left && !keys.right ? S.still + 1 : 0; if (S.still > 60) { S.ghost = true; S.sp = 140; S.still = 0; for (const e of ents) if (e.t === 'b' || e.t === 's') { e.ghost = true; if (e.t === 's') e.kill = false; } } return; }
+    if (--S.sp <= 0) { S.ghost = false; for (const e of ents) if (e.t === 'b' || e.t === 's') { e.ghost = false; if (e.t === 's') e.kill = true; }
+      // your body comes back wherever you are: there had better be room for it
+      if (ents.some(e => e.t === 'b' && e.alive && ov(pbox(2), e))) return die('wall');
+      for (const e of ents) if (e.t === 's' && ov(pbox(3), e)) return die('spike'); } },
+  input(ax){ return {ax, acc:P.on ? 0.9 : 0.6, max: S.ghost ? 3 : 4.4}; },
+  drawPlayer(dx, dy, dw, dh){ if (S.ghost) { ctx.globalAlpha = 0.45 + 0.2*Math.sin(frame*0.3); drawPlayerAt(dx, dy, dw, dh, P.face, '#E8E2F4', C.soft, false); ctx.globalAlpha = 1; ctx.fillStyle = C.grid2; ctx.fillRect(P.x - 2, P.y - 9, PW + 4, 4); ctx.fillStyle = S.sp < 30 ? C.red : C.soft; ctx.fillRect(P.x - 2, P.y - 9, (PW + 4)*S.sp/140, 4); }
+    else { drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false); if (S.still > 10) { ctx.globalAlpha = S.still/60*0.6; drawPlayerAt(dx, dy - S.still/3, dw, dh, P.face, '#E8E2F4', C.soft, false); ctx.globalAlpha = 1; } } } },
+
+/* 88. the gate is narrow; whatever you hold makes you wider; give it away */
+{ id:'needle', was:[85], start:1,
+  build(){ Gd(0,29); R('b',24,24,0,12); S.cs = []; for (let c = 5; c <= 19; c += 2) for (const y of [GY - 20, GY - 92]) S.cs.push({x:c*T + 8, y, vx:0, vy:0, alive:true}); Door(27,14);
+    S.coins = 0; S.beg = {x:21*T, t:0}; },
+  update(){ for (const c of S.cs) { if (!c.alive) continue; const dx = pcx() - (c.x + 8), dy = P.y + 14 - (c.y + 9), d = Math.hypot(dx, dy); if (d < 56) { c.vx += dx/d*0.4; c.vy += dy/d*0.4; } c.vx *= 0.92; c.vy *= 0.92; c.x += c.vx; c.y += c.vy;
+      if (ov(pbox(), {x:c.x, y:c.y, w:16, h:18})) { c.alive = false; S.coins++; sparkle(c.x + 8, c.y + 9); } }
+    // the beggar takes a coin at a time from whoever stands by him
+    const b = S.beg; if (S.coins > 0 && P.on && Math.abs(pcx() - (b.x + 12)) < 30 && Math.abs(P.vx) < 0.5) { if (++b.t > 30) { b.t = 0; S.coins--; b.thanks = 20; } } else b.t = 0; if (b.thanks) b.thanks--;
+    const gx = 24*T; if (S.coins > 0 && P.x + PW + S.coins*3 > gx && P.x < gx + T && P.y + PH > 13*T) { P.x = gx - PW - S.coins*3; P.vx = 0; } },
+  draw(){ for (const c of S.cs) if (c.alive) drawCoin(c.x, c.y);
+    const b = S.beg; drawCreature(b.x, GY - 25, false); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x - 4, GY - 12, 6, 0, Math.PI); ctx.stroke(); if (b.thanks) sparkle(b.x + 12, GY - 30);
+    if (S.coins && state === 'play') { ctx.fillStyle = C.gold; for (let i = 0; i < S.coins; i++) { ctx.beginPath(); ctx.arc(P.x + PW + 2 + i*3, P.y + 14, 3, 0, 7); ctx.fill(); } } } },
+
+/* 89. the sea opens for whoever keeps going, and closes on whoever follows; stand only on the rock */
+{ id:'sea', was:[86], start:2, w:40,
+  build(){ Gd(0,39); R('b',15,16,13,13); Door(37,14);
+    S.sea = {x0:7*T, x1:34*T, top:7*T}; S.n = Math.ceil((S.sea.x1 - S.sea.x0)/4); S.op = new Array(S.n).fill(0); S.ch = {x:-130, go:false, alive:true, sink:0, rot:0}; S.stop = 0; },
+  wet(x, w){ const s = S.sea; if (x + w <= s.x0 || x >= s.x1) return false;
+    const a = Math.max(0, Math.floor((x - s.x0)/4)), b = Math.min(S.n - 1, Math.floor((x + w - 1 - s.x0)/4));
+    for (let i = a; i <= b; i++) if (S.op[i] <= 0) return true; return false; },
+  update(){ const s = S.sea, ch = S.ch, pc = pcx();
+    // it parts ahead of you while you keep going, and stays open behind you a while; stop, and all of it closes at once
+    if (Math.abs(P.vx) >= 2) { S.stop = 0; const look = P.vx*28, a = pc - 18 + Math.min(0, look), b = pc + 18 + Math.max(0, look);
+      for (let i = 0; i < S.n; i++) { const x = s.x0 + i*4 + 2; if (x > a && x < b) S.op[i] = Math.max(S.op[i], 120); } }
+    else if (++S.stop > 12) S.op.fill(0);
+    for (let i = 0; i < S.n; i++) if (S.op[i] > 0) S.op[i]--;
+    // the rock stands above the water
+    const onRock = P.on && P.stand && P.stand.t === 'b';
+    if (!onRock && P.y + PH > s.top + 4 && this.wet(P.x + 3, PW - 6)) return die('drown');
+    // the chariot comes after you once you are in
+    if (!ch.go && pc > s.x0) ch.go = true;
+    if (ch.alive && ch.go) {
+      if (ch.sink) { ch.sink++; if (ch.sink > 60) ch.alive = false; }
+      else { ch.x += 6; ch.rot += 0.3;
+        if (ch.x + 40 > s.x0 + 4 && ch.x < s.x1 && this.wet(ch.x + 6, 30)) ch.sink = 1;
+        if (ov(pbox(3), {x:ch.x + 2, y:GY - 70, w:38, h:70})) return die('chariot'); } } },
+  drawBack(){ const s = S.sea;
+    for (let i = 0; i < S.n; i++) { const o = S.op[i], x = s.x0 + i*4; if (o > 6) continue;
+      const h = o <= 0 ? GY + 40 - s.top : (GY + 40 - s.top)*(1 - o/6);
+      ctx.fillStyle = 'rgba(70,110,170,.30)'; ctx.fillRect(x, s.top, 4, h);
+      if (o <= 0) { ctx.fillStyle = 'rgba(30,43,71,.45)'; ctx.fillRect(x, s.top + Math.sin(x*0.08 + frame*0.08)*2, 4, 2); } } },
+  draw(){ const ch = S.ch; if (!ch.alive) return; const y = GY - 34 + ch.sink*0.8;
+    ctx.globalAlpha = ch.sink ? Math.max(0, 1 - ch.sink/60) : 1;
+    ctx.fillStyle = C.red; ctx.fillRect(ch.x, y + 4, 34, 18); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.strokeRect(ch.x, y + 4, 34, 18);
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(ch.x + 34, y + 6); ctx.lineTo(ch.x + 44, y - 4); ctx.lineTo(ch.x + 46, y + 4); ctx.lineTo(ch.x + 38, y + 14); ctx.fill();
+    for (const wx of [ch.x + 8, ch.x + 26]) { ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(wx, y + 26, 8, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(wx + Math.cos(ch.rot)*8, y + 26 + Math.sin(ch.rot)*8); ctx.lineTo(wx - Math.cos(ch.rot)*8, y + 26 - Math.sin(ch.rot)*8); ctx.stroke(); }
+    // its rider, spear up
+    ctx.fillStyle = C.ink; ctx.fillRect(ch.x + 12, y - 22, 12, 26); ctx.beginPath(); ctx.arc(ch.x + 18, y - 28, 7, 0, 7); ctx.fill(); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ch.x + 26, y + 4); ctx.lineTo(ch.x + 40, y - 36); ctx.stroke();
+    ctx.globalAlpha = 1; } },
+
+/* 90. nothing falls while the Eye laughs, and no joke is funny twice */
+{ id:'joke', was:[80], start:1.5, w:50,
+  build(){ Gd(0,8); Gd(16,24); Gd(32,39); Gd(47,49); Door(48,14);
+    // while the Eye laughs, nobody falls: whoever walks off an edge walks on, until it opens its eye and sees them
+    S.air = [[9,15],[25,31],[40,46]].map(([a, b]) => E({t:'g', x:a*T, y:GY, w:(b - a + 1)*T, h:16, solid:true, air:true, cond:() => S.laugh > 0 || S.hang > 0}));
+    S.gags = [['peel', 4.5], ['rake', 7], ['rake', 22], ['pot', 24], ['peel', 37]].map(([k, c]) => ({k, x:c*T, alive:true, a:0, t:0, fy:null, vy:0}));
+    S.known = {}; S.laugh = 0; S.hang = 0; S.meh = 0; S.down = 0; S.dk = null; S.dir = 1; },
+  // a pratfall: the Eye laughs at a kind of joke the first time only
+  prat(k){ if (!S.known[k]) { S.known[k] = true; S.laugh = 140; S.hang = 0; S.meh = 0; } else if (S.laugh <= 0) S.meh = 80; },
+  update(){ const pc = pcx(), real = P.on && P.stand && !P.stand.air, feet = {x:P.x + 3, y:P.y + PH - 2, w:PW - 6, h:4};
+    for (const g of S.gags) { if (!g.alive) { if (g.k === 'rake' && g.a > 0) g.a = Math.max(0, g.a - 0.04); continue; }
+      if (g.k === 'peel' && real && !S.down && ov(feet, {x:g.x, y:GY - 6, w:20, h:8})) {
+        // a peel takes your feet: you slide on your back the way you were going
+        g.alive = false; S.dir = Math.sign(P.vx) || P.face; S.down = 50; S.dk = 'slip'; dust(g.x + 10, GY); this.prat('peel'); }
+      else if (g.k === 'rake' && real && !S.down && ov(feet, {x:g.x, y:GY - 8, w:14, h:8})) {
+        // step on the teeth and the handle comes up to meet your face
+        g.alive = false; g.a = 1; S.down = 46; S.dk = 'smack'; P.vx = -2.6*P.face; shake = 5; this.prat('rake'); }
+      else if (g.k === 'pot') {
+        if (g.fy == null) { if (real && Math.abs(pc - g.x) < 14 && Math.abs(P.vx) < 0.5 && !S.down) { if (++g.t > 25) { g.fy = GY - 110; g.vy = 0; } } else g.t = Math.max(0, g.t - 2); }
+        else { g.vy += 0.8; g.fy += g.vy;
+          // it drops on whoever stands under it
+          if (Math.abs(pc - g.x) < 16 && g.fy + 16 >= P.y && P.on) { g.alive = false; S.down = 40; S.dk = 'daze'; shake = 6; sparkle(g.x, P.y); this.prat('pot'); }
+          else if (g.fy + 16 >= GY) { g.alive = false; dust(g.x, GY); } } } }
+    if (S.down > 0) { S.down--; P.stun = Math.max(P.stun, 2);
+      if (S.dk === 'slip' && S.down > 24) P.vx = S.dir*4.4/0.7; }
+    if (S.laugh > 0 && --S.laugh === 0) S.hang = 24;
+    else if (S.hang > 0) { S.hang--; }
+    // the moment it looks again, whoever stands on nothing looks back at it, and drops
+    if (S.hang > 0 && P.on && P.stand && P.stand.air) P.stun = Math.max(P.stun, 2);
+    if (S.meh > 0) S.meh--; },
+  alpha(e){ return e.air ? 0 : 1; },
+  gagAt(g, known){ const x = g.x;
+    ctx.globalAlpha = known ? 0.35 : 1; const ink = known ? C.ink2 : C.ink;
+    if (g.k === 'peel' && g.alive) { ctx.fillStyle = known ? C.grid2 : C.gold; ctx.strokeStyle = ink; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(x + 10, GY - 4, 9, 4, 0, 0, 7); ctx.fill(); ctx.stroke();
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + 10, GY - 6); ctx.quadraticCurveTo(x + 10 + s*10, GY - 12, x + 10 + s*15, GY - 3); ctx.lineTo(x + 10 + s*8, GY - 4); ctx.closePath(); ctx.fill(); ctx.stroke(); } }
+    if (g.k === 'rake' && (g.alive || g.a > 0)) { const ang = -g.a*Math.PI*0.48, hx = x + 7, hy = GY - 3; if (!g.alive) ctx.globalAlpha = g.a;
+      ctx.strokeStyle = known ? C.ink2 : '#8A5A2B'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + Math.cos(ang)*50, hy + Math.sin(ang)*50); ctx.stroke();
+      ctx.strokeStyle = ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x - 1, GY - 2); ctx.lineTo(x + 15, GY - 2); for (let i = 0; i < 5; i++) { ctx.moveTo(x + 1 + i*3.2, GY - 2); ctx.lineTo(x + 1 + i*3.2, GY - 11); } ctx.stroke(); }
+    if (g.k === 'pot') { ctx.strokeStyle = ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x + 22, GY); ctx.lineTo(x + 22, GY - 94); ctx.lineTo(x - 18, GY - 94); ctx.stroke();
+      if (g.alive) { const y = g.fy ?? GY - 110, wob = g.fy == null ? Math.sin(frame*0.6)*g.t/25*0.25 : 0;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(wob);
+        ctx.fillStyle = '#4E8A4A'; for (const s of [-1, 0, 1]) { ctx.beginPath(); ctx.ellipse(s*5, -4, 4, 8, s*0.5, 0, 7); ctx.fill(); }
+        ctx.fillStyle = known ? C.grid2 : '#C0613A'; ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.lineTo(6, 16); ctx.lineTo(-6, 16); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); } }
+    ctx.globalAlpha = 1; },
+  draw(){ for (const g of S.gags) this.gagAt(g, S.known[g.k] && g.alive);
+    // the audience
+    const cx = camX + W/2, cy = 56, r = 20;
+    if (S.laugh > 0) { const x = cx + Math.sin(frame*1.1)*2, y = cy - Math.abs(Math.sin(frame*0.45))*5;
+      // squeezed shut with laughing, and crying with it
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - r*1.4, y + 6); ctx.quadraticCurveTo(x, y - r*1.3, x + r*1.4, y + 6); ctx.stroke();
+      ctx.lineWidth = 2.5; for (const s of [-1, -0.35, 0.35, 1]) { const ax = x + s*r*0.9, ay = y - r*0.45 + Math.abs(s)*r*0.35; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + s*5, ay - 7); ctx.stroke(); } ctx.lineCap = 'butt';
+      ctx.fillStyle = '#7FB2E5'; for (const s of [-1, 1]) { const ty = y + 8 + (frame*1.2 % 26); ctx.beginPath(); ctx.arc(x + s*r*1.45, ty, 3, 0, 7); ctx.fill(); }
+      ctx.strokeStyle = C.red; ctx.lineWidth = 2; const k = (frame % 20)/20;
+      for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { const rr = r*1.9 + i*8 + k*8; ctx.globalAlpha = Math.max(0, 1 - (i + k)/3); ctx.beginPath(); ctx.arc(x, y, rr, s > 0 ? -0.5 : Math.PI - 0.5, s > 0 ? 0.5 : Math.PI + 0.5); ctx.stroke(); }
+      ctx.globalAlpha = 1; }
+    else if (S.meh > 0) drawEye(cx, cy, r, cx - 90, cy - 60, 0.55);
+    else { let tx = pcx(), ty = P.y; const near = S.gags.find(g => g.alive && S.known[g.k] && Math.abs(g.x - pcx()) < 110);
+      if (near && S.hang <= 0) { tx = near.x + 10; ty = GY; } drawEye(cx, cy, r, tx, ty, 0); } },
+  drawPlayer(dx, dy, dw, dh){
+    if (S.down > 0 && S.dk !== 'daze') { const dir = S.dk === 'slip' ? S.dir : P.face; ctx.save(); ctx.translate(P.x + PW/2, P.y + PH - PW/2); ctx.rotate(-dir*Math.PI/2);
+      drawPlayerAt(-PW/2, -PH + PW/2, PW, PH, P.face, C.white, C.ink, false); ctx.restore(); return; }
+    if (S.down > 0) { drawPlayerAt(dx, dy + 6, dw, dh - 6, P.face, C.white, C.ink, false);
+      ctx.fillStyle = C.gold; for (let i = 0; i < 3; i++) { const a = frame*0.15 + i*2.1; ctx.beginPath(); ctx.arc(P.x + PW/2 + Math.cos(a)*14, P.y - 2 + Math.sin(a)*4, 3, 0, 7); ctx.fill(); } return; }
+    drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false);
+    if (S.hang > 0 && P.stand && P.stand.air) { ctx.fillStyle = '#7FB2E5'; ctx.beginPath(); ctx.arc(P.x + PW + 5, P.y + 6 + (24 - S.hang)*0.3, 3, 0, 7); ctx.fill(); }
+    if (S.laugh > 0 && P.on && P.stand && P.stand.air && Math.abs(P.vx) > 1 && frame % 4 === 0) parts.push({x:pcx(), y:GY, vx:-P.vx*0.3, vy:-0.3, life:14, r:2}); } }
 ];
 
 // ground that remembers your feet and grows thorns there

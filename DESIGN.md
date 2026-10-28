@@ -262,27 +262,28 @@ The world is full of others: a law, a watchman, guns, a queue, liars, and the pe
 
 ## IX. Art and faith (81–90)
 
-The first half is art. You paint, keep a beat, copy a dancer and act on a stage. The second half is faith: the way through looks like it can't work.
+The first half is art: you paint, sing a round with yourself, copy a dancer and act on a stage. The second half is faith: the way through looks like it can't work.
 
-- walk off the edge;
 - die in the veil;
+- walk off the edge;
 - leave your body;
+- give away what came to you;
 - keep going into the sea.
 
-The chapter ends on a joke.
+The chapter ends on a joke: the Eye laughs, and nothing falls while it laughs.
 
 | # | Level | What is in it | The idea you need | Without it |
 | --- | --- | --- | --- | --- |
-| 81 | **Canvas** | Every canvas tile you step on flips its paint. The door opens only when the floor matches the framed picture. | Paint by stepping, leave out by jumping: cross so each tile is touched the right number of times. | Walking straight across. |
-| 82 | **Beat** | Platforms appear on a four-count. When you stand on the third, the beat holds its breath, and the fourth comes late. | Wait on the third through the rest. | Jumping on the count. |
-| 83 | **Dancer** | Across the stage, a dancer facing you steps on coloured pads in an order. A wrong step opens a pit. | Copy the dance as a mirror: its left is your right. | Copying it straight. |
-| 84 | **Keystone** | Step on the keystone and the arch falls from the middle outward; the door is below, where it falls. On the way, a veil kills whoever enters it, and the dead rise on its far side. | Ride the arch down, and die in the veil to cross it. | Running off the arch; avoiding the veil. |
-| 85 | **Curtain** | When the curtain falls, the set changes, and platforms come and go with it. | Remember both sets, and stand where the next one has ground when the curtain closes. | Standing where this set has ground. |
-| 86 | **Leap of faith** | The bridge appears only under someone who walks off the edge. A jump gets nothing, and stopping on it makes it vanish. | Walk off, and keep walking. | Jumping the gap; stopping to look. |
-| 87 | **Spirit** | Stand still and you leave your body: for a few seconds you pass through walls and spikes, then you must be somewhere with room for your body. Two plates need the two lives you were before. | Leave your body to pass the walls; let your last two lives hold the plates. | Coming back inside a wall; doing it in one life. |
-| 88 | **Narrow gate** | Coins drift toward you and stick, and each one makes you wider. The gate fits only someone holding nothing. | Keep the coins off you. | Picking up what comes to you. |
-| 89 | **Red sea** | The sea parts ahead of you only while you keep going, and a chariot follows. | Keep going without stopping, and let the chariot follow you in. | Stopping in the sea; waiting for the chariot to pass. |
-| 90 | **Joke** | A banana peel, a boxing glove, a door that bonks you back, a piano that falls where you will be, a welcome mat over a hole. | Every gag is telegraphed: walk around each one. | Walking into the punchline. |
+| 81 | **Canvas** | Every landing flips the paint of the tile you land on and of both its neighbours. The door opens when the floor matches the framed picture. | Land where the splashes add up to the picture, not on the red tiles of the picture. | Walking across; landing on what should be red. |
+| 82 | **Round** | Your echo walks a moment behind you, and it is solid only while it holds still. The ledges are too high to jump. | Stand where you need a step, step back, and climb onto your echo as it holds the note. | Jumping at the ledge; waiting at its foot. |
+| 83 | **Dancer** | Across the stage a dancer steps on pads in an order, and you must repeat it. A wrong step opens a pit. | While it faces you it is a mirror: its left is your right. When it turns its back, copy it as it is. | Copying it as you see it; mirroring every time. |
+| 84 | **Curtain** | The set changes behind the curtain every few seconds, and the curtain shows the next set in gold. Two platforms never change. | Go while the set is up, and wait out each change on a platform that stays. | Running and jumping; waiting on the set as the curtain falls. |
+| 85 | **Keystone** | A veil kills whoever enters it, and the dead rise beyond it. Past it, an arch over a pit; the door is below. Step on the keystone and the arch falls from the middle outward. | Die in the veil to cross it; then stand on the keystone and ride it down. | Keeping away from the veil; running across the arch; stepping off when it shakes. |
+| 86 | **Leap** | The bridge is there only for whoever stops at the edge first, then walks off and keeps walking. A jump gets nothing, and stopping on it, it's gone. A feather rests on it now and then. | Stand at the edge a moment, then walk off and keep walking. | Jumping the gap; running off blind; stopping to look. |
+| 87 | **Spirit** | Stand still and you leave your body: for a few seconds you pass through walls and spikes, then your body comes back wherever you are. | Leave it twice: once between the walls, once past the thick one, and come back where there is room. | Running; one long trip; coming back inside a wall. |
+| 88 | **Needle** | Coins drift toward you and stick, and each one makes you wider. The gate fits only someone holding nothing. A beggar takes a coin at a time from whoever stands by him. | Stand by the beggar until he has taken it all. | Walking to the gate with what came to you. |
+| 89 | **Sea** | The sea parts ahead of whoever keeps going, and closes at once on whoever stops. Once you are in, a chariot comes after you. A rock stands above the water. | Run in, and stop only on the rock: the sea closes on the chariot. Then run on. | Running straight across (the chariot catches you); stopping in the sea. |
+| 90 | **Joke** | The Eye laughs at a pratfall (a peel, a rake, a falling pot), and while it laughs nothing falls: you walk on air until it opens its eye and sees you. It laughs at each kind of joke once. Three pits: a peel and a rake at the first, a rake and a pot at the second, only a peel at the last. | Work back from the end: keep the peel for the last pit, so take the rake at the first and the pot at the second. | Slipping on the first peel; taking the rake twice; avoiding every joke. |
 
 ## X. Reason (91–100)
 
