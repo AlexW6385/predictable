@@ -1950,7 +1950,109 @@ const LV = [
       ctx.fillStyle = C.gold; for (let i = 0; i < 3; i++) { const a = frame*0.15 + i*2.1; ctx.beginPath(); ctx.arc(P.x + PW/2 + Math.cos(a)*14, P.y - 2 + Math.sin(a)*4, 3, 0, 7); ctx.fill(); } return; }
     drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false);
     if (S.hang > 0 && P.stand && P.stand.air) { ctx.fillStyle = '#7FB2E5'; ctx.beginPath(); ctx.arc(P.x + PW + 5, P.y + 6 + (24 - S.hang)*0.3, 3, 0, 7); ctx.fill(); }
-    if (S.laugh > 0 && P.on && P.stand && P.stand.air && Math.abs(P.vx) > 1 && frame % 4 === 0) parts.push({x:pcx(), y:GY, vx:-P.vx*0.3, vy:-0.3, life:14, r:2}); } }
+    if (S.laugh > 0 && P.on && P.stand && P.stand.air && Math.abs(P.vx) > 1 && frame % 4 === 0) parts.push({x:pcx(), y:GY, vx:-P.vx*0.3, vy:-0.3, life:14, r:2}); } },
+
+/* 91. half the way, then half of what is left, then half of that */
+{ id:'achilles', was:[90], start:7.6,
+  build(){ Gd(0,29); R('b',1,2,5,13); R('b',3,3,6,13); R('b',4,4,8,13); R('b',5,5,10,13); R('b',6,6,12,13); Door(10.3,14); S.toff = 4.4; S.dc = 10.3*T + 16; },
+  // near the door every step covers less: your speed is what is left of the way, and it runs out just short of the door
+  dist(){ return Math.hypot(pcx() - S.dc, P.y + PH/2 - (GY - 28)); },
+  cap(){ return 4.4*clamp((this.dist() - 40)/190, 0, 1); },
+  input(ax){ return {ax, acc:P.on ? 0.9 : 0.6, max:P.on ? this.cap() : S.toff}; },
+  // in the air you keep the speed you left with, and no more
+  onJump(){ S.toff = Math.min(Math.abs(P.vx), this.cap()); P.vx = clamp(P.vx, -S.toff, S.toff); },
+  update(){ if (P.on) S.toff = Math.min(Math.abs(P.vx), this.cap()); const c = P.on ? this.cap() : S.toff; P.vx = clamp(P.vx, -c, c); },
+  drawBack(){ const dc = S.dc; ctx.strokeStyle = 'rgba(30,43,71,.6)'; ctx.lineWidth = 2.5;
+    for (const s of [-1, 1]) for (let k = 0; k < 7; k++) { const d = 40 + 190/Math.pow(2, k), h = 18 - k*2; ctx.beginPath(); ctx.moveTo(dc + s*d, GY - 1); ctx.lineTo(dc + s*d, GY - 1 - h); ctx.stroke(); }
+    ctx.strokeStyle = C.red; ctx.setLineDash([3, 3]); for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(dc + s*40, GY - 1); ctx.lineTo(dc + s*40, GY - 22); ctx.stroke(); } ctx.setLineDash([]); },
+  draw(){ if (P.on && state === 'play' && Math.abs(P.vx) > 0.05 && frame % 8 === 0) parts.push({x:pcx() - Math.sign(P.vx)*8, y:GY - 1, vx:0, vy:0, life:40, r:1.5, col:'rgba(30,43,71,.5)'}); } },
+
+/* 92. at every instant the arrow is at rest; so is the world, unless you move */
+{ id:'arrow', start:6, wrapX:true,
+  build(){ Gd(0,29); S.door = {x:16*T, y:0, walk:false}; S.wt = 0; S.dt = 0; },
+  wd(d){ return ((d + W/2) % W + W) % W - W/2; },
+  update(){ const pc = pcx(), sp = Math.hypot(P.vx, P.on ? 0 : P.vy);
+    // the world's clock runs only on your moving: stand still and everything stops where it is, the door too
+    S.dt = sp > 0.3 ? Math.min(1, sp/4.4) : 0; const dt = S.dt; S.wt += dt;
+    // the door runs from whoever comes after it, trails a little after whoever leaves, and walks to whoever lets go: but only while time passes
+    const d = S.door, rel = this.wd(d.x + 18 - pc), vx = Math.abs(P.vx); d.walk = dt > 0;
+    if (dt > 0) { if (vx < 0.6) d.x -= Math.sign(rel)*Math.min(Math.abs(rel), 2.6*dt);
+      else if (Math.sign(P.vx) === Math.sign(rel)) d.x += Math.sign(rel)*Math.max(vx, Math.min(1.5*vx, 450 - Math.abs(rel)));
+      else d.x -= Math.sign(rel)*Math.min(Math.abs(rel), 0.38*vx);
+      d.x = ((d.x % W) + W) % W; }
+    if (Math.abs(this.wd(d.x + 18 - pc)) < 14 && P.on) return levelClear(); },
+  drawBack(){ // the clock that runs on your moving
+    const cx = W/2, cy = 64, r = 26, a = S.wt/120*Math.PI*2;
+    ctx.fillStyle = C.white; ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 2; for (let i = 0; i < 12; i++) { const b = i/12*Math.PI*2; ctx.beginPath(); ctx.moveTo(cx + Math.sin(b)*(r - 6), cy - Math.cos(b)*(r - 6)); ctx.lineTo(cx + Math.sin(b)*(r - 2), cy - Math.cos(b)*(r - 2)); ctx.stroke(); }
+    ctx.strokeStyle = S.dt > 0 ? C.red : C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.sin(a)*(r - 8), cy - Math.cos(a)*(r - 8)); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 7); ctx.fill(); ctx.fillRect(cx - 4, cy - r - 8, 8, 6);
+    // and things that hang where they were when time stopped
+    for (let i = 0; i < 7; i++) { const x = 70 + i*137, y = 130 + ((i*53) % 140) + ((S.wt*1.3 + i*40) % 160); ctx.fillStyle = 'rgba(30,43,71,.35)'; ctx.beginPath(); ctx.ellipse(x, y % 300 + 110, 2.5, 7, 0, 0, 7); ctx.fill(); } },
+  draw(){ const d = S.door; for (const ox of [0, -W, W]) drawShy({x:d.x + ox, y:0, walk:d.walk}); } },
+
+/* 93. if you will not move, the world will turn around you */
+{ id:'copernicus', was:[93], start:9.66, sy:478, noEntrance:true,
+  map:['###############','#.......#.....#','#.......#.....#','#.......#..D..#','#........####.#','#.............#','#.............#','#.............#','#.............#','#.............#','#......##....<#','#............<#','#...##.......<#','#.S..........<#','#########..####'],
+  build(){ S.ox = 240; S.oy = 58; S.k = 0; S.st = 0; S.anim = 0; S.spk = [];
+    this.map.forEach((row, r) => [...row].forEach((ch, c) => { const x = S.ox + c*T, y = S.oy + r*T;
+      if (ch === '#') E({t:'b', x, y, w:T, h:T, solid:true});
+      else if ('<>^v'.includes(ch)) S.spk.push({c, r, dir:{'<':'left', '>':'right', '^':'up', 'v':'down'}[ch]});
+      else if (ch === 'D') S.door = {c, r}; })); },
+  rot(c, r){ return [14 - r, c]; },
+  turn(){ const ox = S.ox, oy = S.oy, nd = {up:'right', right:'down', down:'left', left:'up'};
+    for (const e of ents) if (e.t === 'b') { const [c, r] = this.rot(Math.round((e.x - ox)/T), Math.round((e.y - oy)/T)); e.x = ox + c*T; e.y = oy + r*T; }
+    for (const s of S.spk) { [s.c, s.r] = this.rot(s.c, s.r); s.dir = nd[s.dir]; }
+    [S.door.c, S.door.r] = this.rot(S.door.c, S.door.r);
+    const u = pcx() - ox, v = P.y + PH/2 - oy; P.x = ox + (15*T - v) - PW/2; P.y = oy + u - PH/2; P.vx = 0; P.vy = 0; P.on = false;
+    S.k = (S.k + 1) % 4; S.turned = (S.turned || 0) + 1; },
+  spkBox(s){ const x = S.ox + s.c*T, y = S.oy + s.r*T; return s.dir === 'up' ? {x:x+3, y:y+18, w:26, h:14} : s.dir === 'down' ? {x:x+3, y, w:26, h:14} : s.dir === 'left' ? {x:x+18, y:y+3, w:14, h:26} : {x, y:y+3, w:14, h:26}; },
+  update(){
+    if (S.anim) { P.x = S.px; P.y = S.py; P.vx = 0; P.vy = 0; if (++S.anim > 24) { S.anim = 0; S.st = 0; this.turn(); } return; }
+    for (const s of S.spk) if (ov(pbox(3), this.spkBox(s))) return die('spike');
+    const d = S.door; if (S.k === 0 && P.on && ov(pbox(6), {x:S.ox + d.c*T + 4, y:S.oy + d.r*T, w:T - 8, h:T})) return levelClear();
+    S.st = still() ? S.st + 1 : 0;
+    if (S.st > 45) { S.anim = 1; S.px = P.x; S.py = P.y; } },
+  drawBack(){ ctx.fillStyle = 'rgba(30,43,71,.06)'; ctx.fillRect(S.ox, S.oy, 15*T, 15*T);
+    if (S.anim && state === 'play') { const cx = S.ox + 7.5*T, cy = S.oy + 7.5*T, a = (S.anim/24)*(S.anim/24)*Math.PI/2; ctx.save(); S.rotd = true; ctx.translate(cx, cy); ctx.rotate(a); ctx.translate(-cx, -cy); } },
+  draw(){ ctx.fillStyle = C.ink;
+    for (const s of S.spk) { const x = S.ox + s.c*T, y = S.oy + s.r*T; ctx.beginPath();
+      for (let i = 0; i < 2; i++) { const o = 3 + i*13;
+        if (s.dir === 'up') { ctx.moveTo(x + o, y + T); ctx.lineTo(x + o + 6.5, y + 14); ctx.lineTo(x + o + 13, y + T); }
+        else if (s.dir === 'down') { ctx.moveTo(x + o, y); ctx.lineTo(x + o + 6.5, y + 18); ctx.lineTo(x + o + 13, y); }
+        else if (s.dir === 'left') { ctx.moveTo(x + T, y + o); ctx.lineTo(x + 14, y + o + 6.5); ctx.lineTo(x + T, y + o + 13); }
+        else { ctx.moveTo(x, y + o); ctx.lineTo(x + 18, y + o + 6.5); ctx.lineTo(x, y + o + 13); } }
+      ctx.fill(); }
+    const d = S.door, cx = S.ox + d.c*T + 16, cy = S.oy + d.r*T + 16; ctx.save(); ctx.translate(cx, cy); ctx.rotate(S.k*Math.PI/2);
+    ctx.fillStyle = C.door; ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-11, 16); ctx.lineTo(-11, -4); ctx.arc(0, -4, 11, Math.PI, 0); ctx.lineTo(11, 16); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(5, 4, 2.2, 0, 7); ctx.fill(); ctx.restore();
+    if (S.st > 15 && !S.anim) { ctx.strokeStyle = 'rgba(30,43,71,.4)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(S.ox + 7.5*T, S.oy + 7.5*T, 7.5*T*1.08, -Math.PI/2, -Math.PI/2 + (S.st - 15)/30*Math.PI/2); ctx.stroke(); } },
+  drawPlayer(dx, dy, dw, dh){ drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false); if (S.rotd) { S.rotd = false; ctx.restore(); } } },
+
+/* 94. replace every plank, and which one is the ship? whichever keeps sailing */
+{ id:'theseus', start:1.5,
+  build(){ Gd(0,29); Door(27,14,{onEnter(d){ if (S.mk < 0) { d.bite = true; die('door'); } else levelClear(); }});
+    // others who look exactly like you: they stroll back toward the start, and run off to begin again
+    S.db = [[4, 23, 20], [9, 20, 12]].map(([a, b, x]) => ({a:a*T, b:b*T, x:x*T, dir:-1}));
+    S.mk = -1; S.ov = null; S.st = 0; },
+  fig(i){ if (i < 0) return {x:pcx(), y:P.y, vx:P.vx}; const d = S.db[i]; return {x:d.x + PW/2, y:GY - PH, vx:d.dir < 0 ? -1.5 : 6}; },
+  update(){ for (const d of S.db) { d.x += d.dir < 0 ? -1.5 : 6; if (d.x < d.a) { d.x = d.a; d.dir = 1; } if (d.x > d.b) { d.x = d.b; d.dir = -1; } }
+    // the Eye cannot tell you from them: when the one it watches meets another, it keeps whichever is where the watched one was going
+    const m = this.fig(S.mk), near = [-1, 0, 1].filter(i => i !== S.mk && (() => { const f = this.fig(i); return Math.abs(f.x - m.x) < 16 && Math.abs(f.y - m.y) < 24; })());
+    if (near.length) { if (!S.ov) S.ov = {ids:new Set([S.mk]), x:m.x, vx:m.vx, t:0}; for (const i of near) S.ov.ids.add(i); S.ov.t++; }
+    else if (S.ov) { const o = S.ov, px = o.x + o.vx*o.t; let best = S.mk, bd = 1e9;
+      // a glance is not enough to lose you: only a while hidden inside another
+      if (o.t >= 14) for (const i of o.ids) { const d = Math.abs(this.fig(i).x - px); if (d < bd) { bd = d; best = i; } }
+      S.mk = best; S.ov = null; }
+    // and it shoots whoever it takes for you, if they stand still in the open
+    S.st = S.mk < 0 && !S.ov && still() ? S.st + 1 : 0; if (S.st > 50) return die('eye'); },
+  draw(){ for (const d of S.db) drawPlayerAt(d.x, GY - PH, PW, PH, d.dir, C.white, C.ink, false);
+    // the Eye over the door, and its mark on whoever it takes for you
+    const ex = 27*T + 16, ey = 300, m = this.fig(S.mk); drawEye(ex, ey, 16, m.x, m.y + 14, 0);
+    const wob = S.ov ? Math.sin(frame*0.8)*5 : 0; ctx.strokeStyle = C.red; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(m.x + wob, m.y + 14, 20, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(m.x + wob - 26, m.y + 14); ctx.lineTo(m.x + wob - 14, m.y + 14); ctx.moveTo(m.x + wob + 14, m.y + 14); ctx.lineTo(m.x + wob + 26, m.y + 14); ctx.moveTo(m.x + wob, m.y - 12); ctx.lineTo(m.x + wob, m.y); ctx.stroke();
+    if (S.st > 10) { ctx.strokeStyle = C.red; ctx.lineWidth = 3; ctx.globalAlpha = S.st/50; ctx.beginPath(); ctx.moveTo(ex, ey + 10); ctx.lineTo(m.x, m.y + 14); ctx.stroke(); ctx.globalAlpha = 1; }
+    const dd = ents.find(e => e.t === 'door'); if (dd) dd.teeth = S.mk < 0 ? clamp(1 - (dd.x - pcx())/160, 0, 1) : 0; } }
 ];
 
 // ground that remembers your feet and grows thorns there
