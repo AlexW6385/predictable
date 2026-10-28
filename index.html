@@ -39,6 +39,10 @@ canvas{display:block;touch-action:none;outline:none;border:2.5px solid var(--ink
 .side .grp{display:flex;gap:8px}
 .side [data-k]{width:54px;height:54px;border-radius:50%;border:2.5px solid var(--ink);background:var(--paper);color:var(--ink);font-family:var(--f-display);font-size:18px;touch-action:none;-webkit-user-select:none;user-select:none;padding:0}
 .side [data-k]:active{background:var(--gold)}
+.dpad{display:flex;width:116px;height:54px;border:2.5px solid var(--ink);border-radius:27px;background:var(--paper);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+.dpad .h{flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink);font-family:var(--f-display);font-size:18px;pointer-events:none}
+.dpad .h.l{border-right:1.5px solid var(--grid)}
+.dpad.left .h.l,.dpad.right .h.r{background:var(--gold)}
 .mini{width:38px;height:32px;border:2px solid var(--ink-soft);border-radius:6px;background:var(--paper);color:var(--ink);font-size:16px;line-height:1;padding:0;cursor:pointer}
 .foot{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;color:var(--ink-soft);width:min(100%,var(--cw,100%));align-self:center}
 .foot .tools{display:flex;gap:8px}
@@ -80,7 +84,7 @@ canvas{display:block;touch-action:none;outline:none;border:2.5px solid var(--ink
   <div class="stage" id="stage">
     <div class="side l" id="sideL">
       <button class="mini" data-act="restart" aria-label="Restart this level" title="Restart this level">↺</button>
-      <div class="grp"><button data-k="left" aria-label="Left">◀</button><button data-k="right" aria-label="Right">▶</button></div>
+      <div class="dpad" id="dpad" role="group" aria-label="Move: press and slide left or right"><span class="h l">◀</span><span class="h r">▶</span></div>
     </div>
     <div class="view" id="view">
       <canvas id="c" tabindex="0" aria-label="Predictable game"></canvas>
@@ -132,6 +136,14 @@ document.querySelectorAll('.side [data-k]').forEach(b => {
   const up = () => { keys[k] = false; };
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
 });
+// the move pad is one strip: press anywhere on it and slide; which half of it your finger is over is the direction you go
+{ const dp = document.getElementById('dpad'); let pid = null;
+  const set = d => { if (d === (keys.left ? 'left' : keys.right ? 'right' : null)) return; if (d) pressEdge = true; keys.left = d === 'left'; keys.right = d === 'right'; dp.classList.toggle('left', d === 'left'); dp.classList.toggle('right', d === 'right'); };
+  const at = e => { const r = dp.getBoundingClientRect(), dx = e.clientX - (r.left + r.width/2); return Math.abs(dx) < 4 ? (keys.left ? 'left' : keys.right ? 'right' : dx < 0 ? 'left' : 'right') : dx < 0 ? 'left' : 'right'; };
+  dp.addEventListener('pointerdown', e => { e.preventDefault(); pid = e.pointerId; try { dp.setPointerCapture(pid); } catch(_){} set(at(e)); });
+  dp.addEventListener('pointermove', e => { if (e.pointerId === pid) set(at(e)); });
+  const end = e => { if (e.pointerId !== pid) return; pid = null; set(null); };
+  dp.addEventListener('pointerup', end); dp.addEventListener('pointercancel', end); dp.addEventListener('lostpointercapture', end); }
 cv.addEventListener('pointerdown', () => { cv.focus(); if (state !== 'play' || (S && S.over)) jumpEdge = true; });
 // restart the level you are on (fresh level memory, no death counted); the level sheet jumps to any level you have reached
 function restartLevel(){ if (state === 'title') return; prof.mem = null; startLevel(lvl); state = 'play'; parts = []; flash = 0; shake = 0; }

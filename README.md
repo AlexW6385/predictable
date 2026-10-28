@@ -18,7 +18,7 @@ Play online at **https://alexw6385.github.io/predictable/**, or open `index.html
 | Restart this level | R or ↺ |
 | Level sheet | ▦ (jump to any level you have reached) |
 
-The page always fits the window and never scrolls. On phones the game fills the screen in landscape, with the touch controls in their own strips beside it (or under it on nearly 16:9 screens) so they never cover the game (on Android the first touch also switches to real full screen; on iPhone, *Add to Home Screen* gives the same). Progress, death marks and the habits the game has learned about you are kept in `localStorage`; the ✕ in the level sheet (pressed twice) clears them.
+The page always fits the window and never scrolls. On phones the game fills the screen in landscape, with the touch controls in their own strips beside it (the move pad is one strip: press and slide your thumb to switch direction) (or under it on nearly 16:9 screens) so they never cover the game (on Android the first touch also switches to real full screen; on iPhone, *Add to Home Screen* gives the same). Progress, death marks and the habits the game has learned about you are kept in `localStorage`; the ✕ in the level sheet (pressed twice) clears them.
 
 ## How it works
 
