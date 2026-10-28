@@ -41,8 +41,8 @@
   // ---- L8
   check('L8 walk on what you see', run(7, () => R), 'dead');
   check('L8 jump the hole you see', run(7, () => script([S.R(6.2), S.J(30, 1), S.R(29)])), 'dead');
-  check('L8 learned "+2": jump at true edge, then +2 again', run(7, () => script([S.R(8.4), S.J(30, 1), S.R(13), S.J(30,1), S.R(21.4), S.J(30,1), S.R(29)])), 'dead');
-  check('L8 follow the dotted shadows', run(7, () => script([S.R(8.4), S.J(30, 1), S.R(13.2), S.JT(15.8, 448, {tol:14}), S.R(17.4), S.J(30, 1), S.R(24.6)])), 'clear');
+  check('L8 learned "+2": jump at true edge, then +2 again', run(7, () => script([S.R(8.6), S.J(30, 1), S.R(14.2), S.J(30,1), S.R(23.6), S.J(30,1), S.R(29)])), 'dead');
+  check('L8 follow the dotted shadows', run(7, () => script([S.R(8.6), S.J(30, 1), S.R(14.0), S.J(30, 1), S.R(19.4), S.J(30, 1), S.R(26.6)])), 'clear');
   // ---- L9
   const L = {k:{left:true}};
   check('L9 hold right', run(8, () => R, {max:500}), 'timeout');

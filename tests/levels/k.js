@@ -5,7 +5,7 @@
   // ---- 68 colours
   check('68 hop the first spike', run(67, () => script([S.R(2.3), S.J(1, 1), S.R(29)]), {freshMem:true}), 'dead');
   check('68 walk', run(67, () => R, {freshMem:true}), 'dead');
-  check('68 long leaps across each spike and border', run(67, () => P => (P.on && [2.2, 11.2, 17.2, 22.4].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R(), {freshMem:true}), 'clear');
+  check('68 long leaps across each spike and border', run(67, () => P => (P.on && cx() > 28.7*T) ? Lk() : (P.on && [2.0, 11.6, 18.8, 24.6].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R(), {freshMem:true}), 'clear');
   // ---- 69 inverted
   check('69 walk on, as usual', run(68, () => P => (P.on && [6.3, 12.3].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:8, dir:1} : R(), {freshMem:true}), 'dead');
   check('69 stand on the thorns, go in the door', run(68, () => script([S.R(6.3), S.J(30, 1), S.R(12.3), S.JT(18, 432, {tol:20}), S.R(18.7), S.JT(21.5, 432, {tol:16}), S.R(22.2), S.JT(27.6, 432, {tol:20}), S.R(28.3)]), {freshMem:true, max:1500}), 'dead');

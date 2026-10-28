@@ -35,8 +35,8 @@
       const dir = c.x + 8 > cx() ? 1 : -1; const slow = Math.abs(g.P.vx) < 2.4;
       return dir > 0 ? {k:{right:slow}} : {k:{left:slow}}; }, {max:3000}), 'clear');
   // ---- L26 dark
-  check('L26 full jumps across the dark', run(25, () => P => (P.on && [6.4, 14.4, 21.4].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R()), 'dead');
-  check('L26 short jumps, around where you died', run(25, () => script([S.R(6.2), S.JT(9.8), S.JT(12.6, 448, {minPeak:40, tol:12}), S.R(14.2), S.JT(17.7), S.JT(20.6, 448, {minPeak:40, tol:12}), S.R(21.3), S.JT(24.6), S.JT(27.6, 448, {minPeak:40, tol:12}), S.R(28.5)])), 'clear');
+  check('L26 full jumps across the dark', run(25, () => P => (P.on && [5.4, 14.4, 23.4].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R()), 'dead');
+  check('L26 short jumps, around where you died', run(25, () => script([S.R(5.3), S.J(8, 1), S.R(10.3), S.J(8, 1), S.R(14.3), S.J(8, 1), S.R(19.3), S.J(8, 1), S.R(23.3), S.J(30, 1), S.R(28.5)])), 'clear');
   // ---- L27 colored remains
   const build27 = (prehop) => life => { let hopped = !prehop; return P => {
       if (!hopped) { if (P.on && cx() > 2.4*T) { hopped = true; return {jump:1, dir:0}; } return R(); }
@@ -57,8 +57,8 @@
   check('L28 the far door', run(27, () => script([S.R(9.2), S.J(30, 1), S.R(15.2), S.J(30, 1), S.R(22.5)])), 'dead');
   check('L28 the door you came in by', run(27, () => Lk), 'clear');
   // ---- L29 the end
-  check('L29 climb up to the flag', run(28, () => script([S.R(8.8), S.JT(10.5, 416), S.R(10.6), S.J(30, 1), S.W(400)]), {max:900}), 'dead');
-  check('L29 walk under it', run(28, () => script([S.R(8.8), S.JT(10.5, 416), S.R(28)])), 'clear');
+  check('L29 walk to the flag', run(28, () => script([S.R(8.8), S.JT(10.5, 416), S.R(28)]), {max:900}), 'dead');
+  check('L29 leap over it', run(28, () => script([S.R(8.8), S.JT(10.5, 416), S.R(11.2), S.J(30, 1), S.R(28)])), 'clear');
   // ---- L30 the beginning
   check('L30 chase the door', run(29, () => P => ({k: g.S.door.x + 18 > cx() ? {right:true} : {left:true}}), {max:900}), /timeout|dead/);
   check('L30 stand still on the floor like in 1', run(29, () => script([S.R(5), S.W(2000)]), {max:900}), 'dead');

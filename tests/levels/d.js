@@ -26,7 +26,12 @@
   check('33 run', run(32, () => R), 'dead');
   check('33 slow down when it falls (as on the earlier level)', run(32, () => { let n = 0, t = 99; return P => { const c = (g.S.cones || []).filter(c => c.st === 'fall').length; if (c > n) t = 0; n = c; t++; return {k: t < 20 ? {left:true} : {right:true}}; }; }), 'dead');
   check('33 jump forward when it falls', run(32, p33(0, 0, 'keep')), 'dead');
-  check('33 jump and pull back when it falls', run(32, p33(2.6, 14, 'back'), {max:1500}), 'clear');
+  const p33b = () => { let t = 99, dirA = 1; const fired = new Set(); return P => { t++;
+      const c = (g.S.cones || []).find(c => c.st === 'fall' && !fired.has(c));
+      if (c && P.on && (GY - (c.y + 40))/26 <= 25) { fired.add(c); dirA = Math.abs(g.P.vx) > 2.6 ? -1 : 1; t = 0; }
+      const k = dirA < 0 ? (t < 14 ? {left:true} : {}) : {right:true};
+      if (t === 0) return {jump:30, dir:0, k}; if (!P.on) return {k}; return {k:{right:true}}; }; };
+  check('33 jump and pull back just before it lands', run(32, p33b, {max:1500}), 'clear');
   // ---- 34 bubble
   const p34 = h => () => { let j = false; return P => { if (!j) { if (cx() < 12.9*T) return R(); if (Math.abs(g.P.vx) > 0.3) return N(); j = true; return {jump:h, dir:0}; }
       const c = 15.5*T; return {k: g.P.y + 28 < 254 ? {right: cx() < c - 8, left: cx() > c + 8} : {right: cx() < 12.6*T, left: cx() > 13.2*T}}; }; };
@@ -62,8 +67,8 @@
   // ---- 38 noise
   const slowR = () => ({k:{right: Math.abs(g.P.vx) < 1.9}});
   check('38 run', run(37, () => R), 'dead');
-  check('38 sneak, jump the sleepers wherever', run(37, () => script([S.F(slowR, () => cx() > 8.2*T), S.J(30, 1), S.F(slowR, () => cx() > 16.2*T), S.J(30, 1), S.F(slowR, () => cx() > 28*T)])), 'dead');
-  check('38 sneak, and land only on the rugs', run(37, () => script([S.F(slowR, () => cx() > 8.6*T), S.JT(12.9, GY, {tol:10}), S.F(slowR, () => cx() > 16.6*T), S.JT(20.9, GY, {tol:10}), S.F(slowR, () => cx() > 27.8*T)])), 'clear');
+  check('38 sneak, hop over the sleepers', run(37, () => script([S.F(slowR, () => cx() > 9.3*T), S.J(3, 1), S.F(slowR, () => cx() > 18.3*T), S.J(3, 1), S.F(slowR, () => cx() > 28.5*T)])), 'dead');
+  check('38 sneak, and land only on the rugs', run(37, () => script([S.F(slowR, () => cx() > 8.8*T), S.J(30, 1), S.F(slowR, () => cx() > 17.8*T), S.J(30, 1), S.F(slowR, () => cx() > 28.5*T)])), 'clear');
   // ---- 39 wires
   check('39 walk', run(38, () => R), 'dead');
   check('39 never touch a wire', run(38, () => script([S.R(5.6), S.W(2000)]), {max:600}), 'timeout');

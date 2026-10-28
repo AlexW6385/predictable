@@ -3,10 +3,10 @@
   const check = (name, res, expect) => { const last = res[res.length-1]; const ok = expect instanceof RegExp ? expect.test(last) : last.startsWith(expect); out.push(`${ok ? 'ok ' : 'XX '} ${name.padEnd(58)} ${res.join(' ')}   (want ${expect})`); };
   const R = () => ({k:{right:true}}), Lk = () => ({k:{left:true}}), N = () => ({k:{}});
   // ---- 56 echo
-  const jumps56 = [5.2, 11.0, 19.2, 24.3];
+  const jumps56 = [5.2, 11.0, 19.2, 25.2];
   check('56 walk in the dark', run(55, () => R, {freshMem:true}), 'dead');
   check('56 jump to see, then stop to look', run(55, () => script([S.J(1, 0), S.W(70), S.R(28)]), {freshMem:true}), 'dead');
-  const j56 = () => { const i = jumps56.findIndex(x => Math.abs(cx() - x*T) < 5); return i < 0 ? null : {jump: i === 1 ? 7 : 30, dir:1}; };
+  const j56 = () => { const i = jumps56.findIndex(x => Math.abs(cx() - x*T) < 5); return i < 0 ? null : {jump: i === 1 ? 7 : i === 3 ? 8 : 30, dir:1}; };
   const keepGoing = () => P => cx() > 28.6*T ? Lk() : (P.on && j56()) || R();
   check('56 jump where needed, keep moving', run(55, keepGoing, {freshMem:true}), 'clear');
   // ---- 57 bomb

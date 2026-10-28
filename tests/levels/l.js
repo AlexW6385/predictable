@@ -21,7 +21,7 @@
   check('74 copy where it stands', run(73, () => script([S.R(2.4), S.J(30, 1), S.R(3.4), S.L(3.5), S.W(20)]), {freshMem:true, max:600}), /dead|timeout/);
   // ---- 75 canon
   check('75 jump at the ledge', run(74, () => P => (P.on && cx() > 18.8*T) ? {jump:30, dir:1} : R(), {freshMem:true, max:600}), 'timeout');
-  check('75 wait at the foot, then step onto your echo', run(74, () => script([S.R(19.0), S.W(100), S.U(() => g.S.echo.some(e => Math.abs(e.x - g.P.x) < 3 && Math.abs(e.y - g.P.y) < 2), {}), S.J(30, 0), S.U(() => g.P.on, {}), S.W(5), S.J(30, 1), S.R(26.3)]), {freshMem:true, max:1500}), 'clear');
+  check('75 climb on your own echo (searched)', (() => { const r = SOLVE.solve(74, {beam:150, depth:60}); if (!r.ok) return ['nosol']; g.setLvl(74); return [SOLVE.replay(SOLVE.strat(r.seq))]; })(), 'clear');
   const replay = (L, seq, o) => { g.prof.mem = null; g.setLvl(L); return [SOLVE.replay(SOLVE.strat(seq.split(' '), o))]; };
   check('72 hop over each blank (a found route)', replay(71, 'R R R R R R R JR1 R JR1 R R R JR1 R R R R R R R R R', {holds:[1, 3, 5, 8]}), 'clear');
   check('74 copy the colours, not the places (a found route)', replay(73, 'JR5 JR30 JR30 JR30 JL30 JL30 JL30 JR30 JN30 JN30 JR1 JR30 JR30 JR30 R', {holds:[1, 3, 5, 8, 30]}), 'clear');

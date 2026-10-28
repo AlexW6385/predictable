@@ -36,8 +36,8 @@
   // ---- L16 marks
   check('L16 walk', run(15, () => R), 'dead');
   check('L16 avoid the X marks', run(15, () => script([S.R(3.3), S.JT(6.5), S.R(29)])), 'dead');
-  check('L16 trust only the X marks', run(15, () => script([S.R(3.72), S.J(30,1), S.JT(12.6, 448, {minPeak:45, tol:10}), S.R(12.3), S.J(30,1), S.R(29)])), 'dead@17');
-  check('L16 left: the marks lie; right: the marks are true', run(15, () => script([S.R(3.72), S.J(30,1), S.R(9.4), S.J(30,1), S.J(30,1), S.JT(24.0, 448, {minPeak:45, tol:10}), S.JT(26.8, 448, {minPeak:40, tol:12}), S.R(27.5)])), 'clear');
+  check('L16 the marks lie everywhere', run(15, () => script([S.R(5.5), S.J(10, 1), S.R(10.5), S.J(10, 1), S.R(29)])), /dead@1[78]/);
+  check('L16 left: the marks lie; right: the marks are true', run(15, () => script([S.R(5.5), S.J(10, 1), S.R(10.5), S.J(10, 1), S.R(17.5), S.J(10, 1), S.R(22.5), S.J(10, 1), S.R(27.5)])), 'clear');
   // ---- L17 thorns
   check('L17 key, then walk back the way you came', run(16, () => script([S.R(27.5), S.L(2)]), {max:900}), 'dead');
   check('L17 wait at the start', run(16, () => P => ({k:{}}), {max:400}), 'dead');

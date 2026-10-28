@@ -13,6 +13,8 @@
   check('97 run for the door', run(96, () => Lk, {freshMem:true, max:600}), 'dead');
   check('97 solved', solve(96), 'clear');
   check('97 wait for it to calm down, then go', run(96, () => script([S.W(900), S.L(2)]), {freshMem:true, max:1500}), 'dead');
+  check('97 let go before the line, tap in, wait for the demon, go', run(96, () => P => cx() > 19.3*T ? Lk() : cx() > 17.9*T ? {k:{left: Math.abs(g.P.vx) < 0.5}} : (cx() > 16.4*T && !(g.S.open > 0)) ? N() : Lk(), {freshMem:true, max:1500}), 'clear');
+  check('97 walk straight up to the demon', run(96, () => P => cx() > 17.9*T ? Lk() : N(), {freshMem:true, max:600}), 'dead');
   // ---- 98 laplace
   const E3 = [5, 12, 19].map(c => c*T); const leap = offs => P => { const e = E3.find(e => e > cx() - 4); if (P.on && e != null) { const o = offs[E3.indexOf(e)]; if (e - cx() <= o && e - cx() > o - 6) return {jump:30, dir:1}; } return R(); };
   check('98 always leap from the same distance', run(97, () => leap([30, 30, 30]), {freshMem:true, max:600}), 'dead');

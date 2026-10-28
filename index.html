@@ -186,11 +186,14 @@ const pcx = () => P.x + PW/2;
 const groundAt = (x, y) => ents.some(e => isSolid(e) && x >= e.x && x <= e.x + e.w && y >= e.y - 2 && y <= e.y + 4);
 const reveal = o => { o.inv = false; o.revealT = 30; };
 const still = () => P.on && Math.abs(P.vx) < 0.3;
+// really running: near full speed for a while (a quick tap never counts, so players who tap their way along are 'walking')
+const running = () => (P.runT || 0) > 9;
 
 /* ---------- shared pieces ---------- */
 function cone(x, o){ (S.cones || (S.cones = [])).push(Object.assign({x, y:-40, st:'fall', floor:GY}, o||{})); }
 function updCones(){
   for (const c of (S.cones || [])) {
+    if (c.st === 'stake') { if (--c.t <= 0) c.st = 'done'; else if (ov(pbox(3), {x:c.x - 9, y:GY - 40, w:18, h:40})) { die('cone'); return true; } continue; }
     if (c.st !== 'fall') continue;
     c.y += 26;
     const r = {x:c.x-11, y:c.y, w:22, h:40};
@@ -198,11 +201,12 @@ function updCones(){
     if (c.hitAlso && c.hitAlso(r)) { c.st = 'done'; continue; }
     if (ov(pbox(3), r)) { die('cone'); return true; }
     if (!c.grounded && c.y + 40 >= GY) { c.grounded = true; c.onGround && c.onGround(c); }
-    if (c.y + 40 >= c.floor) { c.st = 'done'; if (c.floor <= GY) { dust(c.x, GY); shake = Math.max(shake, 3); } }
+    if (c.y + 40 >= c.floor) { c.st = c.stake && c.floor <= GY ? 'stake' : 'done'; c.t = c.stake || 0; if (c.st === 'stake') c.y = GY - 40; if (c.floor <= GY) { dust(c.x, GY); shake = Math.max(shake, 3); } }
   }
 }
 function drawCones(){
   for (const c of (S.cones || [])) {
+    if (c.st === 'stake') { ctx.globalAlpha = Math.min(1, c.t/10); ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(c.x - 13, c.y); ctx.lineTo(c.x + 13, c.y); ctx.lineTo(c.x, c.y + 40); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; continue; }
     if (c.st !== 'fall') continue;
     const a = clamp((c.y + 40) / GY, 0, 1);
     ctx.fillStyle = `rgba(30,43,71,${0.4*a})`; ctx.beginPath(); ctx.ellipse(c.x, GY - 1, 5 + 11*a, 3, 0, 0, 7); ctx.fill();
@@ -323,10 +327,10 @@ const LV = [
 
 /* 8. what you see is a little to the side of what is */
 { start:3,
-  build(){ for (const [a,b] of [[0,6],[10,19],[22,29]]) R('look',a,b,14,16);
-    Sp(12,12,13,'up',{look:true, kill:false}); Door(26,14,{look:true, inert:true});
-    for (const [a,b] of [[0,8],[12,17],[20,29]]) R('g',a,b,14,16,{shadow:true});
-    Sp(14,14,13,'up',{shadow:true}); Door(24,14,{shadow:true}); } },
+  build(){ for (const [a,b] of [[0,6],[11,21],[24,29]]) R('look',a,b,14,16);
+    Sp(13,13,13,'up',{look:true, kill:false}); Door(28,14,{look:true, inert:true});
+    for (const [a,b] of [[0,8],[13,19],[22,29]]) R('g',a,b,14,16,{shadow:true});
+    Sp(15,15,13,'up',{shadow:true}); Door(26,14,{shadow:true}); } },
 
 /* 9. push, and the world pushes back */
 { start:2, noCut:true,
@@ -407,8 +411,8 @@ const LV = [
 
 /* 16. not every mark is a memory */
 { start:1.5,
-  build(){ Gd(0,29); for (const c of [6,7,10,11,17,18,21,22,25]) HS(c); Door(27,14);
-    S.forged = [4,5,8,9,12,13].map(c => [c*T + 16, 430]).concat([17,18,21,22,25].map(c => [c*T + 16, 430])); },
+  build(){ Gd(0,29); for (const c of [6,7,11,12,18,19,23,24]) HS(c); Door(27,14);
+    S.forged = [4,5,9,10,14,15].map(c => [c*T + 16, 430]).concat([18,19,23,24].map(c => [c*T + 16, 430])); },
   drawBack(){ ctx.strokeStyle = C.grid2; ctx.lineWidth = 2; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(15*T, 60); ctx.lineTo(15*T + 6, 200); ctx.lineTo(15*T - 4, 330); ctx.lineTo(15*T + 3, GY); ctx.stroke(); ctx.setLineDash([]);
     ctx.globalAlpha = 0.5; for (const [x,y] of S.forged) cross(x, y, 6, C.red, 2); ctx.globalAlpha = 1; } },
 
@@ -444,7 +448,11 @@ const LV = [
       if (p[2]) { const f = {x:p[0]+1, y:p[1]+PH, w:PW-2, h:3}; for (const e of ents) if ((e.t === 'g' || e.t === 'b') && e.ct == null && isSolid(e) && ov(f, e)) e.ct = 18; } }
     else S.gp = null;
     const lead = gx != null && gx > P.x ? {x:gx, vx:gvx, ghost:true} : {x:P.x, vx:P.vx};
-    if (!S.coned && lead.x + 11 > 22*T) { S.coned = true; cone(lead.x + 11 + lead.vx*17, {hitAlso: r => { if (S.gp && ov(r, {x:S.gp[0], y:S.gp[1], w:PW, h:PH})) { S.gDead = true; burst(S.gp[0]+11, S.gp[1]+14); return true; } return false; }}); }
+    if (!S.coned && lead.x + 11 > 22*T) { S.coned = true;
+      // aimed at where the leader will be standing: the end of the current leap, or 17 frames down the road
+      let ax = lead.x + 11 + lead.vx*17, ay = -40;
+      if (!lead.ghost && !P.on) { let y = P.y, vy = P.vy, t = 0; while (t < 60 && y + PH < GY) { vy = Math.min(vy + 0.55, 12); y += vy; t++; } if (t > 17) { ax = lead.x + 11 + lead.vx*t; ay = GY - 40 - 26*t; } }
+      cone(ax, {y:ay, stake:36, hitAlso: r => { if (S.gp && ov(r, {x:S.gp[0], y:S.gp[1], w:PW, h:PH})) { S.gDead = true; burst(S.gp[0]+11, S.gp[1]+14); return true; } return false; }}); }
     updCones(); },
   onDeath(){ M.path = S.path; },
   draw(){ drawCones(); if (S.gp && !S.gDead) { ctx.globalAlpha = 0.5; drawPlayerAt(S.gp[0], S.gp[1], PW, PH, 1, C.ink2, C.ink, true); ctx.globalAlpha = 1; } } },
@@ -501,9 +509,9 @@ const LV = [
     for (const c of S.cs) { if (!c.alive) continue;
       if (c.hop) { const h = c.hop; h.t++; const k = Math.min(1, h.t/22); c.x = h.from + (h.to - h.from)*k; c.y = GY - 20 - Math.sin(k*Math.PI)*70; if (k >= 1) { c.hop = null; c.y = GY - 20; } continue; }
       const dx = c.x + 8 - pc;
-      c.warn = (c.x <= 9 || c.x >= W - 25) && Math.abs(dx) < 100 && Math.abs(P.vx) > 3.0;
+      c.warn = (c.x <= 9 || c.x >= W - 25) && Math.abs(dx) < 100 && running();
       if (Math.abs(dx) < 110) { c.vx = Math.sign(dx || 1)*(Math.abs(P.vx)*0.85 + 0.7); const nx = clamp(c.x + c.vx, 8, W - 24); const cornered = nx === 8 || nx === W - 24;
-        if (cornered && Math.abs(dx) < 46 && Math.abs(P.vx) > 3.6) c.hop = {from:c.x, to:clamp(pc - Math.sign(dx)*150 - 8, 8, W - 24), t:0}; else c.x = nx; }
+        if (cornered && Math.abs(dx) < 46 && running()) c.hop = {from:c.x, to:clamp(pc - Math.sign(dx)*150 - 8, 8, W - 24), t:0}; else c.x = nx; }
       if (ov(pbox(), {x:c.x, y:c.y, w:16, h:20})) { c.alive = false; S.coins++; sparkle(c.x + 8, c.y + 10); } }
     for (const b of S.balls) { const dx = pc - b.x, dy = P.y + 14 - b.y, d = Math.hypot(dx, dy) || 1; b.x += dx/d*0.6; b.y += dy/d*0.6; if (d < 22) return die('ball'); } },
   draw(){ for (const c of S.cs) if (c.alive) drawCoin(c.x + (c.warn ? ((frame >> 1) % 2 ? 2 : -2) : 0), c.y - (c.warn ? (frame >> 2) % 2 * 3 : 0));
@@ -511,7 +519,7 @@ const LV = [
 
 /* 26. in the dark, only where you fell is lit */
 { start:2, dark:true,
-  build(){ Gd(0,6); Gd(9,14); Gd(17,21); Gd(24,29); for (const c of [11, 19, 26]) HS(c); Door(28,14); } },
+  build(){ Gd(0,5); Gd(8,14); Gd(17,23); Gd(26,29); for (const c of [11, 20]) HS(c); Door(28,14); } },
 
 /* 27. your remains belong to the side they died on */
 { start:2,
@@ -529,9 +537,9 @@ const LV = [
 
 /* 29. the end */
 { start:2,
-  build(){ Gd(0,7); S.trap = Gt(8,20); Gd(21,29); S.trap.push(R('b',10,10,13,13), R('b',12,14,11,11)); Door(27,14); },
-  update(){ if (!S.fw && ov(pbox(), {x:13*T, y:352 - 84, w:48, h:84})) { S.fw = true; S.over = {kind:'win', t:0}; P.vx = 0; for (let i = 0; i < 4; i++) confetti(pcx() + (i-1.5)*120, P.y - 40); } },
-  draw(){ drawEyeFlag(13*T, 352, !!(S.over && S.over.kind === 'win')); } },
+  build(){ Gd(0,7); S.trap = Gt(8,20); Gd(21,29); S.trap.push(R('b',10,10,13,13)); Door(27,14); },
+  update(){ if (!S.fw && ov(pbox(), {x:13*T + 4, y:GY - 70, w:40, h:70})) { S.fw = true; S.over = {kind:'win', t:0}; P.vx = 0; for (let i = 0; i < 4; i++) confetti(pcx() + (i-1.5)*120, P.y - 40); } },
+  draw(){ drawEyeFlag(13*T, GY, !!(S.over && S.over.kind === 'win')); } },
 
 /* 30. the beginning */
 { start:3,
@@ -586,7 +594,10 @@ const LV = [
 /* 33. on ice, where you will be is already decided */
 { start:2,
   build(){ Gd(0,29,{ice:true}); Door(27.5,14); S.rt = 24; },
-  update(){ const pc = pcx(); if (pc > 3*T && pc < 25.5*T && --S.rt <= 0) { S.rt = 44; cone(clamp(pc + P.vx*17, 3*T, 26.5*T)); }
+  update(){ const pc = pcx(); if (pc > 3*T && pc < 25.5*T && --S.rt <= 0) { S.rt = 56; cone(clamp(pc + P.vx*33, 3*T, 26.5*T), {y:-440}); }
+    // it keeps re-aiming at where your speed is taking you, until it is a moment from the ground
+    const ax = P.on ? P.vx - (S.pvx ?? P.vx) : 0; S.pvx = P.vx;
+    for (const c of S.cones) if (c.st === 'fall') { const left = (GY - (c.y + 40))/26; if (left > 27) c.x = clamp(pc + P.vx*left + 0.5*ax*left*left, 3*T, 26.5*T); }
     updCones(); },
   draw(){ drawCones(); } },
 
@@ -624,11 +635,11 @@ const LV = [
 
 /* 38. they sleep until you make a sound */
 { start:2,
-  build(){ Gd(0,10); Gd(13,18); Gd(21,29); for (const c of [11, 12, 19, 20]) R('g',c,c,14,16,{carpet:true}); Door(27,14);
-    S.gd = [10, 18].map(c => ({x:c*T + 4, y:GY - 24, awake:false})); S.rings = []; },
+  build(){ Gd(0,12); Gd(16,21); Gd(25,29); for (const c of [13, 22]) R('g',c,c + 2,14,16,{carpet:true}); Door(28,14);
+    S.gd = [10, 19].map(c => ({x:c*T + 4, y:GY - 24, awake:false})); S.rings = []; },
   noise(x, r){ if (r <= 0) return; S.rings.push({x, r, t:0}); for (const g of S.gd) if (Math.abs(g.x + 12 - x) < r) g.awake = true; },
   onLand(){ const carpet = ents.some(e => e.carpet && pcx() > e.x + 2 && pcx() < e.x + e.w - 2); this.noise(pcx(), carpet ? 0 : 40 + 10*P.landV); },
-  update(){ if (P.on && Math.abs(P.vx) > 3 && frame % 14 === 0) this.noise(pcx(), 80);
+  update(){ if (P.on && running() && frame % 14 === 0) this.noise(pcx(), 80);
     for (const g of S.gd) { if (g.awake) { g.x += Math.sign(pcx() - g.x - 12)*5.6; } if (ov(pbox(3), {x:g.x + 2, y:g.y + 2, w:20, h:20})) return die('guard'); }
     for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 24); },
   draw(){ for (const r of S.rings) { ctx.strokeStyle = `rgba(207,62,50,${1 - r.t/24})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r.x, GY, r.r*(0.3 + r.t/34), Math.PI, 0); ctx.stroke(); }
@@ -636,7 +647,7 @@ const LV = [
       if (g.awake) { ctx.fillStyle = C.red; ctx.fillRect(g.x + 5, g.y + 8, 5, 5); ctx.fillRect(g.x + 14, g.y + 8, 5, 5); }
       else { ctx.strokeStyle = C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(g.x + 5, g.y + 11); ctx.lineTo(g.x + 10, g.y + 11); ctx.moveTo(g.x + 14, g.y + 11); ctx.lineTo(g.x + 19, g.y + 11); ctx.stroke();
         const z = (frame >> 4) % 3; txt('z', g.x + 22 + z*3, g.y - 2 - z*6, `${10 + z*3}px ${FD}`, C.soft); } }
-    for (const e of ents) if (e.carpet) { ctx.fillStyle = C.red; ctx.fillRect(e.x + 1, e.y - 3, e.w - 2, 6); ctx.fillStyle = C.gold; for (let i = 0; i < 4; i++) ctx.fillRect(e.x + 3 + i*8, e.y - 2, 3, 3); } } },
+    for (const e of ents) if (e.carpet) { ctx.fillStyle = C.red; ctx.fillRect(e.x + 1, e.y - 3, e.w - 2, 6); ctx.fillStyle = C.gold; for (let i = 0; i < e.w/8 - 1; i++) ctx.fillRect(e.x + 3 + i*8, e.y - 2, 3, 3); } } },
 
 /* 39. it only hurts if you are standing on something */
 { start:2,
@@ -866,7 +877,7 @@ const LV = [
 
 /* 56. in the dark, a sound shows you the way, and shows you to it */
 { start:1,
-  build(){ Gd(0,5); Gd(8,19); Gd(22,29); Sp(12,12,13,'up'); Sp(25,25,13,'up'); S.door = Door(28,14); S.rings = []; S.bat = {x:15*T, y:30, st:'roost', t:0}; },
+  build(){ Gd(0,5); Gd(8,19); Gd(22,29); Sp(12,12,13,'up'); Sp(26,26,13,'up'); S.door = Door(28,14); S.rings = []; S.bat = {x:15*T, y:30, st:'roost', t:0}; },
   ping(x, y){ S.rings.push({x, y, t:0}); const b = S.bat; if (b.st === 'roost' || b.st === 'back') { b.st = 'dive'; b.tx = x; b.ty = y - 14; } },
   onJump(){ this.ping(pcx(), P.y + PH); },
   onLand(){ this.ping(pcx(), P.y + PH); },
@@ -987,7 +998,7 @@ const LV = [
 
 /* 62. every leap leaves its own ground behind */
 { start:1,
-  build(){ Gd(0,5); R('g',6,9,15,16); Sp(6,9,14,'up'); Gd(10,29); Sp(9,29,1,'down'); R('b',22,29,5,5); Door(26,5); S.steps = []; S.up = false; },
+  build(){ Gd(0,5); R('g',6,9,15,16); Sp(6,9,14,'up'); Gd(10,29); Sp(9,29,1,'down'); R('b',22,29,6,6); Door(26,6); S.steps = []; S.up = false; },
   onJump(){ S.up = true; },
   update(){ if (S.up && !P.on && P.vy >= 0) { S.up = false; const st = E({t:'b', x:pcx() - 16, y:P.y + PH, w:32, h:12, solid:true, step:true, life:150}); S.steps.push(st); sparkle(pcx(), P.y + PH); }
     if (P.on) S.up = false;
@@ -1074,9 +1085,9 @@ const LV = [
 
 /* 68. every leap makes you someone else */
 { start:1,
-  build(){ const cols = ['R','R','R','R','R','R','G','G','G','G','G','W','B','B','B','B','B','B','R','R','R','R','R','G','G','G','G','G','G','G'];
+  build(){ const cols = ['R','R','R','R','R','R','G','G','G','G','G','W','B','B','B','B','B','B','B','B','R','R','R','R','R','R','G','G','G','G'];
     S.col = 'R'; S.cyc = {R:'G', G:'B', B:'R'}; S.tl = cols.map((k, c) => R('g', c, c, 14, 16, {hue:k, cond:e => e.hue === 'W' || e.hue === S.col}));
-    Sp(3,3,13,'up'); Sp(15,15,13,'up'); Sp(20,20,13,'up'); Door(27,14); },
+    Sp(3,3,13,'up'); Sp(15,15,13,'up'); Sp(22,22,13,'up'); Door(28,14); },
   onJump(){ S.col = S.cyc[S.col]; S.flash = 10; },
   update(){ if (S.flash) S.flash--; },
   alpha(e){ return e.hue && !(e.hue === 'W' || e.hue === S.col) ? 0.35 : 1; },
@@ -1167,7 +1178,7 @@ const LV = [
 
 /* 75. a round: each voice comes in a little after the last */
 { start:2,
-  build(){ Gd(0,19); E({t:'g', x:20*T, y:330, w:10*T, h:118, solid:true}); Door(26, 330/T); S.rec = []; S.echo = []; },
+  build(){ Gd(0,19); E({t:'g', x:20*T, y:282, w:10*T, h:166, solid:true}); Door(26, 282/T); S.rec = []; S.echo = []; },
   update(){ S.rec.push([P.x, P.y]); const n = Math.floor(S.rec.length/90); while (S.echo.length < Math.min(n, 3)) S.echo.push(E({t:'echo', x:-99, y:-99, w:PW, h:PH, solid:true, oneway:true, k:S.echo.length + 1}));
     for (const e of S.echo) { const p = S.rec[S.rec.length - 1 - 90*e.k]; if (p) { e.x = p[0]; e.y = p[1]; } } },
   draw(){ for (const e of S.echo) { ctx.globalAlpha = 0.55 - e.k*0.1; drawPlayerAt(e.x, e.y, PW, PH, 1, C.grid2, C.ink2, false); ctx.globalAlpha = 1; ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(e.x + 7, e.y - 6, 3, 0, 7); ctx.fill(); ctx.fillRect(e.x + 9, e.y - 16, 1.5, 10); } } },
@@ -1520,30 +1531,33 @@ const LV = [
   draw(){ drawCones(); const d = S.door, ex = d.x + 18, ey = d.y - 30, fac = pcx() < ex && P.face > 0;
     drawEye(ex, ey, 12, fac ? pcx() : ex - 40, fac ? P.y + 8 : ey + 30, fac ? 0 : 0.75); } },
 
-/* 97. a small demon keeps the gate: the quick may go one way, the slow the other */
+/* 97. a small demon keeps the wall: the quick may pass one way, the slow the other */
 { start:27,
-  build(){ Gd(0,29); R('b',0,29,0,1); R('b',15,15,2,11); S.gate = R('b',15,15,12,13,{cond:() => S.open <= 0}); Door(2,14); S.open = 0; S.zap = 0;
-    S.balls = [[19,5,3.6,2.2],[24,9,-3.4,-2.4],[22,4,1.2,1.0],[26,7,-1.1,-1.3],[5,6,3.5,-2.3],[9,10,-3.4,2.1],[11,4,1.3,-1.1]].map(([c,r,vx,vy]) => ({x:c*T + 16, y:r*T + 16, vx, vy})); },
+  build(){ Gd(0,29); R('b',0,29,0,1); R('b',15,15,2,11); S.gate = R('b',15,15,12,13,{cond:() => S.open <= 0}); Door(2,14); S.open = 0; S.zap = 0; S.inZ = 0;
+    S.balls = [[21,5,3.2,2.0],[22,4,1.2,1.0],[26,7,-1.1,-1.3],[5,6,3.2,-2.1],[9,10,-3.1,1.9],[11,4,1.3,-1.1]].map(([c,r,vx,vy]) => ({x:c*T + 16, y:r*T + 16, vx, vy})); },
   update(){ const gx0 = 15*T, gx1 = 16*T, gy = 12*T, r = 9;
     if (S.zap > 0) S.zap--; if (S.open > 0) S.open--;
-    for (const b of S.balls) { const sp = Math.hypot(b.vx, b.vy); if (b.y > gy + r) {
-      if (b.vx > 0 && b.x > gx0 - 50 && b.x < gx0 && sp > 3) S.open = Math.max(S.open, 14);
-      if (b.vx < 0 && b.x < gx1 + 50 && b.x > gx1 && sp < 2.2) S.open = Math.max(S.open, 14); } }
-    const near = pcx() > gx1 - 4 && pcx() < gx1 + 64 && P.y + PH > gy;
-    if (near && P.vx < -2.6) { S.zap = 20; return die('demon'); }
-    if (near && Math.abs(P.vx) < 1.6) S.open = Math.max(S.open, 10);
+    // you: come up to the dotted line without hurrying, wait a moment there, and the demon lets you through below
+    const inZ = pcx() > gx1 - 4 && pcx() < gx1 + 64 && P.y + PH > gy;
+    if (inZ && running() && S.inZ <= 12) { S.zap = 20; return die('demon'); }
+    S.inZ = inZ ? S.inZ + 1 : 0;
+    if (S.inZ > 12) S.open = Math.max(S.open, 6);
     if (ov(pbox(), {x:gx0 - 2, y:gy, w:T + 4, h:2*T})) S.open = Math.max(S.open, 3);
-    for (const b of S.balls) { b.x += b.vx; b.y += b.vy;
+    // the molecules: the whole wall sorts them, quick ones through to the right, slow ones through to the left
+    for (const b of S.balls) { const sp = Math.hypot(b.vx, b.vy); b.x += b.vx; b.y += b.vy;
       if (b.y < 2*T + r) { b.y = 2*T + r; b.vy = Math.abs(b.vy); } if (b.y > GY - r) { b.y = GY - r; b.vy = -Math.abs(b.vy); }
       if (b.x < r) { b.x = r; b.vx = Math.abs(b.vx); } if (b.x > W - r) { b.x = W - r; b.vx = -Math.abs(b.vx); }
-      if (!(S.open > 0 && b.y > gy + r)) { if (b.x > gx0 - r && b.x < gx0 + T/2 && b.vx > 0) { b.x = gx0 - r; b.vx = -b.vx; } else if (b.x < gx1 + r && b.x > gx1 - T/2 && b.vx < 0) { b.x = gx1 + r; b.vx = -b.vx; } }
+      const through = (b.vx > 0 && sp > 2.5) || (b.vx < 0 && sp <= 2.5) || (S.open > 0 && b.y > gy + r);
+      if (!through) { if (b.x > gx0 - r && b.x < gx0 + T/2 && b.vx > 0) { b.x = gx0 - r; b.vx = -b.vx; } else if (b.x < gx1 + r && b.x > gx1 - T/2 && b.vx < 0) { b.x = gx1 + r; b.vx = -b.vx; } }
       const qx = clamp(b.x, P.x + 2, P.x + PW - 2), qy = clamp(b.y, P.y + 2, P.y + PH - 2); if (Math.hypot(b.x - qx, b.y - qy) < r - 1) return die('heat'); } },
-  draw(){ for (const b of S.balls) { const sp = Math.hypot(b.vx, b.vy), hot = sp > 3;
+  drawBack(){ ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 2; ctx.setLineDash([3,5]); ctx.beginPath(); ctx.moveTo(16*T, GY - 2); ctx.lineTo(16*T + 64, GY - 2); ctx.stroke(); ctx.setLineDash([]); },
+  draw(){ for (const b of S.balls) { const hot = Math.hypot(b.vx, b.vy) > 2.5;
       ctx.fillStyle = hot ? C.red : '#7C9BC4'; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x, b.y, 9, 0, 7); ctx.fill(); ctx.stroke();
       if (hot) { ctx.strokeStyle = 'rgba(207,62,50,.35)'; ctx.beginPath(); ctx.moveTo(b.x - b.vx*3, b.y - b.vy*3); ctx.lineTo(b.x - b.vx*6, b.y - b.vy*6); ctx.stroke(); } }
     const dx = 15*T + 16, dy = 11*T + 10; ctx.fillStyle = S.zap ? C.red : C.ink; ctx.beginPath(); ctx.arc(dx, dy, 11, 0, 7); ctx.fill();
     ctx.beginPath(); ctx.moveTo(dx - 10, dy - 6); ctx.lineTo(dx - 13, dy - 17); ctx.lineTo(dx - 4, dy - 10); ctx.moveTo(dx + 10, dy - 6); ctx.lineTo(dx + 13, dy - 17); ctx.lineTo(dx + 4, dy - 10); ctx.fill();
     const lk = Math.sign(pcx() - dx)*2; ctx.fillStyle = C.white; ctx.fillRect(dx - 7, dy - 4, 5, 5); ctx.fillRect(dx + 2, dy - 4, 5, 5); ctx.fillStyle = C.ink; ctx.fillRect(dx - 6 + lk, dy - 3, 2, 3); ctx.fillRect(dx + 3 + lk, dy - 3, 2, 3);
+    if (S.inZ > 0 && S.inZ <= 12) { ctx.strokeStyle = C.gold; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(dx, dy, 15, -Math.PI/2, -Math.PI/2 + S.inZ/12*Math.PI*2); ctx.stroke(); }
     if (S.zap) { ctx.strokeStyle = C.red; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(dx + 40, GY - 14); ctx.stroke(); } } },
 
 /* 98. it knows where you will leap, because it knows where you leapt */
@@ -1653,6 +1667,7 @@ function updatePlayer(){
     else if (P.vy*P.g < 0) { P.y = P.g > 0 ? o.y + o.h : o.y - PH; P.vy = 0; P.vx *= 0.3; P.stun = 10; if (o.inv) reveal(o); o.onHead && o.onHead(o); }
   }
   if (P.on && !was) { P.sq = 6; P.landV = Math.abs(vyIn); lv.onLand && lv.onLand(); }
+  P.runT = Math.abs(P.vx) >= 3.2 ? (P.runT || 0) + 1 : Math.abs(P.vx) < 2 ? 0 : (P.runT || 0);
   if (P.sq > 0) P.sq--;
   if (lv.wrapX) { if (P.x + PW/2 < 0) P.x += lvW(); else if (P.x + PW/2 >= lvW()) P.x -= lvW(); }
   if (lv.wrapY) { if (P.y > H) P.y = -PH; else if (P.y < -PH - 6) P.y = H; }

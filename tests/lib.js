@@ -32,7 +32,7 @@ window.LIB = (() => {
       n++; return steps[i].rule(P, n, st) || {};
     };
   }
-  const cx = () => g.P.x + 11;
+  const cx = () => g.P.x + 11 + (window.__NOISE && window.__NOISE.ant ? window.__NOISE.ant*g.P.vx : 0); // ant: act as if this many frames ahead (early)
   const S = {
     R: x => ({until: () => cx() >= x*T, rule: () => ({k:{right:true}})}),
     L: x => ({until: () => cx() <= x*T, rule: () => ({k:{left:true}})}),
@@ -57,8 +57,8 @@ window.LIB = (() => {
         if (g.state !== 'play') break;
         let r = strat(g.P, f);
         if (nz) { // human-ish noise: act on what you decided a few frames ago, and hold jump a little longer or shorter
-          if (r && r.jump) r = Object.assign({}, r, {jump: Math.max(1, r.jump + Math.round((nr()*2 - 1)*nz.jit))});
-          buf.push(r); r = buf.length > nz.delay ? buf.shift() : {k:{}}; }
+          if (r && r.jump && nz.jit) r = Object.assign({}, r, {jump: Math.max(1, r.jump + Math.round((nr()*2 - 1)*nz.jit))});
+          buf.push(r); r = buf.length > (nz.delay || 0) ? buf.shift() : {k:{}}; }
         frame(r);
       }
       const st = g.state;
