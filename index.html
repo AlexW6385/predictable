@@ -302,6 +302,37 @@ function ray(ex, ey, tx, ty){
   return {x, y, hit};
 }
 
+/* a plank on a pivot: the heavier side goes down, and when the heavier side changes, whatever sits on the side going up is thrown */
+function plank(x0, x1, y, o){ return Object.assign({x0, x1, px:(x0 + x1)/2, y, a:14, vis:0, side:0, v0:8, vk:2.2, span:4}, o || {}); }
+function plankY(k, x){ return k.y + k.vis*k.a*clamp((x - k.px)/(x > k.px ? k.x1 - k.px : k.px - k.x0), -1, 1); }
+// it slopes, so it is not a block: you stand on it here, and walk up onto its end
+function plankStand(k){ const was = k.onP; k.onP = false; const x = pcx(); if (state !== 'play' || x < k.x0 || x > k.x1) return;
+  const sy = plankY(k, x), feet = P.y + PH;
+  if (P.vy >= 0 && feet >= sy - (was ? 6 : 1) && feet - P.vy <= sy + (P.on ? 32 : 6)) { P.y = sy - PH; P.vy = 0; P.on = true; P.stand = k; k.onP = true; } }
+function plankMe(k, w){ return {w, x:pcx(), on:k.onP, thrown(v){ P.vy = -v; P.on = false; P.noCutT = 90; P.y -= 2; k.onP = false; }}; }
+function plankTip(k, items){ let l = 0, r = 0;
+  for (const it of items) if (it.on) { if (it.x < k.px) l += it.w; else r += it.w; }
+  const s = Math.sign(r - l);
+  if (s && k.side && s !== k.side) for (const it of items) if (it.on && Math.sign(it.x - k.px) === -s) it.thrown(k.v0 + k.vk*Math.abs(it.x - k.px)/T);
+  if (s) k.side = s;
+  k.vis += clamp(clamp((r - l)/k.span, -1, 1) - k.vis, -0.2, 0.2); }
+function drawPlank(k){ const yl = plankY(k, k.x0), yr = plankY(k, k.x1);
+  ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.moveTo(k.px - 16, GY); ctx.lineTo(k.px, k.y + 4); ctx.lineTo(k.px + 16, GY); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C.door; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(k.x0, yl); ctx.lineTo(k.x1, yr); ctx.lineTo(k.x1, yr + 9); ctx.lineTo(k.x0, yl + 9); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(k.px, k.y + 4, 3.5, 0, 7); ctx.fill(); }
+// the heavy block from 16, hung over a plank: it falls when you are about to be under it, and lifts again after a while
+function heavyBlk(b, k){ const bc = b.x + 20;
+  const ft = b.ft || 45; if (b.st === 'wait' && Math.abs(whereIn(ft) - bc) < 22) { b.st = 'fall'; b.vy = 0; b.acc = 2*(plankY(k, bc) - b.y - 40)/(ft*ft); }
+  else if (b.st === 'fall') { b.vy += b.acc; b.y += b.vy; if (ov(pbox(3), b)) return die('crush');
+    const sy = plankY(k, bc); if (b.y + 40 >= sy) { b.y = sy - 40; b.st = 'down'; b.tm = b.hold || 110; b.ghost = false; shake = 8; dust(bc, sy); } }
+  else if (b.st === 'down') { b.y = plankY(k, bc) - 40; if (--b.tm <= 0) { b.st = 'rise'; b.ghost = true; } }
+  else if (b.st === 'rise') { b.y -= 3; if (b.y <= b.top) { b.y = b.top; b.st = 'wait'; } } }
+function drawBlkShadow(b, k){ if (b.st !== 'fall') return; const sy = plankY(k, b.x + 20); ctx.fillStyle = 'rgba(30,43,71,.35)'; ctx.beginPath(); ctx.ellipse(b.x + 20, sy - 1, 22, 4, 0, 0, 7); ctx.fill(); }
+// keys on strings; what you carry shows as weight at your feet
+function drawHung(){ ctx.strokeStyle = 'rgba(30,43,71,.45)'; ctx.lineWidth = 1.5; for (const e of ents) if (e.hang && e.alive) { ctx.beginPath(); ctx.moveTo(e.x + 7, -4); ctx.lineTo(e.x + 7, e.y + 1); ctx.stroke(); } }
+function heavyPlayer(dx, dy, dw, dh){ drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false, P.g < 0);
+  if (S.keys) { const h = Math.min(dh - 6, S.keys*4); ctx.fillStyle = 'rgba(30,43,71,.4)'; ctx.fillRect(dx + 2, dy + dh - 2 - h, dw - 4, h); } }
+
 /* ================= the hundred ================= */
 const LV = [
 /* ===================== I. Door ===================== */
@@ -732,6 +763,138 @@ const LV = [
     ctx.beginPath(); ctx.moveTo(px, py + h); ctx.lineTo(px, py + h*0.32); ctx.arc(px + w/2, py + h*0.32, w/2, Math.PI, 0); ctx.lineTo(px + w, py + h); ctx.closePath(); ctx.fill(); },
   drawPlayer(dx, dy, dw, dh){ if (this.look()) drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false); else { ctx.fillStyle = 'rgba(40,32,28,.9)'; ctx.fillRect(dx, dy, dw, dh); } } },
 
+/* ===================== IV. Weight ===================== */
+
+/* 31. what you hold weighs on you, and the door wants exactly three */
+{ id:'enough', start:4,
+  jumpV(){ return 10.6 - 1.6*S.keys; },
+  build(){ Gd(0,29);
+    Door(1.5,14,{slots:3, onEnter(d){ if (S.keys === 3) levelClear(); else if (S.keys > 3) { d.bite = true; die('door'); } }});
+    // how high each hangs: only reachable while you carry fewer than 1, 2, 3 and 4 keys
+    for (const [c, a] of [[9,21],[14,37],[19,58],[24,84]]) E({t:'key', x:c*T + 9, y:400 - a, w:14, h:20, hang:true}); },
+  drawPlayer: heavyPlayer,
+  draw(){ drawHung(); } },
+
+/* 32. the heavy thing falls where you will be, and the other end goes up */
+{ id:'seesaw', start:2, vmax:22,
+  build(){ Gd(0,29); E({t:'b', x:0, y:256, w:7*T, h:16, solid:true}); Door(2,8);
+    S.pk = plank(9*T, 21*T, GY - 16);
+    S.blk = E({t:'th', mode:'pred', x:21*T - 48, y:8, top:8, ft:70, w:40, h:40, solid:true, ghost:true, st:'wait'}); },
+  update(){ const k = S.pk, b = S.blk;
+    heavyBlk(b, k); if (state !== 'play') return;
+    plankStand(k);
+    plankTip(k, [plankMe(k, 1), {w:5, x:b.x + 20, on:b.st === 'down', thrown(){}}]); },
+  drawBack(){ drawPlank(S.pk); drawBlkShadow(S.blk, S.pk); } },
+
+/* 33. it asks one more than it has seen you hold, and it pays you in what you lost */
+{ id:'price', was:[53], start:6,
+  build(){ Gd(0,29); E({t:'b', x:T, y:208, w:21*T, h:32, solid:true}); E({t:'b', x:21*T, y:240, w:T, h:48, solid:true}); E({t:'b', x:16*T, y:288, w:T, h:128, solid:true});
+    E({t:'b', x:23*T, y:288, w:2*T, h:16, solid:true}); E({t:'b', x:26*T, y:368, w:3*T, h:16, solid:true});
+    Sp(10,11,13,'up'); Sp(23,23,13,'up');
+    S.door = Door(2,14,{onEnter(){ if (S.coins >= S.price) levelClear(); }});
+    S.cs = marksOf().map(([x, y]) => ({x:x - 8, y:y - 10, alive:true})); S.price = 1; S.seen = false; },
+  eye(){ return {x:2*T + 16, y:GY - 74}; },
+  sees(){ const e = this.eye(), dx = pcx() - e.x, dy = P.y + 14 - e.y; const an = Math.atan2(dy, dx); if (dx < 8 || an < -0.24 || an > 0.48) return false;
+    const d = Math.hypot(dx, dy); for (let s = 10; s < d; s += 6) { const x = e.x + dx*s/d, y = e.y + dy*s/d; if (ents.some(o => o.t === 'b' && x > o.x && x < o.x + o.w && y > o.y && y < o.y + o.h)) return false; } return true; },
+  update(){ for (const c of S.cs) if (c.alive && ov(pbox(), {x:c.x, y:c.y, w:16, h:20})) { c.alive = false; S.coins++; sparkle(c.x + 8, c.y + 10); }
+    S.seen = state === 'play' && this.sees(); if (S.seen && S.price < S.coins + 1) { S.price = S.coins + 1; S.blinkT = 16; }
+    if (S.blinkT) S.blinkT--; },
+  draw(){ for (const c of S.cs) if (c.alive) drawCoin(c.x, c.y);
+    const e = this.eye(), d = S.door; ctx.fillStyle = S.seen ? 'rgba(207,62,50,.08)' : 'rgba(30,43,71,.045)'; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + 900, e.y - 900*Math.tan(0.24)); ctx.lineTo(e.x + 900, e.y + 900*Math.tan(0.48)); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = S.blinkT ? C.red : C.white; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(e.x, e.y, 9, 6, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(e.x + 4, e.y + clamp((P.y + 14 - e.y)*0.02, -2, 2), 3, 0, 7); ctx.fill();
+    ctx.fillStyle = C.door; ctx.fillRect(d.x + 22, d.y + 28, 10, 12);
+    for (let i = 0; i < S.price; i++) { const sx = d.x + 18 + (i - (S.price - 1)/2)*9; ctx.fillStyle = i < S.coins ? C.gold : C.ink; ctx.beginPath(); ctx.arc(sx, d.y + 34, 3, 0, 7); ctx.fill(); } } },
+
+/* 34. each gap is as wide as your last leap, and a little more */
+{ id:'measure', was:[65], start:1,
+  build(){ S.pits = [{x:3*T, w:40}, {x:10*T}, {x:18*T}]; S.last = null; S.take = null; this.layout(); Door(27.5,14); },
+  layout(){ for (const e of ents) if (e.pitg) e.alive = false; let x0 = 0;
+    for (const p of S.pits) { E({t:'g', x:x0, y:GY, w:p.x - x0, h:96, solid:true, pitg:true}); E({t:'s', x:p.x, y:GY + 40, w:p.w || 48, h:16, dir:'up', kill:true, pitg:true}); x0 = p.x + (p.w || 48); }
+    E({t:'g', x:x0, y:GY, w:W - x0, h:96, solid:true, pitg:true}); },
+  onJump(){ S.take = pcx(); },
+  onLand(){ if (S.take != null) { const cr = S.pits.find(p => p.w != null && S.take < p.x && P.x + PW > p.x + p.w); S.take = null;
+      if (cr) { const ex = Math.max(0, pcx() - (cr.x + cr.w)); S.last = {from:cr.x + cr.w, to:pcx(), y:GY + 8};
+        const nxt = S.pits.find(p => p.x > pcx() && p.w == null); if (nxt) { nxt.w = clamp(Math.round(cr.w + ex + 6), 40, 190); this.layout(); } } } },
+  update(){ if (P.on && S.take != null) S.take = null; },
+  draw(){ const L = S.last; if (L) { ctx.strokeStyle = C.red; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(L.from, L.y); ctx.lineTo(L.to, L.y); ctx.moveTo(L.from, L.y - 5); ctx.lineTo(L.from, L.y + 5); ctx.moveTo(L.to, L.y - 5); ctx.lineTo(L.to, L.y + 5); ctx.stroke(); }
+    for (const p of S.pits) if (p.w != null && p.w !== 40) { ctx.strokeStyle = 'rgba(207,62,50,.6)'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(p.x, GY + 6); ctx.lineTo(p.x + p.w, GY + 6); ctx.stroke(); ctx.setLineDash([]); } } },
+
+/* 35. up is a choice, and the floor of the world is the roof of the world */
+{ id:'upchoice', was:[11, 4], start:2, flip:true, wrapY:true, vmax:9,
+  build(){ Gd(0,6); Gd(9,16); Gd(19,29); R('b',0,29,4,4); Sp(4,11,3,'up'); Sp(11,13,13,'up'); Sp(17,23,5,'down'); Door(26,4); },
+  // upside down under the floor is outside the world
+  update(){ if (P.g < 0 && P.y > GY) die('fall'); } },
+
+/* 36. what falls in comes out going up */
+{ id:'portal', was:[45], start:2, sy:100,
+  build(){ Gd(0,6); Gd(9,10); Gd(13,18); Gd(21,29); R('g',0,6,4,4); E({t:'g', x:22*T, y:336, w:7*T, h:112, solid:true}); Door(26,14,{y:336 - 56});
+    Sp(13,15,13,'up');
+    S.po = [{x:7*T, gold:true, to:19*T}, {x:19*T, gold:true, to:7*T}, {x:11*T, gold:false, to:null}]; S.cool = 0; },
+  update(){ if (S.cool > 0) { S.cool--; return; }
+    for (const p of S.po) if (P.vy > 0 && pcx() > p.x + 4 && pcx() < p.x + 60 && P.y + PH > GY + 6) {
+      const v = Math.max(3, Math.min(12, P.vy)); S.cool = 12;
+      if (p.gold) { P.x = p.to + 32 - PW/2 + (pcx() - p.x - 32); P.y = GY - PH - 2; P.vy = -v; P.noCutT = 60; }
+      else { S.chomp = 20; return die('portal'); }
+      burst(pcx(), P.y + 14); return; } },
+  drawBack(){ for (const p of S.po) { ctx.fillStyle = p.gold ? C.gold : C.red; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x + 32, GY + 2, 30, 7, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(p.x + 32, GY + 2, 20, 4, 0, 0, 7); ctx.fill(); } } },
+
+/* 37. the ground hits back as hard as you fall */
+{ id:'hardlanding', was:[35], start:2, sy:68,
+  build(){ Gd(0,29); R('g',0,4,3,3); R('g',7,10,3,3); R('g',12,15,6,6); R('g',17,19,9,9,{crumble:24}); R('g',21,23,12,12); Door(27,14); },
+  onLand(){ if (P.landV >= 11.5) die('fall'); } },
+
+/* 38. the wheel hurries away from whoever jumps at it */
+{ id:'wheel', was:[36], start:2,
+  build(){ Gd(0,5); Sp(6,23,14,'up'); R('g',6,23,15,16); Gd(24,29); Door(27,14);
+    S.wh = {cx:15*T, cy:360, r:140, a:0.3, boost:0}; S.pl = [0,1,2,3].map(k => E({t:'b', wheel:true, x:0, y:0, w:64, h:12, solid:true, k})); this.place(); },
+  place(dx){ const w = S.wh; for (const p of S.pl) { const a = w.a + p.k*Math.PI/2, nx = w.cx + Math.cos(a)*w.r - 32, ny = w.cy + Math.sin(a)*w.r;
+      if (dx && P.on && P.stand === p) { P.x += nx - p.x; P.y += ny - p.y; } p.x = nx; p.y = ny; } },
+  onJump(){ if (P.vx > 0.5 && pcx() < S.wh.cx - 100) S.wh.boost = 26; },
+  update(){ S.wh.a += 0.012*(S.wh.boost > 0 ? 3.2 : 1); if (S.wh.boost > 0) S.wh.boost--; this.place(true); },
+  drawBack(){ const w = S.wh; ctx.strokeStyle = S.wh.boost ? C.red : C.grid2; ctx.lineWidth = 3; for (const p of S.pl) { ctx.beginPath(); ctx.moveTo(w.cx, w.cy); ctx.lineTo(p.x + 32, p.y + 6); ctx.stroke(); } ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(w.cx, w.cy, 8, 0, 7); ctx.fill(); } },
+
+/* 39. it runs from wherever you are heading */
+{ id:'shyraft', start:3,
+  build(){ Gd(0,5); Sp(6,23,14,'up'); R('g',6,23,15,16); Gd(24,29);
+    S.raft = E({t:'raft', x:6*T, y:GY, w:3*T, h:12, solid:true}); S.door = {x:27*T, y:0}; S.look = 90; },
+  update(){ const r = S.raft, on = P.on && P.stand === r;
+    const nx = on ? clamp(r.x - P.face*1.8, 6*T, 21*T) : r.x, vx = nx - r.x; r.x = nx; if (on) P.x += vx; r.mv = vx;
+    // the door on the far bank: it comes to whoever lets go, and bites whoever faces it
+    const d = S.door, dir = Math.sign(d.x + 18 - pcx()) || 1, docked = r.x >= 21*T;
+    S.look = (P.face === dir) ? 0 : S.look + 1; d.teeth = clamp(1 - S.look/60, 0, 1);
+    if (fleeDoor(d, 1.6, {min: docked ? r.x : 25*T, wait:50})) { if (S.look >= 60) return levelClear(); d.bite = true; return die('door'); }
+    d.y = docked && d.x < 24*T - 18 ? -8 : 0; },
+  draw(){ drawShy(S.door); const r = S.raft; if (r.mv) { ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { const wx = r.mv > 0 ? r.x - 8 - i*10 : r.x + r.w + 8 + i*10; ctx.beginPath(); ctx.moveTo(wx, GY + 8); ctx.lineTo(wx - Math.sign(r.mv)*6, GY + 14); ctx.stroke(); } } } },
+
+/* 40. whatever is lighter flies */
+{ id:'balance', start:8.5,
+  jumpV(){ return 10.6 - 1.6*S.keys; },
+  drawPlayer: heavyPlayer,
+  build(){ Gd(0,29);
+    S.wall = E({t:'b', x:3*T, y:0, w:T, h:GY, solid:true, hidden:true}); Door(1,14);
+    E({t:'b', x:5*T, y:300, w:2*T, h:GY - 30 - 300, solid:true});
+    for (const [c, a] of [[10,21],[12,84]]) E({t:'key', x:c*T - 7, y:400 - a, w:14, h:20, hang:true});
+    S.pk = plank(14*T, 24*T, GY - 16, {px:16*T});
+    S.box = E({t:'b', x:14*T + 2, y:0, w:28, h:20, solid:true, held:true, hidden:true});
+    S.blk = E({t:'th', mode:'pred', x:24*T - 44, y:70, top:70, w:40, h:40, solid:true, ghost:true, st:'wait'});
+    S.box.y = plankY(S.pk, S.box.x + 14) - 20; },
+  update(){ const k = S.pk, b = S.box, bl = S.blk;
+    heavyBlk(bl, k); if (state !== 'play') return;
+    plankStand(k);
+    if (b.alive && b.held && !b.fly) { b.y = plankY(k, b.x + 14) - 20; b.vy = 0; }
+    if (b.alive && b.fly) { b.x += b.vx; b.vy = Math.min(b.vy + 0.6, 12); b.y += b.vy;
+      if (ov(b, S.wall)) return this.cancel();
+      if (b.vy > 0) for (const o of ents) if (o !== b && isSolid(o) && ov(b, o)) { b.y = o.y - b.h; b.vy = 0; b.fly = false; b.held = false; b.ghost = false; shake = 6; dust(b.x + 14, b.y + 20); break; } }
+    plankTip(k, [plankMe(k, 1 + S.keys), {w:5, x:bl.x + 20, on:bl.st === 'down', thrown(){}},
+      {w:7, x:b.x + 14, on:b.alive && b.held && !b.fly, thrown(){ b.fly = true; b.ghost = true; b.vx = -8; b.vy = -16; }}]);
+    // gold cancels red
+    if (b.alive && S.wall.alive && !b.held && ov({x:b.x - 3, y:b.y + 2, w:b.w + 6, h:b.h - 4}, S.wall)) this.cancel(); },
+  cancel(){ const b = S.box; b.alive = false; S.wall.alive = false; burst(b.x, b.y + 12); shake = 10; },
+  drawBack(){ drawPlank(S.pk); drawBlkShadow(S.blk, S.pk); },
+  draw(){ drawHung(); const b = S.box, w = S.wall;
+    if (b.alive) { ctx.fillStyle = C.gold; ctx.fillRect(b.x, b.y, 28, 20); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.strokeRect(b.x + 1, b.y + 1, 26, 18); ctx.fillStyle = C.ink; ctx.fillRect(b.x + 8, b.y, 3, 20); ctx.fillRect(b.x + 17, b.y, 3, 20); }
+    if (w.alive) { ctx.fillStyle = C.red; ctx.fillRect(w.x, w.y, w.w, w.h); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(w.x + 1, w.y - 2, w.w - 2, w.h + 2); ctx.strokeStyle = 'rgba(251,252,253,.35)'; ctx.lineWidth = 1; for (let yy = 12; yy < w.h; yy += 12) { ctx.beginPath(); ctx.moveTo(w.x, yy); ctx.lineTo(w.x + w.w, yy); ctx.stroke(); } } } },
 ];
 
 // ground that remembers your feet and grows thorns there
@@ -825,7 +988,7 @@ function updateWorld(){
     if (e.grow != null && e.h < e.grow) { e.h = Math.min(e.grow, e.h + 9); e.y = e.base - e.h; }
     if (e.revealT) e.revealT--;
     if (e.stk && e.alive && --e.life <= 0) e.alive = false;
-    if (e.t === 'box' && e.alive) { e.vy = Math.min(e.vy + 0.6, 12); e.y += e.vy;
+    if (e.t === 'box' && e.alive && !e.held) { e.vy = Math.min(e.vy + 0.6, 12); e.y += e.vy;
       for (const o of ents) if (o !== e && isSolid(o) && ov(e, o) && e.vy > 0) { e.y = o.y - e.h; e.vy = 0; }
       if (e.y > H + 40) e.alive = false; }
   }

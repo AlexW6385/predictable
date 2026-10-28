@@ -152,20 +152,20 @@ What is drawn and what is there come apart. Each level teaches a different way o
 
 ## IV. Weight (31–40)
 
-Numbers start to matter. Keys and coins weigh something, planks hold so much, a fall hits back as hard as it fell, and up is a direction you can choose. Two-piece levels become the norm: one piece sets a limit, and the other pushes you toward it.
+Numbers start to matter. Keys and coins weigh something, a seesaw throws whatever is lighter, a fall hits back as hard as it fell, and up is a direction you can choose. Two-piece levels become the norm: one piece sets a limit, and the other pushes you toward it.
 
 | # | Level | What is in it | The idea you need | Without it |
 | --- | --- | --- | --- | --- |
-| 31 | **Enough** | Keys weigh: each one lowers your jump. Planks hold only so many keys. The door takes exactly three. | Take them in an order your weight allows, and leave the extra one. | Taking every key; taking them in the order you meet them. |
-| 32 | **Seesaw** | A seesaw under a high ledge. The heavy block from 16 falls where you will be. | Stand on the near end and let it land on the far end, so it throws you up. | Jumping at the ledge; standing where it will land. |
-| 33 | **Price** | The door asks one more coin than the Eye has seen you hold. Coins appear only where you died. | Die where the coins should be, then collect them out of the Eye's sight. | Collecting in view; avoiding death. |
+| 31 | **Enough** | Four keys hang at rising heights, and each key you hold lowers your jump. The door takes exactly three, and bites if you bring more. | Take the highest one you can reach first, work down, and leave the lowest. | Taking them in the order you meet them; taking all four. |
+| 32 | **Seesaw** | A seesaw under a high ledge. The heavy block from 16 falls where you will be when it lands. | Run at it to call the block, then turn back to the near end: it lands on the far end and throws you up. | Jumping at the ledge; running on (it lands on you). |
+| 33 | **Price** | The door asks one more coin than the Eye has seen you hold. Coins appear only where you died. Behind a pillar the Eye is blind. | Die in its blind spot, take that coin there, and come home over the roof, out of its sight. | Collecting in view; walking home past it. |
 | 34 | **Measure of a leap** | Each gap is as wide as your last leap, plus a little. | Make small leaps, so the gaps stay small. | Big jumps "to be safe". |
-| 35 | **Up is a choice** | Every jump flips gravity, and falling off the floor brings you in through the roof. | Use both: drop through the bottom to arrive on top. | Fighting the flip. |
+| 35 | **Up is a choice** | Every jump flips gravity. Falling off the bottom brings you in at the top, onto the roof where the door is; most of that roof is spikes. | Flip to cross, flip back before the hanging spikes, and fall through the second hole. | Fighting the flip; the first hole. |
 | 36 | **Portal** | What falls in comes out going up, as fast as it went in. One portal is red and eats you. | Fall from higher to fly higher; avoid the red one. | Stepping in from the floor. |
 | 37 | **Hard landing** | Falls from too high kill. The middle step crumbles under you. | Step down in stages and don't linger on the crumbling one. | Dropping straight down; waiting on the middle step. |
 | 38 | **Wheel** | A wheel of platforms over spikes speeds away from whoever jumps at it. | Let its platform come to you; step on, don't leap. | Leaping at it. |
-| 39 | **Shy raft** | A raft that runs from wherever you are heading. | To cross to the right, walk left on it. | Walking toward the far side. |
-| 40 | **Balance** | Boxes of one colour cancel walls of the other. The only way to get a box over the wall is the seesaw, which throws whatever is lighter. You are heavier with every key. | Choose what to carry so the right thing flies. | Any single trick from the chapter on its own. |
+| 39 | **Shy raft** | A raft over spikes that runs from wherever you face. On the far bank, the door from 1 and 5: it comes to whoever lets go and bites whoever faces it. | Face back the way you came and stand still. Keep your back to the door when you arrive. | Walking toward the far side; turning to the door. |
+| 40 | **Balance** | A seesaw holding a heavy gold box, a tunnel too low for the box, and a red wall in front of the door. Gold cancels red. The block from 32 hangs over the other end, and each key makes you heavier. | Take the high key first, then the low one. Then stand on the block's side, short of it: you and the block together outweigh the box, and it flies over into the wall. | Too few keys (the plank only levels out); running into the block; any single trick on its own. |
 
 ## V. Elements (41–50)
 
