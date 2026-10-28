@@ -60,8 +60,6 @@ canvas{display:block;touch-action:none;outline:none;border:2.5px solid var(--ink
 .picker .grid button:disabled{opacity:.25;cursor:default;border-style:dashed}
 .picker .grid button.cur{background:var(--gold);border-color:var(--ink)}
 .picker .grid button:not(:disabled):active{background:var(--ink);color:var(--paper)}
-.picker .wipe{border-color:var(--pencil);color:var(--pencil)}
-.picker .wipe.arm{background:var(--pencil);color:var(--paper)}
 .rot{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:var(--paper);z-index:5;pointer-events:none}
 .rot svg{width:96px;height:96px;animation:rot 2.4s ease-in-out infinite}
 @keyframes rot{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
@@ -89,7 +87,7 @@ canvas{display:block;touch-action:none;outline:none;border:2.5px solid var(--ink
     <div class="view" id="view">
       <canvas id="c" tabindex="0" aria-label="Predictable game"></canvas>
       <div class="picker" id="picker" role="dialog" aria-label="Levels">
-        <div class="top"><button class="mini wipe" id="wipe" aria-label="Forget everything" title="Forget everything (press twice)">✕</button><button class="mini" data-act="levels" aria-label="Close" title="Close">▦</button></div>
+        <div class="top"><span></span><button class="mini" data-act="levels" aria-label="Close" title="Close">✕</button></div>
         <div class="grid" id="grid"></div>
       </div>
     </div>
@@ -147,17 +145,15 @@ document.querySelectorAll('.side [data-k]').forEach(b => {
 cv.addEventListener('pointerdown', () => { cv.focus(); if (state !== 'play' || (S && S.over)) jumpEdge = true; });
 // restart the level you are on (fresh level memory, no death counted); the level sheet jumps to any level you have reached
 function restartLevel(){ if (state === 'title') return; prof.mem = null; startLevel(lvl); state = 'play'; parts = []; flash = 0; shake = 0; }
-const picker = document.getElementById('picker'), grid = document.getElementById('grid'), wipe = document.getElementById('wipe');
+const picker = document.getElementById('picker'), grid = document.getElementById('grid');
 function placePicker(){ const r = cv.getBoundingClientRect(), v = document.getElementById('view').getBoundingClientRect(); Object.assign(picker.style, {left:(r.left - v.left) + 'px', top:(r.top - v.top) + 'px', width:r.width + 'px', height:r.height + 'px'}); }
 function buildGrid(){ grid.textContent = ''; const best = Math.max(prof.best || 0, prof.level || 0);
   for (let i = 0; i < LV.length; i++) { const b = document.createElement('button'); b.textContent = String(i + 1).padStart(2, '0'); b.disabled = i > best; if (i === lvl && state !== 'title') b.className = 'cur';
     b.addEventListener('click', () => { closePicker(); prof.mem = null; prof.level = i; startLevel(i); state = 'play'; parts = []; }); grid.appendChild(b); } }
-function openPicker(){ buildGrid(); placePicker(); picker.classList.add('open'); paused = true; wipe.classList.remove('arm'); }
+function openPicker(){ buildGrid(); placePicker(); picker.classList.add('open'); paused = true; }
 function closePicker(){ picker.classList.remove('open'); paused = false; keys.left = keys.right = keys.jump = false; cv.focus(); }
 const togglePicker = () => picker.classList.contains('open') ? closePicker() : openPicker();
 document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', e => { e.currentTarget.blur(); if (b.dataset.act === 'restart') { if (picker.classList.contains('open')) closePicker(); restartLevel(); cv.focus(); } else togglePicker(); }));
-wipe.addEventListener('click', () => { if (!wipe.classList.contains('arm')) { wipe.classList.add('arm'); setTimeout(() => wipe.classList.remove('arm'), 2500); return; }
-  closePicker(); prof = fresh(); save(); state = 'title'; startLevel(0, true); });
 addEventListener('keydown', e => { if (e.code === 'KeyR' && !picker.classList.contains('open')) restartLevel(); else if (e.code === 'Escape' && picker.classList.contains('open')) closePicker(); });
 
 /* ================= world ================= */
