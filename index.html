@@ -431,6 +431,17 @@ function drawCrate(x, y, w, h, br, bite){ const g = br ? br*1.6 : 0;
   ctx.beginPath(); ctx.moveTo(x + 3, y + 3 - g); ctx.lineTo(x + w - 3, y + 29); ctx.moveTo(x + w - 3, y + 3 - g); ctx.lineTo(x + 3, y + 29); ctx.stroke();
   if (bite) { ctx.fillStyle = C.ink; ctx.fillRect(x, y - 2, w, 10); ctx.fillStyle = C.white; ctx.beginPath(); for (let i = 0; i < w/8; i++) { ctx.moveTo(x + i*8, y - 2); ctx.lineTo(x + i*8 + 4, y + 7); ctx.lineTo(x + i*8 + 8, y - 2); } ctx.fill(); } }
 
+// habit: three jumps at one rhythm, and your body keeps the rhythm for you, until you break it
+function habitJump(){ if (S.auto) { S.auto = false; return; } S.h0 = frame; S.js.push({f:frame, vx:P.vx}); if (S.js.length > 3) S.js.shift();
+  const j = S.js; if (!S.hab && j.length === 3 && j.every(q => q.vx > 2)) { const a = j[1].f - j[0].f, b = j[2].f - j[1].f; if (a > 16 && a < 80 && Math.abs(a - b) <= 8) S.hab = {int:(a + b)/2, next:frame + (a + b)/2, t0:frame}; } }
+function habitStep(){ if (S.h0 != null && !keys.jump) { S.holdLen = frame - S.h0; S.h0 = null; }
+  const h = S.hab; if (!h) return;
+  if (still() || (P.on && P.vx < 1) || keys.left) { S.hab = null; S.js = []; return; }
+  if (frame >= h.next) { if (P.on) { S.auto = true; P.vy = -10.6; P.on = false; P.noCutT = S.holdLen; P.coy = 0; onJump(); h.t0 = frame; h.next += h.int; } else h.next = frame + 1; } }
+function drawHabit(){ const h = S.hab; if (!h || state !== 'play') return; const ph = clamp((frame - h.t0)/h.int, 0, 1), a = Math.sin(ph*Math.PI*2)*0.6, ox = pcx(), oy = P.y - 8;
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + Math.sin(a)*12, oy - Math.cos(a)*12); ctx.stroke();
+  ctx.fillStyle = ph > 0.85 ? C.red : C.ink; ctx.beginPath(); ctx.arc(ox + Math.sin(a)*12, oy - Math.cos(a)*12, 3, 0, 7); ctx.fill(); }
+
 /* ================= the hundred ================= */
 const LV = [
 /* ===================== I. Door ===================== */
@@ -1293,6 +1304,162 @@ const LV = [
   drawBack(){ ctx.strokeStyle = C.red; ctx.lineWidth = 2; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(18.5*T, GY); ctx.lineTo(18.5*T, GY - 30); ctx.stroke(); ctx.setLineDash([]); },
   draw(){ drawNoise(S.rings); for (const g of S.gd) drawGuard(g); drawCarpets(); drawFlock(S.fl); drawVines(S.vg); drawCones(); } },
 
+/* ===================== VII. Self ===================== */
+
+/* 61. what you leave behind is what you stand on, and it belongs to the side it died on */
+{ id:'bodies', was:[27, 6], start:2,
+  build(){ Gd(0,3); Sp(4,24,14,'up'); R('g',4,24,15,16); Gd(25,29); Door(27,14); S.tog = 'A';
+    for (const k of (M.crates || [])) E({t:'crate', set:k.s, x:k.c*T, y:432 - 32*k.k, w:T, h:T, solid:true, cond:e => e.set === S.tog}); },
+  onJump(){ S.tog = S.tog === 'A' ? 'B' : 'A'; },
+  onDeath(cause){ const pc = pcx(); if (cause === 'spike' && pc > 4*T && pc < 25*T) { M.crates = M.crates || []; const c = Math.floor(pc/T), k = M.crates.filter(z => z.c === c).length; if (k < 3) M.crates.push({c, k, s:S.tog}); } },
+  drawBack(){ ctx.fillStyle = S.tog === 'A' ? 'rgba(226,166,42,.06)' : 'rgba(79,111,166,.08)'; ctx.fillRect(0, 0, W, GY); } },
+
+/* 62. last time, you could have held it for yourself */
+{ id:'lasttime', was:[49], start:2,
+  build(){ Gd(0,9); Gd(13,29); R('b',22,22,9,13,{cond:() => !S.open, gate:true}); Door(27,14);
+    S.plate = {x:4*T + 2, y:GY - 6, w:T - 4, h:6}; S.rec = []; S.ghost = M.last || null; S.gi = 0; S.open = false; S.hold = 0; },
+  update(){ if (S.rec.length < 3600) S.rec.push([Math.round(P.x), Math.round(P.y)]);
+    const g = S.ghost && S.gi < S.ghost.length ? S.ghost[S.gi++] : null; S.gp = g;
+    const pr = (P.on && ov(pbox(), S.plate)) || (g && ov({x:g[0], y:g[1], w:PW, h:PH}, S.plate));
+    S.pressed = !!pr; if (pr) S.hold = 10; else if (S.hold > 0) S.hold--;
+    const inGate = ov(pbox(), {x:22*T, y:9*T, w:T, h:5*T}); S.open = S.hold > 0 || (S.open && inGate); },
+  onDeath(){ M.last = S.rec; },
+  draw(){ const p = S.plate; ctx.fillStyle = S.pressed ? C.gold : C.red; ctx.fillRect(p.x, p.y + (S.pressed ? 3 : 0), p.w, p.h - (S.pressed ? 3 : 0)); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(p.x, p.y + (S.pressed ? 3 : 0), p.w, p.h - (S.pressed ? 3 : 0));
+    if (S.gp) { ctx.globalAlpha = 0.45; drawPlayerAt(S.gp[0], S.gp[1], PW, PH, 1, C.white, C.soft, false); ctx.globalAlpha = 1; } } },
+
+/* 63. what you do three times, your body does the fourth */
+{ id:'habit', was:[46], start:2,
+  build(){ Gd(0,5); Gd(8,11); Gd(14,17); Gd(20,29); Sp(24,26,11,'down'); Door(28,14); S.js = []; S.hab = null; S.holdLen = 30; },
+  onJump(){ habitJump(); },
+  update(){ habitStep(); },
+  draw(){ drawHabit(); } },
+
+/* 64. what you did becomes what you do, and what you did comes after you */
+{ id:'habitshadow', was:[70, 51], start:2, w:52,
+  build(){ Gd(0,5); Gd(8,11); Gd(14,17); Gd(20,29); Gd(32,35); Gd(38,41); Gd(44,51); Sp(47,49,11,'down');
+    Door(50,14,{slots:1, fill:() => S.gem ? 1 : 0, onEnter(){ if (S.gem) levelClear(); }}); S.js = []; S.hab = null; S.holdLen = 30; S.trail = []; S.sh = null; S.gem = false; },
+  onJump(){ habitJump(); },
+  update(){ S.trail.push([P.x, P.y]);
+    if (!S.gem && ov(pbox(), {x:25*T + 6, y:GY - 24, w:20, h:22})) { S.gem = true; sparkle(25*T + 16, GY - 14); S.sh = {i:Math.max(0, S.trail.length - 90)}; shake = 4; }
+    if (S.sh) { const p = S.trail[S.sh.i++]; S.sp = p; if (p && ov(pbox(3), {x:p[0] + 3, y:p[1] + 3, w:PW - 6, h:PH - 6})) return die('shadow'); }
+    habitStep(); },
+  draw(){ if (!S.gem) { const y = GY - 24 + Math.sin(frame*0.08)*2, x = 25*T; ctx.fillStyle = C.red; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 16, y); ctx.lineTo(x + 26, y + 9); ctx.lineTo(x + 16, y + 22); ctx.lineTo(x + 6, y + 9); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    if (S.sp) drawPlayerAt(S.sp[0], S.sp[1], PW, PH, -1, C.red, C.ink, true);
+    drawHabit(); } },
+
+/* 65. it bets on you changing your mind */
+{ id:'changed', was:[19], start:2,
+  build(){ Gd(0,29); R('b',7,22,11,11); R('b',7,22,8,8); R('b',4,5,12,12); Door(27,14);
+    S.trap = M.last ? (M.last === 'U' ? 'L' : 'U') : 'L'; },
+  update(){ const pc = pcx();
+    if (!S.route && pc > 8.5*T) { S.route = P.y + PH <= 354 ? 'U' : 'L'; M.last = S.route; save(); }
+    if (S.route === S.trap && !S.fired && pc > 12*T && P.on) { S.fired = true; spikeGrow(P.x + PW + 4 + P.vx*3, S.route === 'U' ? 352 : GY); } } },
+
+/* 66. what you see has already happened, and your body arrives after you meant it to */
+{ id:'late', was:[48, 59], start:2,
+  build(){ Gd(0,29); S.door = Door(27,14,{inert:true}); S.t = 0; S.hist = []; S.lag = 30;
+    S.bl = [[8, 0], [15, 2.1], [22, 4.2]].map(([c, ph]) => ({px:c*T + 16, py:190, len:230, ph, per:150})); },
+  pos(b, t){ const a = Math.sin(t*2*Math.PI/b.per + b.ph)*0.85; return {x:b.px + Math.sin(a)*b.len, y:b.py + Math.cos(a)*b.len}; },
+  body(){ const h = S.hist; return h.length > S.lag ? h[h.length - 1 - S.lag] : (h[0] || [P.x, P.y, true]); },
+  update(){ S.t++; S.hist.push([P.x, P.y, P.on]); if (S.hist.length > 400) S.hist.shift();
+    const b = this.body(), bx = b[0] + PW/2, by = b[1] + 14;
+    for (const bl of S.bl) { const p = this.pos(bl, S.t); if (Math.hypot(bx - p.x, by - p.y) < 25) { P.x = b[0]; P.y = b[1]; return die('blade'); } }
+    if (b[2] && ov({x:b[0] + 6, y:b[1] + 6, w:PW - 12, h:PH - 12}, S.door)) levelClear(); },
+  drawPlayer(){ const b = this.body(); ctx.strokeStyle = 'rgba(30,43,71,.55)'; ctx.lineWidth = 2; ctx.setLineDash([4,3]); ctx.strokeRect(P.x, P.y, PW, PH); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(30,43,71,.4)'; ctx.fillRect(P.x + PW/2 + P.face*4 - 6, P.y + 8, 3, 6); ctx.fillRect(P.x + PW/2 + P.face*4 + 2, P.y + 8, 3, 6);
+    drawPlayerAt(b[0], b[1], PW, PH, P.face, C.white, C.ink, false); },
+  draw(){ const D = 26;
+    for (const b of S.bl) { const now = this.pos(b, S.t), k = clamp((now.y - 330)/90, 0, 1);
+      ctx.fillStyle = `rgba(30,43,71,${0.12 + 0.5*k})`; ctx.beginPath(); ctx.ellipse(now.x, GY - 1, 8 + 14*k, 2.5 + 2.5*k, 0, 0, 7); ctx.fill();
+      if (k > 0.85) { ctx.strokeStyle = 'rgba(207,62,50,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(now.x - 20, GY + 4); ctx.lineTo(now.x + 20, GY + 4); ctx.stroke(); } }
+    for (const b of S.bl) { const p = this.pos(b, S.t - D);
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(b.px, b.py); ctx.lineTo(p.x, p.y); ctx.stroke();
+      ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(b.px, b.py, 5, 0, 7); ctx.fill();
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(S.t*0.35); ctx.fillStyle = C.ink2; ctx.beginPath(); for (let i = 0; i < 16; i++) { const a = i/16*Math.PI*2, r = i % 2 ? 14 : 22; ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r); } ctx.closePath(); ctx.fill(); ctx.fillStyle = C.paper; ctx.beginPath(); ctx.arc(0, 0, 4, 0, 7); ctx.fill(); ctx.restore(); } } },
+
+/* 67. the harder you want it, the better it knows where you will be */
+{ id:'wanting', was:[55], start:2, noJump:true, noCut:true, vmax:14,
+  build(){ Gd(0,29); R('b',10,10,10,13); R('g',22,29,11,13); Door(26,11); S.ch = 0; S.cd = 1; S.charging = false; S.slab = {x:23*T, w:7*T, y:240}; },
+  vOf(c){ return 5 + 8*c; },
+  rise(c){ let v = this.vOf(c), r = 0; while (v > 0) { v -= 0.55; if (v > 0) r += v; } return r; },
+  input(ax){ return (S.charging || (P.on && keys.jump)) ? {ax:0, acc:0, max:4.4} : {ax, acc:P.on ? 0.9 : 0.6, max:4.4}; },
+  update(){ const sl = S.slab;
+    if (P.on && keys.jump) { S.charging = true; P.vx = 0; S.ch += S.cd/45; if (S.ch >= 1) { S.ch = 1; S.cd = -1; } if (S.ch <= 0) { S.ch = 0; S.cd = 1; } }
+    else if (S.charging) { S.charging = false; if (P.on) { const v = this.vOf(S.ch); P.vy = -v; P.on = false; P.vx = ((keys.right ? 1 : 0) - (keys.left ? 1 : 0))*3.6; onJump(); } S.ch = 0; S.cd = 1; }
+    if (S.charging) S.lock = P.y - this.rise(S.ch) + 10; else if (P.on) S.lock = null;
+    const tgt = S.lock != null ? S.lock : 230;
+    sl.y += clamp(tgt - sl.y, -4, 4); sl.y = clamp(sl.y, 60, 330);
+    if (pcx() > sl.x + 4 && pcx() < sl.x + sl.w - 4 && P.y + 2 < sl.y) return die('slab'); },
+  draw(){ const sl = S.slab; ctx.fillStyle = C.ink2; ctx.fillRect(sl.x, sl.y - 60, sl.w, 46); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(sl.x + 1, sl.y - 59, sl.w - 2, 44);
+    ctx.strokeStyle = C.ink; ctx.beginPath(); ctx.moveTo(sl.x + sl.w/2, 0); ctx.lineTo(sl.x + sl.w/2, sl.y - 60); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.beginPath(); for (let x = sl.x; x < sl.x + sl.w; x += 16) { ctx.moveTo(x, sl.y - 14); ctx.lineTo(x + 8, sl.y); ctx.lineTo(x + 16, sl.y - 14); } ctx.fill();
+    if (S.charging && state === 'play') { const bx = P.x - 12, by = P.y - 2; ctx.fillStyle = 'rgba(30,43,71,.15)'; ctx.fillRect(bx, by - 30, 6, 30); ctx.fillStyle = S.cd > 0 ? C.red : C.gold; ctx.fillRect(bx, by - 30*S.ch, 6, 30*S.ch); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by - 30, 6, 30);
+      const apex = P.y - this.rise(S.ch); ctx.strokeStyle = 'rgba(207,62,50,.5)'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(P.x - 8, apex); ctx.lineTo(P.x + PW + 8, apex); ctx.stroke(); ctx.setLineDash([]); } } },
+
+/* 68. you may take it back, but whatever you do instead is what it waits for */
+{ id:'regret', start:2,
+  build(){ Gd(0,29); Sp(7,7,13,'up'); Sp(14,14,13,'up'); Sp(21,21,13,'up'); Door(28,14);
+    // past each spike the ground gives way wherever you first come down
+    S.sp = [7, 14, 21]; S.i = 0; S.air = false; S.f = 0; S.pop = null; this.snaps = []; M.ref = M.ref || {}; },
+  update(){ S.f++;
+    if (S.f % 5 === 1) { this.snaps.push(dclone({P, S, ents}, new Map())); if (this.snaps.length > 40) this.snaps.shift(); }
+    if (!P.on) S.air = true;
+    if (S.i < 3 && P.on && S.air) { S.air = false; const pc = pcx();
+      if (pc > (S.sp[S.i] + 1)*T + 4) { const ref = M.ref[S.i];
+        // the first time, it is where you land; after that, it is anywhere you land instead
+        if (ref === undefined) { M.ref[S.i] = pc; S.pop = {x:pc, t:12}; return die('trap'); }
+        if (Math.abs(pc - ref) > 26) { S.pop = {x:pc, t:12}; return die('regret'); }
+        S.i++; } } },
+  // instead of starting over, take back the last two seconds
+  rewind(){ const target = S.f - 110; let z = null; for (const s of this.snaps) if (s.S.f <= target) z = s; if (!z) z = this.snaps[0]; if (!z) return false;
+    const c = dclone(z, new Map()); P = c.P; S = c.S; ents = c.ents; S.pop = null; parts = []; shake = 6; flash = 0.6;
+    this.snaps = this.snaps.filter(s => s.S.f <= S.f); return true; },
+  draw(){ // where you came down before: a scuffed patch of ground
+    for (let i = 0; i < 3; i++) { const x = M.ref && M.ref[i]; if (x === undefined) continue; const done = i < S.i;
+      ctx.fillStyle = done ? C.soft : C.ink; ctx.globalAlpha = done ? 0.5 : 0.8; for (let k = -1; k <= 1; k += 2) ctx.fillRect(x + k*6 - 3, GY - 3, 6, 3); ctx.globalAlpha = 1; }
+    if (S.pop) { const p = S.pop; ctx.fillStyle = C.ink; ctx.beginPath(); for (let i = 0; i < 3; i++) { ctx.moveTo(p.x - 18 + i*12, GY); ctx.lineTo(p.x - 12 + i*12, GY - 22); ctx.lineTo(p.x - 6 + i*12, GY); } ctx.fill(); }
+    if (state === 'dead' && deathT > 8) { ctx.globalAlpha = Math.min(0.5, (deathT - 8)/40); ctx.fillStyle = C.ink; ctx.fillRect(camX, 0, W, H); ctx.globalAlpha = 1; ctx.strokeStyle = C.white; ctx.lineWidth = 3; for (let i = 0; i < 3; i++) { const a = -deathT*0.2 + i*2.1; ctx.beginPath(); ctx.arc(camX + W/2, H/2, 30, a, a + 1.2); ctx.stroke(); } } } },
+
+/* 69. it remembers where you fell, and the sky falls there */
+{ id:'remembered', was:[], start:2,
+  build(){ Gd(0,15); Gd(22,29); R('g',16,21,14,16,{y:GY + 64}); for (const c of [16,17,18,19,20,21]) { R('bb',c,c,14,14,{hp:1}); } S.lidSp = [16,17,18,19,20,21].map(c => Sp(c,c,13,'up'));
+    Door(18.5,16); Sp(9,10,13,'up'); S.marks = marksOf().slice(); S.k = 0; S.rt = 90; },
+  update(){ // the lid's thorns go with the brick they stand on
+    for (const s of S.lidSp) if (s.alive && !ents.some(e => e.t === 'bb' && e.alive && Math.abs(e.x - s.x) < 2)) s.alive = false;
+    if (S.marks.length && --S.rt <= 0) { S.rt = 70; const m = S.marks[S.k++ % S.marks.length]; drop(m[0], 40); }
+    updCones(); },
+  draw(){ drawCones(); } },
+
+/* 70. every life you had is still here: as a body, as a ghost, as a habit, as a place the sky remembers */
+{ id:'self', start:1.5, w:48,
+  build(){ Gd(0,3); Sp(4,9,14,'up'); R('g',4,9,15,16); Gd(10,16);
+    // the gate, the plate that opens it, and the ghosts of every earlier life
+    S.plate = {x:12*T + 2, y:GY - 6, w:T - 4, h:6}; S.gate = R('b',15,15,9,13,{cond:() => !S.open}); S.open = false; S.hold = 0; S.pst = 0;
+    // three gaps at one rhythm, and a low spiked roof where the fourth would take you
+    Gd(19,22); Gd(25,28); Gd(31,38); Sp(35,37,11,'down');
+    // the door, under a lid of bricks with thorns
+    for (const c of [39,40,41]) R('bb',c,c,14,14,{hp:1}); S.lidSp = [39,40,41].map(c => Sp(c,c,13,'up')); R('g',39,41,16,16,{y:GY + 64}); Gd(42,47); Door(40,16);
+    for (const k of (M.crates || [])) E({t:'crate', x:k.c*T, y:432 - 32*k.k, w:T, h:T, solid:true});
+    S.ghosts = (M.lives || []).map(rec => ({rec, i:0, p:null})); S.rec = []; S.js = []; S.hab = null; S.holdLen = 30;
+    S.marks = marksOf().slice(); S.k = 0; S.rt = 90; },
+  onJump(){ habitJump(); },
+  update(){ if (S.rec.length < 5400) S.rec.push([Math.round(P.x), Math.round(P.y)]);
+    let held = P.on && ov(pbox(), S.plate);
+    for (const g of S.ghosts) { g.p = g.i < g.rec.length ? g.rec[g.i++] : null; if (g.p && ov({x:g.p[0], y:g.p[1], w:PW, h:PH}, S.plate)) held = true; }
+    if (held) S.hold = 10; else if (S.hold > 0) S.hold--;
+    const inGate = ov(pbox(), {x:15*T, y:9*T, w:T, h:5*T}); S.open = S.hold > 0 || (S.open && inGate);
+    // stand on the plate too long and it closes on you
+    S.pst = P.on && ov(pbox(), S.plate) ? S.pst + 1 : 0; if (S.pst > 200) return die('plate');
+    for (const s of S.lidSp) if (s.alive && !ents.some(e => e.t === 'bb' && e.alive && Math.abs(e.x - s.x) < 2)) s.alive = false;
+    if (S.marks.length && --S.rt <= 0) { S.rt = 75; const m = S.marks[S.k++ % S.marks.length]; drop(m[0], 40); }
+    habitStep(); updCones(); },
+  onDeath(cause){ (M.lives || (M.lives = [])).push(S.rec); if (M.lives.length > 6) M.lives.shift();
+    const pc = pcx(); if (cause === 'spike' && pc > 4*T && pc < 10*T) { M.crates = M.crates || []; const c = Math.floor(pc/T), k = M.crates.filter(z => z.c === c).length; if (k < 3) M.crates.push({c, k}); } },
+  draw(){ const p = S.plate, pr = S.hold > 0; ctx.fillStyle = pr ? C.gold : C.red; ctx.fillRect(p.x, p.y + (pr ? 3 : 0), p.w, p.h - (pr ? 3 : 0)); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(p.x, p.y + (pr ? 3 : 0), p.w, p.h - (pr ? 3 : 0));
+    if (S.pst > 120) { ctx.fillStyle = `rgba(207,62,50,${(S.pst - 120)/80})`; ctx.fillRect(p.x - 2, p.y - 4, p.w + 4, 4); }
+    ctx.globalAlpha = 0.4; for (const g of S.ghosts) if (g.p) drawPlayerAt(g.p[0], g.p[1], PW, PH, 1, C.white, C.soft, false); ctx.globalAlpha = 1;
+    drawCones(); drawHabit(); } },
+
 ];
 
 // ground that remembers your feet and grows thorns there
@@ -1418,6 +1585,8 @@ function step(){
   if (state === 'title') { if (jumpEdge) { state = 'play'; startLevel(lvl); } jumpEdge = false; pressEdge = false; return; }
   if (state === 'dead') {
     deathT++; updParts();
+    // some levels take the last moments back instead of starting over
+    if (lv.rewind) { if (deathT >= 34 && lv.rewind()) { state = 'play'; deathT = 0; } jumpEdge = false; pressEdge = false; if (state === 'play' || deathT < 90) return; }
     if ((deathT > 18 && jumpEdge) || deathT > 90) { push(prof.retry, deathT, 5); respawn(); state = 'play'; }
     jumpEdge = false; pressEdge = false; return;
   }

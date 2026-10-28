@@ -222,9 +222,9 @@ Several levels need more than one life on purpose: you spend a life to set up th
 | 65 | **Changed mind** | Two routes, high and low. It puts the spike on the route it bets you will switch to. | Take the same route as last time. | Switching after a death. |
 | 66 | **Late** | The blades you see are where they were a moment ago, and your body goes where you meant to a moment later. | Act on the shadows on the floor (the present), and send your intentions early. | Reacting to what you see. |
 | 67 | **Wanting** | No jump button: you charge a jump instead. The slab above moves to where your charged jump will peak. | Charge past the height you want, and release on the way back down, after the slab has committed. | Releasing at the height you want. |
-| 68 | **Regret** | Dying rewinds a few seconds instead of restarting, but the trap that killed you remembers and moves to where you dodged. | After a rewind, do exactly what you did the first time. | Dodging the new way. |
-| 69 | **Remembered** | The sky falls on your old ✕ marks, and cones crack bricks. | Die once on the brick lid; next life, the sky breaks it for you. | Avoiding death on the lid. |
-| 70 | **Self** | The chapter together: a body, a ghost, a broken rhythm, a remembered death. | Use each of your pasts once, in the right order. | Treating each life as a fresh start. |
+| 68 | **Regret** | Dying rewinds two seconds instead of restarting. Past each spike the ground gives way where you first land; after a rewind, it waits wherever you land instead. | Land exactly where you died. | Landing somewhere new after the rewind. |
+| 69 | **Remembered** | The door is under a lid of thorny bricks. The sky falls on your old ✕ marks, and a falling cone cracks a brick. | Die once on the lid; next life, wait for the sky to open it for you. | Avoiding death on the lid. |
+| 70 | **Self** | The chapter together: a pit too wide to jump, a gate opened by a plate that kills whoever stands on it too long, three gaps at one rhythm with spikes over the fourth jump, and the door under a thorny lid. | Spend your lives in order: a body in the pit, a ghost on the plate, a death on the lid. Then use them all, and break the rhythm on the way. | Treating each life as a fresh start. |
 
 ## VIII. Others (71–80)
 
