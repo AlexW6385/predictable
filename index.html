@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,6 +21,7 @@
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
   color-scheme:light;
 }
+*{touch-action:manipulation}
 html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:var(--paper);color:var(--ink)}
 body{
   position:fixed;inset:0;
@@ -1739,6 +1740,9 @@ addEventListener('pointerdown', () => {
   try { Promise.resolve(req.call(el, {navigationUI:'hide'})).then(() => { try { const p = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (p && p.catch) p.catch(() => {}); } catch(e) {} }).catch(() => {}); } catch(e) {}
 }, {passive:true});
 document.addEventListener('fullscreenchange', () => setTimeout(resize, 60));
+// no zooming on phones: double-tap is handled by touch-action above; this also stops pinch (iOS) and stray double-click zoom
+for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) document.addEventListener(ev, e => e.preventDefault(), {passive:false});
+document.addEventListener('touchstart', e => { if (e.touches.length > 1 && !e.target.closest('.side')) e.preventDefault(); }, {passive:false});
 document.addEventListener('touchmove', e => { if (e.target === cv || e.target.closest('.side')) e.preventDefault(); }, {passive:false});
 function gridRect(x, y, w, h){
   ctx.fillStyle = C.paper; ctx.fillRect(x, y, w, h); ctx.lineWidth = 1;
