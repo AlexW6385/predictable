@@ -173,16 +173,16 @@ Light, water, fire and air each have a rule, and most levels pair two that pull 
 
 | # | Level | What is in it | The idea you need | Without it |
 | --- | --- | --- | --- | --- |
-| 41 | **Dark** | Only you and your ✕ marks are lit. Every jump and landing sends out a ring of light, and a bat dives at it. | Let your deaths map the dark; make noise only where the bat can't reach you. | Jumping to look around. |
-| 42 | **Sun** | A sun crosses the sky and burns you in its light; the shade behind pillars moves with it. Further on, a lamp makes your own shadow a hole in the planks. | Move with the shade; under the lamp, keep your shadow on solid ground. | Standing still in shade that is leaving; walking under the lamp. |
-| 43 | **Water** | Breath runs out underwater, and using one air pocket closes another. Getting wet lets you walk through fire for a while. | Wet yourself just before the fire; breathe at the pocket that stays. | Breathing at the first pocket; drying off before the fire. |
-| 44 | **Fire** | Grass burns and fire runs along it. A bomb's fuse burns only while you are near, and the blast breaks bricks. | Light the grass to burn the thorn bush; walk the bomb to the brick wall, near enough to keep it lit, far enough when it blows. | Standing by the bomb; walking away from it. |
+| 41 | **Dark** | Only you and your ✕ marks are lit. Every jump and landing sends out a ring of light, and a bat dives at the sound. Under the low roof the bat can't reach you, but the roof's underside is spiked. | Let your deaths map the dark. Jump only to cross, keep moving after you land, and under the roof hop small. | Jumping to look around; stopping where you landed; full jumps under the roof. |
+| 42 | **Sun** | A sun crosses the sky and burns you in its light; the shade under each block moves with it. On the boards, your own shadow is a hole. | Move with the shade, and cross the boards only inside it. | Running now; waiting in shade that is leaving; stepping onto lit boards. |
+| 43 | **Water** | Fire on the bank, then a pool under a roof. Getting wet lets you walk through fire for a while. Breath runs out underwater, and using the first air gap closes the second. | Wet yourself at the puddle behind you. In the pool, breathe at the gap and then at the bubbles. | Walking into the fire dry; counting on the second gap. |
+| 44 | **Fire** | A torch, grass that carries fire, and a thorn bush in the way. Past it, a bomb whose fuse burns only while you are near, and a brick wall. | Knock the torch over and wait out the fire on the stone. Then kick the bomb to the wall and wait near it, but not too near. | Running back from the fire; following the bomb; walking away from it. |
 | 45 | **Spark** | Live wires hurt only if you are standing on something. | Cross them in the air. | Walking over them. |
 | 46 | **Wind** | The wind always blows against the way you are pushing. | Want nothing (let go) to drift, or push the other way. | Pushing harder. |
-| 47 | **Geyser** | Water bursts up where you will be, and a burst lifts whatever is on it. | Lure one under the ledge, then ride it. | Running past; waiting on the spot (it bursts under you). |
-| 48 | **Bubble** | Inside the bubble you weigh almost nothing, under a spiked ceiling. | Tap, don't hold. | A full jump. |
-| 49 | **Light and dark** | Light tiles and dark tiles, and the room's light switches. In the light you may stand only on light tiles; in the dark, only on dark ones. | Time each step to the switch, and stand where the next switch won't drop you. | Ignoring the colours. |
-| 50 | **Storm** | Night. Lightning shows the whole level for a moment. Gusts blow against you, and the rain carries cones. | Memorize each flash and move in the dark between them; let go in the gusts; hide from the cones. | Moving only when you can see. |
+| 47 | **Geyser** | Water bursts up where you will be, then stands as a column that lifts whatever is on it. The door is on a ledge too high to jump to. | Wait just beside the ledge, step aside from the burst, then ride the column up. | Running past; waiting where it bursts; luring it under the ledge. |
+| 48 | **Bubble** | Inside the bubble you weigh almost nothing, under a spiked ceiling. | A measured press: not a tap, not a full jump. | A full jump. |
+| 49 | **Light and dark** | Light tiles and dark tiles, and the room's light moves. In the light you may stand only on light tiles; in the dark, only on dark ones. | Time each step to the light, and stand where the next change won't drop you. | Ignoring the colours. |
+| 50 | **Storm** | Night: lightning shows the whole level for a moment. Over the gaps, gusts blow against whatever you push, and the rain brings the sky down where you are going. Two roofs. | Learn the level in the flashes. Let go over the gaps. Go roof to roof, leaving each one just after a cone hits it. | Pushing across the gaps; running without shelter. |
 
 ## VI. Living (51–60)
 
