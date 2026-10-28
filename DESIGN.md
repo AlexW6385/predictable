@@ -100,6 +100,15 @@ These come back through the whole game, each time doing something new.
 | **The ghost** | Your last attempt walks again (15). | Holds a plate for you (62), chases you (64), carries a key further (77). Becomes the ship of Theseus (93). |
 | **The entrance** | Every level starts in front of the open door you came in by. | Usually scenery. In 7 it is the way out, and in 100 it is the only one. |
 
+## The dialectic
+
+The hidden Hegel is not just a list of chapter names: it is how the levels move from one to the next.
+
+- **Every level negates the one before.** The answer a level teaches becomes the habit the next one punishes, or the thing it has to be turned against. Nothing learned stays simply true.
+- **A negation keeps what it negates.** The next level does not throw the old answer away; it needs it, changed. You still use the shy door's rule, but now as a lure, a constraint or a weapon.
+- **The chain is unbroken.** Each level leads out of the last. Each chapter grows out of the contradiction the previous one ended on, and its last level gathers its pieces into something none of them was alone. The last level returns to the first, understood.
+- **The world changes too.** The door, the sky, the Eye and your own past keep changing what they are as the game goes on.
+
 ## I. Door (1–10)
 
 The door is the main character: it runs from whoever chases it. The Eye arrives at level 5 and the sky at level 2. Levels 1–3 are the gentle onboarding.
