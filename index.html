@@ -38,10 +38,10 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(22px,3.2vw,34px)
 canvas{display:block;touch-action:none;outline:none;border:2.5px solid var(--ink);background:var(--paper);box-shadow:6px 6px 0 var(--ink)}
 .side{display:none;flex-direction:column;justify-content:space-between;align-items:center;flex:none}
 .side .grp{display:flex;gap:8px}
-.side [data-k]{width:54px;height:54px;border-radius:50%;border:2.5px solid var(--ink);background:var(--paper);color:var(--ink);font-family:var(--f-display);font-size:18px;touch-action:none;-webkit-user-select:none;user-select:none;padding:0}
+.side [data-k]{width:var(--bt,54px);height:var(--bt,54px);border-radius:50%;border:2.5px solid var(--ink);background:var(--paper);color:var(--ink);font-family:var(--f-display);font-size:calc(var(--bt,54px)*.36);touch-action:none;-webkit-user-select:none;user-select:none;padding:0}
 .side [data-k]:active{background:var(--gold)}
-.dpad{display:flex;width:116px;height:54px;border:2.5px solid var(--ink);border-radius:27px;background:var(--paper);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
-.dpad .h{flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink);font-family:var(--f-display);font-size:18px;pointer-events:none}
+.dpad{display:flex;width:calc(var(--bt,54px)*1.8);height:var(--bt,54px);border:2.5px solid var(--ink);border-radius:calc(var(--bt,54px)/2);background:var(--paper);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+.dpad .h{flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink);font-family:var(--f-display);font-size:calc(var(--bt,54px)*.36);pointer-events:none}
 .dpad .h.l{border-right:1.5px solid var(--grid)}
 .dpad.left .h.l,.dpad.right .h.r{background:var(--gold)}
 .mini{touch-action:manipulation;width:38px;height:32px;border:2px solid var(--ink-soft);border-radius:6px;background:var(--paper);color:var(--ink);font-size:16px;line-height:1;padding:0;cursor:pointer}
@@ -66,6 +66,7 @@ canvas{display:block;touch-action:none;outline:none;border:2.5px solid var(--ink
 @keyframes rot{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
 /* touch devices: the game takes the whole screen; the controls get their own strips beside it, so they never cover it */
 @media (pointer:coarse){
+  :root{--bt:clamp(64px,21vmin,96px)}
   .wrap{gap:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
   h1,.foot{display:none}
   canvas{border:0;box-shadow:none}
@@ -1619,7 +1620,9 @@ function resize(){
   let cw;
   if (fine) { stg.classList.remove('below'); const st = document.getElementById('view').getBoundingClientRect(); cw = Math.min(st.width - pad, (st.height - pad)*16/9); }
   else { // phones: controls go beside the game, or under it when the screen is nearly 16:9 and there is more room below
-    const st = stg.getBoundingClientRect(), beside = Math.min(st.width - 198, st.height*16/9), under = Math.min(st.width - 8, (st.height - 74)*16/9);
+    // room for the controls is measured from the controls themselves, so it follows their size
+    const st = stg.getBoundingClientRect(), sl = document.getElementById('sideL'), sr = document.getElementById('sideR'), pd = document.getElementById('dpad').getBoundingClientRect();
+    const beside = Math.min(st.width - sl.getBoundingClientRect().width - sr.getBoundingClientRect().width - 4, st.height*16/9), under = Math.min(st.width - 8, (st.height - pd.height - 22)*16/9);
     stg.classList.toggle('below', under > beside); cw = Math.max(beside, under); }
   cw = Math.max(160, Math.floor(cw));
   cv.style.width = cw + 'px'; cv.style.height = Math.round(cw*9/16) + 'px'; document.body.style.setProperty('--cw', (cw + pad) + 'px'); if (typeof picker !== 'undefined' && picker.classList.contains('open')) placePicker();
