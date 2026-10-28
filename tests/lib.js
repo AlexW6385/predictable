@@ -51,9 +51,15 @@ window.LIB = (() => {
     const res = [];
     for (let life = 0; life < (opts.lives || 1); life++) {
       const strat = makeStrat(life); let out = 'timeout'; hold = 0;
+      const nz = window.__NOISE, buf = []; let ns = nz ? nz.seed * 7919 + life * 104729 + L : 0;
+      const nr = () => (ns = (ns * 1103515245 + 12345) % 2147483648) / 2147483648;
       for (let f = 0; f < (opts.max || 1500); f++) {
         if (g.state !== 'play') break;
-        frame(strat(g.P, f));
+        let r = strat(g.P, f);
+        if (nz) { // human-ish noise: act on what you decided a few frames ago, and hold jump a little longer or shorter
+          if (r && r.jump) r = Object.assign({}, r, {jump: Math.max(1, r.jump + Math.round((nr()*2 - 1)*nz.jit))});
+          buf.push(r); r = buf.length > nz.delay ? buf.shift() : {k:{}}; }
+        frame(r);
       }
       const st = g.state;
       if (st === 'dead') out = 'dead@' + (cx()/T).toFixed(1);

@@ -244,7 +244,7 @@ function drawEye(cx, cy, r, lx, ly, lid){
 function fleeDoor(d, approach){
   const pc = pcx(), dc = d.x + 18, dist = dc - pc, dir = dist >= 0 ? 1 : -1;
   if (d.hop) { const h = d.hop; h.t++; const k = Math.min(1, h.t/26); d.x = h.from + (h.to - h.from)*k; d.y = -Math.sin(k*Math.PI)*90; if (k >= 1) { d.hop = null; d.y = 0; } return false; }
-  S.stillT = still() ? (S.stillT || 0) + 1 : 0;
+  S.stillT = (still() && !keys.left && !keys.right) ? (S.stillT || 0) + 1 : 0;
   const toward = P.vx*dir > 0.6, away = P.vx*dir < -0.6;
   if (toward && Math.abs(dist) < 320) {
     d.x += dir*Math.min(5.4, Math.abs(P.vx) + 0.9);
