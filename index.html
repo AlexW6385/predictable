@@ -1629,9 +1629,14 @@ function updatePlayer(){
   const vm = sw ? 2.2 : (lv.vmax || 12);
   P.vy = clamp(P.vy + (0.55 + (sw ? -0.43 : 0) + (lv.extraG ? lv.extraG() : 0))*P.g, sw ? -9 : -vm, vm);
   if (!P.on) S.airT = (S.airT || 0) + 1;
-  P.x += P.vx;
+  const px0 = P.x; P.x += P.vx;
   if (!lv.wrapX) { if (P.x < 0) { P.x = 0; P.vx = 0; } if (P.x > lvW() - PW) { P.x = lvW() - PW; P.vx = 0; } }
-  for (const o of ents) if (isSolid(o) && !o.oneway && ov(pbox(), o)) {
+  // a block you were already inside before this step (it appeared, or moved, around you) pushes you out by its nearest side, and only if that side is close;
+  // it used to shove you by the way you were walking, which could fling you to the far end of a long block
+  for (const o of ents) if (isSolid(o) && !o.oneway && ov(pbox(), o) && ov({x:px0, y:P.y, w:PW, h:PH}, o)) {
+    const l = P.x + PW - o.x, r = o.x + o.w - P.x; if (Math.min(l, r) > 16) continue;
+    P.x = l < r ? o.x - PW : o.x + o.w; P.vx = 0; }
+  for (const o of ents) if (isSolid(o) && !o.oneway && ov(pbox(), o) && !ov({x:px0, y:P.y, w:PW, h:PH}, o)) {
     if (o.t === 'box' && P.on && P.vx) { const ox = o.x; pushBox(o, clamp(P.vx, -2.6, 2.6)); if (o.x !== ox) { P.vx = clamp(P.vx, -2.6, 2.6); P.x = P.vx > 0 ? o.x - PW : o.x + o.w; continue; } }
     if (o.inv) reveal(o);
     if (P.vx > 0) P.x = o.x - PW; else if (P.vx < 0) P.x = o.x + o.w; P.vx = 0;
