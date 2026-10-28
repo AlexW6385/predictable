@@ -2,11 +2,13 @@
 
 A wordless troll platformer that watches how you play and sets its traps for the player you are.
 
+**▶ Play it in your browser: https://alexw6385.github.io/predictable/**
+
 100 levels, no text, no hints. Every trap is meant to be fair: you can always work out afterwards why you died, and the next level is built on what you just learned. Then it uses that against you.
 
 ## Play
 
-Open `index.html` in a browser. It is a single self-contained file (vanilla JS + canvas, no build step, no dependencies).
+Play online at **https://alexw6385.github.io/predictable/**, or open `index.html` locally. It is a single self-contained file (vanilla JS + canvas, no build step, no dependencies).
 
 | Action | Keys |
 | --- | --- |
