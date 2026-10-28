@@ -171,7 +171,7 @@ addEventListener('keydown', e => { if (e.code === 'KeyR' && !picker.classList.co
 /* ================= world ================= */
 let lvl = 0, lv = null, S = null, M = null, ents = [], P = null, state = 'title', deathT = 0, clearT = 0, frame = 0, camX = 0, parts = [], shake = 0, flash = 0, paused = false;
 const lvW = () => (lv.w || 30) * T;
-const SOLID = new Set(['g','b','bb','tog','plank','crate','box','pt','mb','raft','q','th','vine','belt','cloud','body']);
+const SOLID = new Set(['g','b','bb','stk','tog','plank','crate','box','pt','mb','raft','q','th','vine','belt','cloud','body']);
 const E = o => { const e = Object.assign({alive:true, fall:0, vy:0}, o); ents.push(e); return e; };
 const R = (t, c0, c1, r0, r1, o) => E(Object.assign({t, x:c0*T, y:r0*T, w:(c1-c0+1)*T, h:(r1-r0+1)*T, solid:SOLID.has(t)}, o||{}));
 const Gd = (c0, c1, o) => R('g', c0, c1, 14, 16, o);
@@ -191,6 +191,16 @@ const running = () => (P.runT || 0) > 9;
 
 /* ---------- shared pieces ---------- */
 function cone(x, o){ (S.cones || (S.cones = [])).push(Object.assign({x, y:-40, st:'fall', floor:GY}, o||{})); }
+// where you will be F frames from now if you keep doing what you are doing (keys held as they are, falling where there is no floor)
+function whereIn(F){ let x = P.x, y = P.y, vx = P.vx, vy = P.vy, on = P.on; const ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  for (let i = 0; i < F; i++) {
+    if (ax) vx = clamp(vx + ax*(on ? 0.9 : 0.6), -4.4, 4.4); else vx *= on ? 0.7 : 0.97;
+    if (!on) { if (!keys.jump && vy < -3.5) vy = -3.5; vy = Math.min(vy + 0.55, 12); y += vy; if (vy > 0 && y + PH >= GY && groundAt(x + PW/2, GY)) { y = GY - PH; vy = 0; on = true; } }
+    else if (!groundAt(x + PW/2, GY)) on = false;
+    x += vx; }
+  return x + PW/2; }
+// a cone that lands on the floor F frames from now: long enough to see its shadow and do something about it
+function drop(x, F, o){ const fl = (o && o.floor) ?? GY; cone(x, Object.assign({y:fl - 40 - 26*F}, o||{})); }
 function updCones(){
   for (const c of (S.cones || [])) {
     if (c.st === 'stake') { if (--c.t <= 0) c.st = 'done'; else if (ov(pbox(3), {x:c.x - 9, y:GY - 40, w:18, h:40})) { die('cone'); return true; } continue; }
@@ -198,18 +208,27 @@ function updCones(){
     c.y += 26;
     const r = {x:c.x-11, y:c.y, w:22, h:40};
     if (c.block && ents.some(e => e.roof && !e.fakeRoof && isSolid(e) && ov(r, e))) { c.st = 'done'; dust(c.x, c.y + 40); continue; }
+    // cracked bricks break under it (it stops there); a planted cone stops on what it meets, too
+    const bk = ents.find(e => e.t === 'bb' && e.alive && isSolid(e) && ov({x:c.x - 8, y:c.y + 28, w:16, h:14}, e));
+    if (bk) { if ((bk.hp = (bk.hp ?? 1) - 1) <= 0) { bk.alive = false; for (let i = 0; i < 10; i++) parts.push({x:bk.x + 16, y:bk.y + 16, vx:(Math.random() - .5)*6, vy:-Math.random()*5, life:30, r:3, col:C.ink2, sq:true}); } else bk.crack = 1;
+      c.st = 'done'; shake = Math.max(shake, 6); dust(c.x, bk.y); if (ov(pbox(3), r)) { die('cone'); return true; } continue; }
+    if (c.plant) { const st = ents.find(e => e.stk && e.alive && ov({x:c.x - 8, y:c.y + 28, w:16, h:14}, e)); if (st) { st.alive = false; c.st = 'done'; dust(c.x, st.y); continue; } }
     if (c.hitAlso && c.hitAlso(r)) { c.st = 'done'; continue; }
     if (ov(pbox(3), r)) { die('cone'); return true; }
     if (!c.grounded && c.y + 40 >= GY) { c.grounded = true; c.onGround && c.onGround(c); }
-    if (c.y + 40 >= c.floor) { c.st = c.stake && c.floor <= GY ? 'stake' : 'done'; c.t = c.stake || 0; if (c.st === 'stake') c.y = GY - 40; if (c.floor <= GY) { dust(c.x, GY); shake = Math.max(shake, 3); } }
+    if (c.y + 40 >= c.floor) { c.st = c.stake && c.floor <= GY ? 'stake' : 'done'; c.t = c.stake || 0; if (c.st === 'stake') c.y = GY - 40; if (c.floor <= H) { dust(c.x, c.floor); shake = Math.max(shake, 3); }
+      if (c.plant) E({t:'stk', stk:true, x:c.x - 13, y:c.floor - 40, w:26, h:40, solid:true, life:c.plant}); c.onLand && c.onLand(c); }
   }
 }
 function drawCones(){
   for (const c of (S.cones || [])) {
     if (c.st === 'stake') { ctx.globalAlpha = Math.min(1, c.t/10); ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(c.x - 13, c.y); ctx.lineTo(c.x + 13, c.y); ctx.lineTo(c.x, c.y + 40); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; continue; }
     if (c.st !== 'fall') continue;
-    const a = clamp((c.y + 40) / GY, 0, 1);
-    ctx.fillStyle = `rgba(30,43,71,${0.4*a})`; ctx.beginPath(); ctx.ellipse(c.x, GY - 1, 5 + 11*a, 3, 0, 0, 7); ctx.fill();
+    // its shadow is on whatever it will hit, from the moment it sets off, and darkens as it comes
+    if (c.y0 == null) c.y0 = c.y;
+    const a = clamp((c.y - c.y0)/Math.max(1, c.floor - 40 - c.y0), 0, 1);
+    let sy = c.floor; for (const e of ents) if (isSolid(e) && !e.fakeRoof && e.y >= c.y + 40 && e.y < sy && c.x > e.x && c.x < e.x + e.w) sy = e.y;
+    ctx.fillStyle = `rgba(30,43,71,${0.22 + 0.4*a})`; ctx.beginPath(); ctx.ellipse(c.x, sy - 1, 6 + 11*a, 3, 0, 0, 7); ctx.fill();
     ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(c.x - 13, c.y); ctx.lineTo(c.x + 13, c.y); ctx.lineTo(c.x, c.y + 40); ctx.closePath(); ctx.fill();
   }
 }
@@ -410,6 +429,131 @@ const LV = [
     drawEye(480, 96, 24, L.ph === 'idle' ? pcx() : L.tx, L.ph === 'idle' ? P.y + 14 : L.ty, 0);
     drawShy(S.door); } },
 
+/* ===================== II. Sky ===================== */
+
+/* 11. shelter is a habit too */
+{ id:'shelter', was:[24], start:1,
+  build(){ Gd(0,29); Door(27,14); S.roofs = [[5,2,false],[10,2,false],[15,2,false],[20,2,false],[24,2,true]].map(([c, w, p]) => R('b', c, c+w-1, 10, 10, {roof:true, fakeRoof:p, painted:p, killFall:true}));
+    S.uT = S.roofs.map(() => 0); S.lim = clamp(Math.round((avg(M.sh) ?? 90)*0.75), 45, 120); S.rt = 50; },
+  update(){ const pc = pcx();
+    S.roofs.forEach((r, i) => { const under = pc > r.x && pc < r.x + r.w && P.y > r.y && !r.fall && r.alive;
+      if (under && !r.painted) { if (++S.uT[i] > S.lim && r.ct == null) { r.crumble = 16; r.ct = 16; } } else if (S.uT[i] > 0) { M.sh = M.sh || []; push(M.sh, S.uT[i], 6); S.uT[i] = 0; } });
+    // a curtain of rain, every so often, centred on where you will be: in the open there is nowhere to go
+    if (--S.rt <= 0 && pc < 26*T) { S.rt = 54; const at = whereIn(36), bk = P.vx >= 0 ? 170 : 70, fw = P.vx >= 0 ? 70 : 170;
+      for (let x = Math.min(pc, at) - bk; x <= Math.max(pc, at) + fw; x += 30) drop(x, 36, {block:true}); }
+    updCones(); },
+  draw(){ drawCones(); } },
+
+/* 12. its aim is your tool */
+{ id:'hammer', start:2, sy:324,
+  build(){ R('g',0,19,11,16); R('g',22,29,11,16); R('g',20,21,14,16); R('bb',20,21,11,11,{hp:3}); Door(20.5,14); S.armed = true; },
+  update(){ const pc = pcx();
+    const lid = ents.find(e => e.t === 'bb'); if (pc < 12*T && lid && lid.alive) S.armed = true; if (!lid || !lid.alive) S.armed = false;
+    if (S.armed && pc > 15*T && P.vx > 0.5) { S.armed = false; drop(pc + P.vx*40, 40, {floor:352}); }
+    updCones(); },
+  draw(){ drawCones(); } },
+
+/* 13. it always aims where you were */
+{ id:'behind', start:3,
+  build(){ Gd(0,29); R('g',24,29,10,13); Door(27,10); S.t = 0; },
+  update(){ if (S.t++ % 50 === 0) drop(pcx(), 50, {plant:300});
+    updCones(); },
+  draw(){ drawCones(); } },
+
+/* 14. it only moves you if you let it */
+{ id:'nothing', was:[15], start:4.1, sy:388, noEntrance:true,
+  build(){ Gd(0,2); Sp(3,25,14,'up'); R('g',3,25,15,16); Gd(26,29); R('b',14,16,10,10); Sp(14,16,11,'down');
+    S.raft = E({t:'raft', x:3*T, y:416, w:3*T, h:12, solid:true}); S.idle = 0; S.endT = 0; S.door = {x:27*T, y:0}; },
+  update(){ const r = S.raft;
+    if (pressEdge) { S.idle = 0; drop(pcx(), 24, {floor:H + 60}); }
+    S.idle = (keys.left || keys.right || keys.jump) ? 0 : S.idle + 1;
+    const on = P.on && P.stand === r; let vx = 0;
+    if (on && S.idle >= 30 && r.x < 23*T) vx = 1.2;
+    if (!r.fall) { r.x += vx; if (on) P.x += vx; }
+    if (r.x >= 23*T && on) { if (++S.endT > 150 && !r.fall) r.fall = 1; }
+    // the door waits on the far bank; once the raft is in, it steps aboard
+    const docked = r.x >= 23*T && !r.fall;
+    if (fleeDoor(S.door, 1.6, {min: docked ? r.x : 26*T})) return levelClear();
+    S.door.y = docked && S.door.x < 26*T - 18 ? -32 : 0;
+    updCones(); },
+  draw(){ drawCones(); drawShy(S.door); } },
+
+/* 15. your last attempt walks ahead of you and uses the road up */
+{ id:'decoy', was:[20], start:2,
+  build(){ Gt(0,29); for (const [a,b] of [[7,12],[14,19],[21,25]]) for (let c = a; c <= b; c++) R('b',c,c,11,11); R('b',4,5,12,12); Door(28,14);
+    S.path = []; S.gi = 50; S.coned = false; },
+  update(){ S.path.length < 2400 && S.path.push([Math.round(P.x), Math.round(P.y), P.on ? 1 : 0]);
+    const g = M.path; let gx = null, gvx = 0;
+    if (g && !S.gDead && S.gi < g.length) { const p = g[S.gi]; gx = p[0]; gvx = S.gi > 0 ? p[0] - g[S.gi-1][0] : 0; S.gp = p; S.gi++;
+      if (p[2]) { const f = {x:p[0]+1, y:p[1]+PH, w:PW-2, h:3}; for (const e of ents) if ((e.t === 'g' || e.t === 'b') && e.ct == null && isSolid(e) && ov(f, e)) e.ct = 18; } }
+    else S.gp = null;
+    const lead = gx != null && gx > P.x ? {x:gx, vx:gvx, ghost:true} : {x:P.x, vx:P.vx};
+    if (!S.coned && lead.x + 11 > 22*T) { S.coned = true;
+      // aimed at where the leader will be standing: the end of the current leap, or 17 frames down the road
+      let ax = lead.x + 11 + lead.vx*17, ay = -40;
+      // whoever is in front gets the sky; if that is you, it does not miss
+      if (!lead.ghost) { const at = whereIn(24); for (let k = -2; k <= 2; k++) drop(at + k*40, 24, {stake:36}); }
+      else cone(ax, {y:ay, stake:36, hitAlso: r => { if (S.gp && ov(r, {x:S.gp[0], y:S.gp[1], w:PW, h:PH})) { S.gDead = true; burst(S.gp[0]+11, S.gp[1]+14); return true; } return false; }}); }
+    updCones(); },
+  onDeath(){ M.path = S.path; },
+  draw(){ drawCones(); if (S.gp && !S.gDead) { ctx.globalAlpha = 0.5; drawPlayerAt(S.gp[0], S.gp[1], PW, PH, 1, C.ink2, C.ink, true); ctx.globalAlpha = 1; } } },
+
+/* 16. three heavy things, three opinions about you */
+{ id:'heavy', was:[10], start:1,
+  build(){ Gd(0,29); Door(28,14);
+    S.th = ['pred','ambush','dash'].map((m,i) => E({t:'th', mode:m, x:[7.5,15.5,23.5][i]*T - 20, y:GY - 150, top:GY - 150, w:40, h:40, solid:true, st:'wait', tm:0})); },
+  update(){ const pc = pcx();
+    for (const b of S.th) { const bc = b.x + 20;
+      if (b.st === 'wait') { let go = Math.abs(pc - bc) < 31;
+        if (b.mode === 'pred') go = go || Math.abs(pc + P.vx*13 - bc) < 10;
+        if (b.mode === 'ambush') go = Math.abs(pc - bc) < 5;
+        if (b.mode === 'dash') go = go || (P.vx > 0.3 && Math.abs(pc + 4.4*13 - bc) < 10);
+        if (go) { b.st = 'fall'; b.vy = 0; b.ghost = true; } }
+      else if (b.st === 'fall') { b.vy += b.mode === 'ambush' ? 2 : 1.2; b.y += b.vy; if (ov(pbox(3), b)) return die('crush'); if (b.y + 40 >= GY) { b.y = GY - 40; b.st = 'down'; b.tm = 40; b.ghost = false; shake = 8; dust(bc, GY); } }
+      else if (b.st === 'down') { if (--b.tm <= 0) b.st = 'rise'; }
+      else if (b.st === 'rise') { b.y -= 2; if (b.y <= b.top) { b.y = b.top; b.st = 'wait'; } } } } },
+
+/* 17. on ice, where you will be is already decided */
+{ id:'ice', was:[33], start:2,
+  build(){ Gd(0,29,{ice:true}); Door(27.5,14); S.rt = 24; },
+  update(){ const pc = pcx(); if (pc > 3*T && pc < 25.5*T && --S.rt <= 0) { S.rt = 56; cone(clamp(pc + P.vx*33, 3*T, 26.5*T), {y:-440}); }
+    // it keeps re-aiming at where your speed is taking you, until it is a moment from the ground
+    const ax = P.on ? P.vx - (S.pvx ?? P.vx) : 0; S.pvx = P.vx;
+    for (const c of S.cones) if (c.st === 'fall') { const left = (GY - (c.y + 40))/26; if (left > 27) c.x = clamp(pc + P.vx*left + 0.5*ax*left*left, 3*T, 26.5*T); }
+    updCones(); },
+  draw(){ drawCones(); } },
+
+/* 18. it aims at you in the mirror */
+{ id:'reflection', start:3,
+  build(){ Gd(0,29); R('g',24,29,10,13); Door(27,10); S.st = 0; },
+  update(){ S.st = still() ? S.st + 1 : 0; if (S.st === 30) drop(W - pcx(), 40, {plant:300});
+    updCones(); },
+  drawBack(){ ctx.strokeStyle = 'rgba(30,43,71,.22)'; ctx.lineWidth = 2; ctx.setLineDash([2,7]); ctx.beginPath(); ctx.moveTo(W/2, 40); ctx.lineTo(W/2, GY); ctx.stroke(); ctx.setLineDash([]);
+    if (state === 'play') { ctx.globalAlpha = 0.16 + 0.5*clamp(S.st/30, 0, 1); drawPlayerAt(W - P.x - PW, P.y, PW, PH, -P.face, C.white, C.ink, false); ctx.globalAlpha = 1; } },
+  draw(){ drawCones(); } },
+
+/* 19. it knows where you will come down */
+{ id:'landing', start:2,
+  build(){ Gd(0,6); Gd(9,14); Gd(17,22); Gd(25,29); Door(27,14); },
+  onJump(){ drop(pcx() + P.vx*38, 38); },
+  update(){ updCones(); },
+  draw(){ drawCones(); } },
+
+/* 20. the Eye aims the sky, and it blinks */
+{ id:'eyesky', start:1,
+  build(){ Gd(0,29); S.roofs = [[5,false],[11,true],[17,false],[23,false]].map(([c, p]) => R('b', c, c+2, 10, 10, {roof:true, fakeRoof:p, painted:p, killFall:true}));
+    S.uT = [0,0,0,0]; S.door = {x:28*T - 18, y:0}; S.look = 90; S.eye = {t:0}; S.rt = 30; },
+  update(){ const pc = pcx(), e = S.eye; e.t = (e.t + 1) % 300; S.lid = e.t < 200 ? 0 : e.t < 210 ? (e.t - 200)/10 : e.t < 290 ? 1 : 1 - (e.t - 290)/10;
+    S.roofs.forEach((r, i) => { const under = pc > r.x && pc < r.x + r.w && P.y > r.y && !r.fall && r.alive;
+      if (under) { if (++S.uT[i] > 150 && r.ct == null) { r.crumble = 16; r.ct = 16; } r.shk = S.uT[i] > 110 && !r.painted; } else { S.uT[i] = 0; r.shk = false; } });
+    if (S.lid < 0.5 && pc > 2*T && --S.rt <= 0) { S.rt = 50; drop(pc + P.vx*36, 36, {block:true}); }
+    const d = S.door, dir = Math.sign(d.x + 18 - pc) || 1;
+    S.look = (P.face === dir) ? 0 : S.look + 1; d.teeth = clamp(1 - S.look/60, 0, 1);
+    // it keeps to its post until you are near it
+    if (pc > 21*T && fleeDoor(d, 2.0, {min:22*T, noFlee:true, wait:60})) { if (S.look >= 60) return chapterEnd(); d.bite = true; return die('door'); }
+    updCones(); },
+  draw(){ drawCones(); drawShy(S.door); drawEye(480, 70, 26, pcx() + P.vx*30, P.y + 14, S.lid); } },
+
 ];
 
 // ground that remembers your feet and grows thorns there
@@ -430,7 +574,7 @@ function respawn(){
   ents = []; parts = []; S = {keys:0, coins:0, cones:[]};
   P = { x:(lv.start || 2)*T, y:lv.sy ?? GY - PH, vx:0, vy:0, g:1, on:true, stand:null, face:1, coy:0, jbuf:0, sq:0, stun:0, noCoy:0, noCutT:0, landV:0 };
   lv.build();
-  S.entr = lv.noEntrance || lv.sy != null ? null : {x:P.x + PW/2 - 18, y:P.y + PH - 56};
+  S.entr = lv.noEntrance ? null : {x:P.x + PW/2 - 18, y:P.y + PH - 56};
   deathT = 0; camX = lvW() > W ? clamp(P.x - 360, 0, lvW() - W) : 0;
 }
 function die(cause){
@@ -502,6 +646,7 @@ function updateWorld(){
     if (e.fall && e.alive) { e.vy += 0.6; e.y += e.vy; if (e.killFall && ov(pbox(3), e)) return die('crush'); if (e.y > H + 200) e.alive = false; }
     if (e.grow != null && e.h < e.grow) { e.h = Math.min(e.grow, e.h + 9); e.y = e.base - e.h; }
     if (e.revealT) e.revealT--;
+    if (e.stk && e.alive && --e.life <= 0) e.alive = false;
     if (e.t === 'box' && e.alive) { e.vy = Math.min(e.vy + 0.6, 12); e.y += e.vy;
       for (const o of ents) if (o !== e && isSolid(o) && ov(e, o) && e.vy > 0) { e.y = o.y - e.h; e.vy = 0; }
       if (e.y > H + 40) e.alive = false; }
@@ -662,10 +807,12 @@ function drawEnt(e){
     case 'b': case 'bb': case 'q': case 'th': {
       if (!act) { ctx.strokeStyle = 'rgba(30,43,71,.3)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,5]); ctx.strokeRect(x + 1, e.y + 1, e.w - 2, e.h - 2); ctx.setLineDash([]); break; }
       if (e.t === 'q') { ctx.fillStyle = e.used ? C.grid2 : C.gold; ctx.fillRect(x, e.y, e.w, e.h); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.strokeRect(x+1, e.y+1, e.w-2, e.h-2); if (!e.used) txt('?', x + 16, e.y + 25, `20px ${FD}`, C.ink, 'center'); break; }
+      if (e.painted) { ctx.fillStyle = 'rgba(51,66,106,.82)'; ctx.fillRect(x, e.y, e.w, e.h); ctx.strokeStyle = 'rgba(30,43,71,.5)'; ctx.lineWidth = 1; ctx.strokeRect(x+0.5, e.y+0.5, e.w-1, e.h-1); break; }
       ctx.fillStyle = C.ink2; ctx.fillRect(x, e.y, e.w, e.h); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(x+1, e.y+1, e.w-2, e.h-2);
       ctx.strokeStyle = 'rgba(231,236,241,.25)'; ctx.lineWidth = 1;
       for (let yy = e.y + 10; yy < e.y + e.h; yy += 10) { ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + e.w, yy); ctx.stroke(); }
-      if (e.t === 'bb') { ctx.strokeStyle = 'rgba(231,236,241,.5)'; ctx.beginPath(); ctx.moveTo(x + 8, e.y + 4); ctx.lineTo(x + 14, e.y + 14); ctx.lineTo(x + 10, e.y + 24); ctx.stroke(); }
+      if (e.t === 'bb') { ctx.strokeStyle = 'rgba(231,236,241,.5)'; ctx.beginPath(); ctx.moveTo(x + 8, e.y + 4); ctx.lineTo(x + 14, e.y + 14); ctx.lineTo(x + 10, e.y + 24); ctx.stroke();
+        if (e.crack) { ctx.strokeStyle = C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 4, e.y + 6); ctx.lineTo(x + 16, e.y + 16); ctx.lineTo(x + 26, e.y + 8); ctx.moveTo(x + 16, e.y + 16); ctx.lineTo(x + 18, e.y + 28); ctx.stroke(); } }
       if (e.t === 'th') { ctx.fillStyle = C.ink; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x+2+i*9.5, e.y+e.h); ctx.lineTo(x+6.75+i*9.5, e.y+e.h+6); ctx.lineTo(x+11.5+i*9.5, e.y+e.h); ctx.fill(); }
         ctx.fillStyle = C.white;
         if (e.mode === 'ambush' && e.st === 'wait') { ctx.fillRect(x+8, e.y+16, 8, 2); ctx.fillRect(x+24, e.y+16, 8, 2); }
@@ -693,6 +840,7 @@ function drawEnt(e){
     case 'box': { ctx.fillStyle = C.door; ctx.fillRect(x, e.y, e.w, e.h); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.strokeRect(x+1, e.y+1, e.w-2, e.h-2); ctx.beginPath(); ctx.moveTo(x+3, e.y+3); ctx.lineTo(x+e.w-3, e.y+e.h-3); ctx.moveTo(x+e.w-3, e.y+3); ctx.lineTo(x+3, e.y+e.h-3); ctx.stroke(); break; }
     case 'raft': { ctx.fillStyle = C.door; ctx.fillRect(x, e.y, e.w, e.h); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(x+1, e.y+1, e.w-2, e.h-2); for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.moveTo(x + i*16, e.y); ctx.lineTo(x + i*16, e.y + e.h); ctx.stroke(); } break; }
     case 'key': drawKey(e.x, e.y); break;
+    case 'stk': { const a = Math.min(1, e.life/30); ctx.globalAlpha *= a; ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(x, e.y); ctx.lineTo(x + 26, e.y); ctx.lineTo(x + 13, e.y + 40); ctx.closePath(); ctx.fill(); ctx.fillStyle = C.ink2; ctx.fillRect(x, e.y, 26, 4); ctx.globalAlpha /= a || 1; break; }
     case 'door': drawDoor(e.x, e.y, {open:e.open, bite:e.bite, teeth:e.teeth, slots:e.slots, filled: e.fill ? e.fill() : (e.slots ? S.keys : 0), flip:e.flip}); break;
   }
 }
