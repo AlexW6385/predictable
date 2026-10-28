@@ -58,8 +58,8 @@ canvas{display:block;touch-action:none;outline:none;border:2.5px solid var(--ink
 .picker .top{display:flex;justify-content:space-between;align-items:center}
 .picker .grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);gap:4px}
 .picker .grid button{font-family:var(--f-mono);font-size:clamp(9px,1.6vmin,15px);border:1.5px solid var(--ink-soft);background:var(--paper);color:var(--ink);padding:0;cursor:pointer;min-height:0}
-.picker .grid button:disabled{opacity:.25;cursor:default;border-style:dashed}
-.picker .grid button.cur{background:var(--gold);border-color:var(--ink)}
+.picker .grid button.done{background:#F2DDAA;border-color:var(--gold)}
+.picker .grid button.cur{outline:2.5px solid var(--ink);outline-offset:-1px;font-weight:700}
 .picker .grid button:not(:disabled):active{background:var(--ink);color:var(--paper)}
 .rot{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:var(--paper);z-index:5;pointer-events:none}
 .rot svg{width:96px;height:96px;animation:rot 2.4s ease-in-out infinite}
@@ -120,9 +120,12 @@ const predict = (h, def, a, b) => { if (!h || !h.length) return def; const l = h
 
 /* ================= memory ================= */
 const KEY = 'predictable.v5';
-const fresh = () => ({ level:0, best:0, deaths:0, wins:0, marks:{}, retry:[], spd:null, eyeLR:[], mem:null });
+const fresh = () => ({ level:0, best:0, done:[], deaths:0, wins:0, marks:{}, retry:[], spd:null, eyeLR:[], mem:null });
 let prof = fresh();
 try { const s = localStorage.getItem(KEY); if (s) prof = Object.assign(fresh(), JSON.parse(s)); } catch(e) {}
+// which levels have been cleared (older saves only knew the furthest level reached: everything before it counts as cleared)
+if (!Array.isArray(prof.done)) { prof.done = []; for (let i = 0; i < Math.max(prof.best || 0, prof.level || 0); i++) prof.done[i] = 1; }
+const markDone = () => { prof.done[lvl] = 1; save(); };
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prof)); } catch(e) {} };
 
 /* ================= input ================= */
@@ -150,8 +153,8 @@ cv.addEventListener('pointerdown', () => { cv.focus(); if (state !== 'play' || (
 function restartLevel(){ if (state === 'title') return; prof.mem = null; startLevel(lvl); state = 'play'; parts = []; flash = 0; shake = 0; }
 const picker = document.getElementById('picker'), grid = document.getElementById('grid');
 function placePicker(){ const r = cv.getBoundingClientRect(), v = document.getElementById('view').getBoundingClientRect(); Object.assign(picker.style, {left:(r.left - v.left) + 'px', top:(r.top - v.top) + 'px', width:r.width + 'px', height:r.height + 'px'}); }
-function buildGrid(){ grid.textContent = ''; const best = Math.max(prof.best || 0, prof.level || 0);
-  for (let i = 0; i < LV.length; i++) { const b = document.createElement('button'); b.textContent = String(i + 1).padStart(2, '0'); b.disabled = i > best; if (i === lvl && state !== 'title') b.className = 'cur';
+function buildGrid(){ grid.textContent = '';
+  for (let i = 0; i < LV.length; i++) { const b = document.createElement('button'); b.textContent = String(i + 1).padStart(2, '0'); b.className = (prof.done[i] ? 'done' : '') + (i === lvl ? ' cur' : '');
     b.addEventListener('click', () => { closePicker(); prof.mem = null; prof.level = i; startLevel(i); state = 'play'; parts = []; }); grid.appendChild(b); } }
 function openPicker(){ buildGrid(); placePicker(); picker.classList.add('open'); paused = true; }
 function closePicker(){ picker.classList.remove('open'); paused = false; keys.left = keys.right = keys.jump = false; cv.focus(); }
@@ -1599,9 +1602,9 @@ function die(cause){
   save();
   burst(pcx(), clamp(P.y + PH/2, 10, H - 30)); shake = 14; flash = 1;
 }
-function levelClear(){ if (state !== 'play') return; state = 'clear'; clearT = 0; S.fake = false; confetti(pcx(), P.y); }
+function levelClear(){ if (state !== 'play') return; state = 'clear'; clearT = 0; S.fake = false; markDone(); confetti(pcx(), P.y); }
 function fakeClear(){ if (state !== 'play') return; state = 'clear'; clearT = 0; S.fake = true; confetti(pcx(), P.y); }
-function finalWin(){ if (state !== 'play') return; state = 'win'; clearT = 0; prof.wins++; save(); for (let i = 0; i < 4; i++) confetti(pcx() + (i-1.5)*120, P.y - 40); }
+function finalWin(){ if (state !== 'play') return; state = 'win'; clearT = 0; prof.wins++; markDone(); for (let i = 0; i < 4; i++) confetti(pcx() + (i-1.5)*120, P.y - 40); }
 
 /* ================= player ================= */
 function frozen(){ return !!(S.over); }
@@ -1888,7 +1891,7 @@ function drawHUD(){
   const tot = (prof.seen || lvl >= 30) ? 100 : 30, pw = tot === 30 ? 5 : 3;
   ctx.fillStyle = 'rgba(231,236,241,.85)'; ctx.fillRect(10, 10, 12 + tot*pw, 46);
   txt(num, 16, 36, `24px ${FD}`, C.ink);
-  for (let i = 0; i < tot; i++) { ctx.fillStyle = i < shown - 1 ? C.gold : C.grid2; ctx.fillRect(16 + i*pw, 44, pw - 2, 6); }
+  for (let i = 0; i < tot; i++) { ctx.fillStyle = (lv.hudOffset ? i < shown - 1 : prof.done[i]) ? C.gold : C.grid2; ctx.fillRect(16 + i*pw, 44, pw - 2, 6); }
   let kx = 70; for (let i = 0; i < S.keys; i++) { drawKey(kx, 14); kx += 16; }
   for (let i = 0; i < S.coins; i++) { drawCoin(kx, 15); kx += 18; }
   const n = String(prof.deaths + (S.over && S.over.kind === 'death' ? 1 : 0));
