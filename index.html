@@ -752,11 +752,14 @@ const LV = [
 
 /* 48. what you see has already happened */
 { start:2,
-  build(){ Gd(0,29); Door(27,14); S.t = 0; S.bl = [[8, 0, 150], [15, 1.9, 170], [22, 3.3, 140]].map(([c, ph, per]) => ({px:c*T + 16, py:150, len:270, ph, per})); },
-  pos(b, t){ const a = Math.sin(t*2*Math.PI/b.per + b.ph)*1.05; return {x:b.px + Math.sin(a)*b.len, y:b.py + Math.cos(a)*b.len}; },
+  build(){ Gd(0,29); Door(27,14); S.t = 0; S.bl = [[6, 0], [14, 2.1], [22, 4.2]].map(([c, ph]) => ({px:c*T + 16, py:190, len:230, ph, per:150})); },
+  pos(b, t){ const a = Math.sin(t*2*Math.PI/b.per + b.ph)*0.85; return {x:b.px + Math.sin(a)*b.len, y:b.py + Math.cos(a)*b.len}; },
   update(){ S.t++; for (const b of S.bl) { const p = this.pos(b, S.t); if (Math.hypot(pcx() - p.x, P.y + 14 - p.y) < 25) return die('blade'); } },
   draw(){ const D = 26;
-    for (const b of S.bl) { const now = this.pos(b, S.t); ctx.fillStyle = 'rgba(30,43,71,.38)'; ctx.beginPath(); ctx.ellipse(now.x, GY - 1, 15, 3.5, 0, 0, 7); ctx.fill(); }
+    // the shadow on the floor is where the blade really is now; it darkens and widens as the blade comes down to your height
+    for (const b of S.bl) { const now = this.pos(b, S.t), k = clamp((now.y - 330)/90, 0, 1);
+      ctx.fillStyle = `rgba(30,43,71,${0.12 + 0.5*k})`; ctx.beginPath(); ctx.ellipse(now.x, GY - 1, 8 + 14*k, 2.5 + 2.5*k, 0, 0, 7); ctx.fill();
+      if (k > 0.85) { ctx.strokeStyle = 'rgba(207,62,50,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(now.x - 20, GY + 4); ctx.lineTo(now.x + 20, GY + 4); ctx.stroke(); } }
     for (const b of S.bl) { const p = this.pos(b, S.t - D);
       ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(b.px, b.py); ctx.lineTo(p.x, p.y); ctx.stroke();
       ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(b.px, b.py, 5, 0, 7); ctx.fill();
