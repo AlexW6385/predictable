@@ -265,7 +265,7 @@ function drawEye(cx, cy, r, lx, ly, lid){
   if (lid > 0.95) { ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - r*1.6, cy); ctx.quadraticCurveTo(cx, cy + r*0.5, cx + r*1.6, cy); ctx.stroke(); }
 }
 // the door that runs away from whoever wants it, and walks to whoever lets go.
-// o: min/max (where it may go), noFlee (it stands its ground when chased), noFollow (it doesn't trail after you when you leave)
+// o: min/max (where it may go), noFlee (it stands its ground when chased), noFollow (it doesn't trail after you when you leave), noHop (cornered, it stays cornered)
 function fleeDoor(d, approach, o){
   o = o || {}; const lo = o.min ?? 40, hi = o.max ?? W - 76;
   const pc = pcx(), dc = d.x + 18, dist = dc - pc, dir = dist >= 0 ? 1 : -1;
@@ -274,7 +274,7 @@ function fleeDoor(d, approach, o){
   const toward = P.vx*dir > 0.6, away = P.vx*dir < -0.6; d.walk = false;
   if (toward && Math.abs(dist) < 320 && !o.noFlee) {
     d.x += dir*Math.min(5.4, Math.abs(P.vx) + 0.9); d.walk = true;
-    if (d.x < lo || d.x > hi) { d.x = clamp(d.x, lo, hi); if (Math.abs(dist) < 96) d.hop = {from:d.x, to:clamp(pc - dir*240 - 18, lo, hi), t:0}; }
+    if (d.x < lo || d.x > hi) { d.x = clamp(d.x, lo, hi); if (!o.noHop && Math.abs(dist) < 96) d.hop = {from:d.x, to:clamp(pc - dir*240 - 18, lo, hi), t:0}; }
   } else if (o.come ? o.come() : S.stillT > (o.wait ?? 40)) { d.x = clamp(d.x - dir*Math.min(approach, Math.abs(dist)), lo, hi); d.walk = Math.abs(dist) > 1; }
   else if (away && !o.noFollow) { d.x = clamp(d.x - dir*1.7, lo, hi); d.walk = true; }
   return Math.abs(dist) < 12 && P.on && P.y + PH > GY - 56;
@@ -443,6 +443,122 @@ function drawHabit(){ const h = S.hab; if (!h || state !== 'play') return; const
   ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + Math.sin(a)*12, oy - Math.cos(a)*12); ctx.stroke();
   ctx.fillStyle = ph > 0.85 ? C.red : C.ink; ctx.beginPath(); ctx.arc(ox + Math.sin(a)*12, oy - Math.cos(a)*12, 3, 0, 7); ctx.fill(); }
 
+/* ---- the law: jumping, going left and stopping may each be done once; the second time, a bolt ---- */
+function lawInit(){ S.law = {jump:0, left:0, stop:0}; S.lawSt = 0; S.lawL = true; S.lawMoved = false; S.bolt = null; S.lawFl = null; }
+function lawAct(a){ if (S.law[a]) { S.law[a] = 2; S.bolt = {x:pcx(), f:frame}; die('law'); shake = 16; return true; } S.law[a] = 1; S.lawFl = {a, f:frame}; return false; }
+// stopping is standing on still ground with your hands off; riding something that moves, or pushing against a wall, is not
+function lawStep(){
+  if (keys.left && !S.lawL && lawAct('left')) return true; S.lawL = keys.left;
+  if (Math.abs(P.vx) > 1) S.lawMoved = true;
+  const ride = P.stand && P.stand.lift, st = P.on && !ride && !keys.left && !keys.right && Math.abs(P.vx) < 0.3;
+  S.lawSt = st ? S.lawSt + 1 : 0; if (S.lawSt === 40 && S.lawMoved && lawAct('stop')) return true;
+  return false; }
+function drawLaw(){ const cx0 = camX + W/2, y = 34;
+  ctx.fillStyle = 'rgba(30,43,71,.07)'; ctx.strokeStyle = 'rgba(30,43,71,.45)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx0 - 84, y + 22); ctx.lineTo(cx0 - 84, y - 12); ctx.quadraticCurveTo(cx0 - 84, y - 24, cx0 - 70, y - 24); ctx.lineTo(cx0 + 70, y - 24); ctx.quadraticCurveTo(cx0 + 84, y - 24, cx0 + 84, y - 12); ctx.lineTo(cx0 + 84, y + 22); ctx.closePath(); ctx.fill(); ctx.stroke();
+  for (const [a, dx] of [['jump', -50], ['left', 0], ['stop', 50]]) { const x = cx0 + dx, st = S.law[a], fl = S.lawFl && S.lawFl.a === a ? Math.max(0, 1 - (frame - S.lawFl.f)/30) : 0;
+    ctx.globalAlpha = st ? 1 : 0.4; ctx.strokeStyle = C.ink; ctx.fillStyle = C.ink; ctx.lineWidth = 3;
+    if (a === 'jump') { ctx.beginPath(); ctx.moveTo(x, y + 10); ctx.lineTo(x, y - 8); ctx.moveTo(x - 7, y - 1); ctx.lineTo(x, y - 9); ctx.lineTo(x + 7, y - 1); ctx.stroke(); }
+    if (a === 'left') { ctx.beginPath(); ctx.moveTo(x + 10, y); ctx.lineTo(x - 8, y); ctx.moveTo(x - 1, y - 7); ctx.lineTo(x - 9, y); ctx.lineTo(x - 1, y + 7); ctx.stroke(); }
+    if (a === 'stop') { ctx.fillRect(x - 7, y - 8, 5, 16); ctx.fillRect(x + 2, y - 8, 5, 16); }
+    // while you stand still, the stop sign fills before it counts
+    if (a === 'stop' && !st && S.lawSt > 8 && S.lawMoved) { ctx.globalAlpha = 1; ctx.strokeStyle = C.red; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, 15, -Math.PI/2, -Math.PI/2 + Math.PI*2*Math.min(1, S.lawSt/40)); ctx.stroke(); }
+    if (st) { const big = 1 + fl*0.8; ctx.globalAlpha = 1; ctx.strokeStyle = C.red; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(x, y, 14*big, 0, 7); ctx.moveTo(x - 10*big, y + 10*big); ctx.lineTo(x + 10*big, y - 10*big); ctx.stroke(); }
+    ctx.globalAlpha = 1; }
+  if (S.bolt && frame - S.bolt.f < 26) { ctx.globalAlpha = 1 - (frame - S.bolt.f)/26; ctx.strokeStyle = C.red; ctx.lineWidth = 4; ctx.beginPath(); let yy = 0, k = 0; ctx.moveTo(S.bolt.x, 0); while (yy < GY - 20) { yy += 34; ctx.lineTo(S.bolt.x + ((k++ * 37) % 23 - 11), yy); } ctx.stroke(); ctx.globalAlpha = 1; } }
+
+/* ---- the searchlight: the Eye shoots what it sees for long; when it loses you, it looks where you would have gone ---- */
+function lampMake(x, y, a0, a1, o){ return Object.assign({x, y, a:a0, a0, a1, dir:1, mode:'sweep', t:0, seen:0, las:null, sp:0.006, see:20, look:70, ahead:38, wd:0.09}, o || {}); }
+function lampLit(L, x, y){ const dx = x - L.x, dy = y - L.y, a = Math.atan2(dy, dx); if (Math.abs(a - L.a) > L.wd) return false;
+  const d = Math.hypot(dx, dy); for (let s = 20; s < d; s += 5) { const px = L.x + dx*s/d, py = L.y + dy*s/d; if (ents.some(o => o.t === 'b' && isSolid(o) && px > o.x && px < o.x + o.w && py > o.y && py < o.y + o.h)) return false; } return true; }
+function lampStep(L){ const pc = pcx(), see = state === 'play' && (lampLit(L, pc, P.y + 6) || lampLit(L, pc, P.y + 22));
+  if (L.las) { if (--L.las.t <= 0) L.las = null; return false; }
+  // seen: it keeps its eye on you (a watchman never lets you out of its sight; a sweeping light turns after you)
+  if (see) { L.seen++; L.mode = 'track'; L.last = {x:pc, vx:P.vx}; const to = Math.atan2(P.y + 14 - L.y, pc - L.x);
+    if (L.post) { L.a = to; L.wd = 0.09; } else L.a += clamp(to - L.a, -0.025, 0.025);
+    if (L.seen > L.see) { const r = ray(L.x, L.y, pc, P.y + 14); L.las = {x:r.x, y:r.y, t:12}; shake = 5; if (r.hit) { die('laser'); return true; } } return false; }
+  L.seen = 0;
+  // it lost you: it looks where you would have gone, a while, then goes back to its watch
+  // (a wise one has learned that people double back, and looks the other way)
+  if (L.mode === 'track') { L.mode = 'search'; L.t = L.look; L.tx = clamp(L.last.x + (L.wise ? -1 : 1)*L.last.vx*L.ahead, 20, lvW() - 20); }
+  if (L.mode === 'search') { const to = Math.atan2(GY - 14 - L.y, L.tx - L.x); if (L.post) { L.a += clamp(to - L.a, -0.08, 0.08); L.wd = 0.14; } else L.a += clamp(to - L.a, -0.04, 0.04);
+    // one that learns, once fooled, expects to be fooled the same way again
+    if (--L.t <= 0) { L.mode = L.post ? 'post' : 'sweep'; if (L.learns) { L.wise = !L.wise; L.wiseF = frame; } } return false; }
+  // on watch: a watchman covers its stretch; a sweeping light sweeps
+  if (L.post) { const [a0, a1] = [Math.atan2(GY - 14 - L.y, L.post[1] - L.x), Math.atan2(GY - 14 - L.y, L.post[0] - L.x)], m = (a0 + a1)/2;
+    L.mode = 'post'; L.a += clamp(m - L.a, -0.08, 0.08); L.wd = Math.min(L.wd + 0.02, (a1 - a0)/2 + 0.02); return false; }
+  L.a += L.sp*L.dir; if (L.a > L.a1) L.dir = -1; if (L.a < L.a0) L.dir = 1; return false; }
+function drawLamp(L){ ctx.fillStyle = L.seen ? 'rgba(207,62,50,.22)' : L.mode === 'search' ? 'rgba(226,166,42,.4)' : 'rgba(226,166,42,.26)'; ctx.beginPath(); ctx.moveTo(L.x, L.y);
+  for (const da of [-L.wd, L.wd]) { const a = L.a + da; let s = 0; for (; s < 1400; s += 6) { const px = L.x + Math.cos(a)*s, py = L.y + Math.sin(a)*s; if (py > GY || ents.some(o => o.t === 'b' && isSolid(o) && px > o.x && px < o.x + o.w && py > o.y && py < o.y + o.h)) break; } ctx.lineTo(L.x + Math.cos(a)*s, L.y + Math.sin(a)*s); }
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(L.x, L.y + 14); ctx.lineTo(L.x, -10); ctx.stroke();
+  drawEye(L.x, L.y, 13, L.x + Math.cos(L.a)*100, L.y + Math.sin(L.a)*100, 0);
+  if (L.wise) { ctx.strokeStyle = C.ink; ctx.lineWidth = 3; for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(L.x + k*8, L.y - 18); ctx.lineTo(L.x + k*22, L.y - 24); ctx.stroke(); } }
+  if (L.las) { ctx.strokeStyle = C.red; ctx.lineWidth = 2 + L.las.t*0.5; ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.lineTo(L.las.x, L.las.y); ctx.stroke(); } }
+
+/* ---- two guns: one fires at where you will be, the other at where you are; two shells that land together cancel ---- */
+function gunsMake(o){ return Object.assign({gun:[{x:22, y:GY - 250, pred:true}, {x:70, y:GY - 150, pred:false}], sh:[], bl:[], vh:[], every:170, F:90, Fw:30, t:100, warn:45, br:72, G:0.18}, o || {}); }
+// where you will be: on at the speed you have been going, until something stops you
+function gunsAhead(gs){ const vb = avg(gs.vh) || 0, pc = pcx(); let t = pc + vb*gs.F;
+  for (const e of ents) if (isSolid(e) && e.t !== 'g' && e.y < P.y + PH - 2 && e.y + e.h > P.y + 2) { if (vb > 0 && e.x >= P.x + PW - 1) t = Math.min(t, e.x - PW/2); if (vb < 0 && e.x + e.w <= P.x + 1) t = Math.max(t, e.x + e.w + PW/2); }
+  return t; }
+function gunsFire(gs, gn, F){ const G = gs.G, tx = clamp(gn.pred ? gunsAhead(gs) : pcx(), 10, lvW() - 10), ty = GY - 4;
+  gs.sh.push({x:gn.x, y:gn.y, vx:(tx - gn.x)/F, vy:(ty - gn.y)/F - G*(F + 1)/2, t:0, F, tx, ty, pred:gn.pred}); gn.kick = 8; }
+function gunsBlast(gs, x, y){ gs.bl.push({x, y, t:16}); shake = Math.max(shake, 6);
+  for (const e of ents) if (e.t === 'bb' && e.alive && Math.hypot(clamp(x, e.x, e.x + e.w) - x, clamp(y, e.y, e.y + e.h) - y) < gs.br) { e.alive = false; for (let i = 0; i < 14; i++) parts.push({x:e.x + 16, y:e.y + e.h*Math.random(), vx:(Math.random() - .5)*6, vy:-Math.random()*5, life:30, r:3, col:C.ink2, sq:true}); }
+  // it bursts upward: jumping does not take you out of it
+  if (state === 'play' && Math.abs(x - pcx()) < gs.br && P.y + PH > y - 130 && P.y < y + 10) { die('shell'); return true; } return false; }
+function gunsStep(gs){ const G = gs.G; push(gs.vh, P.vx, 20);
+  // the gold gun fires at where you will be; the white one waits, and fires at where you are, so that both come down together
+  if (--gs.t <= 0) { gs.t = gs.every; gunsFire(gs, gs.gun[0], gs.F); gs.t2 = gs.F - gs.Fw + 1; }
+  if (gs.t2 != null && --gs.t2 <= 0) { gs.t2 = null; gunsFire(gs, gs.gun[1], gs.Fw); }
+  for (const g of gs.gun) if (g.kick) g.kick--;
+  for (const b of gs.bl) b.t--; gs.bl = gs.bl.filter(b => b.t > 0);
+  for (const s of gs.sh) { s.vy += G; s.x += s.vx; s.y += s.vy; s.t++;
+    // it bursts on whatever solid thing is in its way
+    if (s.t < s.F && ents.some(e => isSolid(e) && e.t !== 'g' && s.x > e.x && s.x < e.x + e.w && s.y > e.y && s.y < e.y + e.h)) { s.hit = true; s.F = s.t; } }
+  const land = gs.sh.filter(s => s.t >= s.F);
+  // two shells that come down on the same spot together put each other out
+  for (const a of land) for (const b of land) if (a !== b && !a.out && !b.out && !a.hit && !b.hit && Math.abs(a.x - b.x) < 40) { a.out = b.out = true; for (let q = 0; q < 14; q++) parts.push({x:(a.x + b.x)/2, y:a.y - 6, vx:(Math.random() - .5)*6, vy:-Math.random()*5, life:26, r:2.5, col:q % 2 ? C.gold : C.ink2}); }
+  for (const s of land) if (!s.out && gunsBlast(gs, s.x, s.y)) return true;
+  gs.sh = gs.sh.filter(s => s.t < s.F);
+  return false; }
+function drawGuns(gs){ for (const g of gs.gun) { const dir = g.x < lvW()/2 ? 1 : -1, x = g.x - dir*(g.kick || 0)*0.6;
+    ctx.fillStyle = C.ink2; ctx.fillRect(g.x - 10, g.y + 6, 20, GY - g.y - 6); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(g.x - 10, g.y + 6, 20, GY - g.y - 6);
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(x, g.y + 6, 14, Math.PI, 0); ctx.fill(); ctx.save(); ctx.translate(x, g.y); ctx.rotate(-dir*0.8 + (dir < 0 ? Math.PI : 0)); ctx.fillRect(0, -5, 26, 10); ctx.restore();
+    const tt = g.pred ? gs.t : gs.t2 != null ? gs.t2 : 999; if (tt < gs.warn) { const a = (gs.warn - tt)/gs.warn; ctx.fillStyle = `rgba(207,62,50,${a})`; ctx.beginPath(); ctx.arc(x, g.y - 2, 4 + a*6, 0, 7); ctx.fill(); }
+    ctx.fillStyle = g.pred ? C.gold : C.white; ctx.beginPath(); ctx.arc(x, g.y + 2, 4, 0, 7); ctx.fill(); }
+  // where each shell will come down, marked in its gun's colour
+  for (const s of gs.sh) { const a = s.t/s.F; ctx.strokeStyle = s.pred ? C.gold : C.ink; ctx.lineWidth = 2; ctx.globalAlpha = 0.35 + 0.5*a; ctx.beginPath(); ctx.ellipse(s.tx, s.ty, 8 + 10*a, 3, 0, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, 7); ctx.fill(); ctx.fillStyle = s.pred ? C.gold : C.white; ctx.beginPath(); ctx.arc(s.x - 2, s.y - 2, 2.2, 0, 7); ctx.fill(); }
+  for (const b of gs.bl) { const a = b.t/16, r = gs.br - b.t*1.2; ctx.fillStyle = `rgba(207,62,50,${0.35*a})`; ctx.beginPath(); ctx.moveTo(b.x - r, b.y); ctx.quadraticCurveTo(b.x - r*0.6, b.y - 130, b.x, b.y - 140); ctx.quadraticCurveTo(b.x + r*0.6, b.y - 130, b.x + r, b.y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = `rgba(207,62,50,${a})`; ctx.lineWidth = 3; ctx.stroke(); } }
+
+/* ---- a queue: the others cross one at a time and wait their turn; they count you only once you have taken your place at the back ---- */
+// x0: where they come from; edge: the near end of the bridge; x1: its far end; exit: where they go when they are over
+function queueMake(x0, edge, x1, exit, o){ return Object.assign({x0, edge, x1, exit, cr:[], line:[], gap:34, sp:1.8, every:96, t:0, wait:0, meX:false}, o || {}); }
+function queueAdd(q, x, st){ const c = {x, st:st || 'come', bob:(q.cr.length*1.7) % 6}; q.cr.push(c); if (c.st !== 'cross') q.line.push(c); return c; }
+function queueStep(q, bridge){ const pc = pcx(), onBr = P.on && P.stand === bridge, i = q.line.indexOf('me');
+  // you lose your place if you pass the one ahead of you, or drop behind the one after you
+  if (i >= 0) { const ah = q.line[i - 1], bh = q.line[i + 1];
+    if ((ah && pc > ah.x - 8) || (bh && pc < bh.x + 8)) q.line.splice(i, 1); }
+  // you take your place by standing still just behind the last one waiting
+  if (!q.line.includes('me') && !q.meX && P.on && Math.abs(P.vx) < 0.3 && pc < q.edge - 6 && pc > q.x0 && !onBr) { const last = q.line[q.line.length - 1];
+    if (last ? (last.st === 'wait' && pc < last.x - 8 && pc > last.x - 3*q.gap) : pc > q.edge - 3*q.gap) q.line.push('me'); }
+  let busy = q.cr.some(c => c.st === 'cross') || q.meX || q.wait > 0; if (q.wait > 0) q.wait--;
+  const f = q.line[0];
+  if (f === 'me' && onBr) { q.line.shift(); q.meX = true; }
+  else if (f && f !== 'me' && !busy && f.x >= q.edge - 16) { q.line.shift(); f.st = 'cross'; }
+  if (q.meX && P.on && !onBr && pc > q.x1 - 4) { q.meX = false; q.wait = 10; }
+  let prev = q.edge - 14 + q.gap;
+  for (const m of q.line) { if (m === 'me') { prev = pc; continue; }
+    const tg = prev - q.gap; if (m.x < tg - 0.5) { m.x = Math.min(tg, m.x + q.sp); m.st = 'come'; } else m.st = 'wait'; prev = m.x; }
+  for (const c of q.cr) if (c.st === 'cross' || c.st === 'off') { c.x += q.sp*1.3; if (c.st === 'cross' && c.x > q.x1 + 6) { c.st = 'off'; q.wait = 10; } }
+  // and through the door they go
+  q.cr = q.cr.filter(c => !(c.st === 'off' && c.x > q.exit));
+  if (++q.t >= q.every) { q.t = 0; queueAdd(q, q.x0 - 30); }
+  return q.cr.filter(c => c.st === 'cross').length + (onBr ? 1 : 0) >= 2; }
+function drawQueue(q){ for (const c of q.cr) { const mv = c.st !== 'wait', y = c.st === 'fall' ? GY - 25 + (c.fy || 0) : GY - 25 - (mv ? Math.abs(Math.sin(frame*0.25 + c.bob))*3 : 0); drawCreature(c.x - 12, y, false); }
+  if (q.line.includes('me') || q.meX) { ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(pcx(), P.y - 9, 3.5, 0, 7); ctx.fill(); } }
+
 /* ================= the hundred ================= */
 const LV = [
 /* ===================== I. Door ===================== */
@@ -601,23 +717,18 @@ const LV = [
     updCones(); },
   draw(){ drawCones(); } },
 
-/* 14. it only moves you if you let it */
+/* 14. it only carries you while you keep still, and the sky knows where it is carrying you */
 { id:'nothing', was:[15], start:4.1, sy:388, noEntrance:true,
-  build(){ Gd(0,2); Sp(3,25,14,'up'); R('g',3,25,15,16); Gd(26,29); R('b',14,16,10,10); Sp(14,16,11,'down');
-    S.raft = E({t:'raft', x:3*T, y:416, w:3*T, h:12, solid:true}); S.idle = 0; S.endT = 0; S.door = {x:27*T, y:0}; },
+  build(){ Gd(0,2); Sp(3,25,14,'up'); R('g',3,25,15,16); Gd(26,29); R('b',14,16,10,10); Sp(14,16,11,'down'); Door(28,14);
+    S.raft = E({t:'raft', x:3*T, y:416, w:3*T, h:12, solid:true}); S.idle = 0; S.mv = 0; S.next = 40; },
   update(){ const r = S.raft;
-    if (pressEdge) { S.idle = 0; drop(pcx(), 24, {floor:H + 60}); }
     S.idle = (keys.left || keys.right || keys.jump) ? 0 : S.idle + 1;
-    const on = P.on && P.stand === r; let vx = 0;
-    if (on && S.idle >= 30 && r.x < 23*T) vx = 1.2;
-    if (!r.fall) { r.x += vx; if (on) P.x += vx; }
-    if (r.x >= 23*T && on) { if (++S.endT > 150 && !r.fall) r.fall = 1; }
-    // the door waits on the far bank; once the raft is in, it steps aboard
-    const docked = r.x >= 23*T && !r.fall;
-    if (fleeDoor(S.door, 1.6, {min: docked ? r.x : 26*T})) return levelClear();
-    S.door.y = docked && S.door.x < 26*T - 18 ? -32 : 0;
+    const on = P.on && P.stand === r, vx = on && S.idle >= 20 && r.x < 23*T ? 1.2 : 0;
+    r.x += vx; if (on) P.x += vx;
+    // while it carries you, the sky drops on the place it is carrying you to
+    if (vx && r.x < 21*T && ++S.mv >= S.next) { S.mv = 0; S.next = 110; drop(pcx() + 1.2*50, 50, {floor:H + 60}); }
     updCones(); },
-  draw(){ drawCones(); drawShy(S.door); } },
+  draw(){ drawCones(); } },
 
 /* 15. your last attempt walks ahead of you and uses the road up */
 { id:'decoy', was:[20], start:2,
@@ -1461,6 +1572,132 @@ const LV = [
     ctx.globalAlpha = 0.4; for (const g of S.ghosts) if (g.p) drawPlayerAt(g.p[0], g.p[1], PW, PH, 1, C.white, C.soft, false); ctx.globalAlpha = 1;
     drawCones(); drawHabit(); } },
 
+/* ===================== VIII. Others ===================== */
+
+/* 71. whatever you do here, you may do once */
+{ id:'law', was:[58], start:1.5,
+  build(){ Gd(0,5); Gd(10,29); R('b',15,15,12,13); S.lift = E({t:'b', lift:true, x:8*T, y:GY, w:2*T, h:12, solid:true}); S.lt = 130;
+    S.door = {x:25*T, y:0}; lawInit(); },
+  onJump(){ lawAct('jump'); },
+  update(){ const L = S.lift; S.lt++; const ph = (S.lt % 260)/260, k = ph < 0.15 ? 0 : ph < 0.5 ? (ph - 0.15)/0.35 : ph < 0.65 ? 1 : 1 - (ph - 0.65)/0.35, nx = 6*T + 2*T*k;
+    if (P.on && P.stand === L) P.x += nx - L.x; L.x = nx;
+    if (lawStep()) return;
+    // the door runs from whoever comes at it, bites whoever corners it face to face, and comes to whoever turns away
+    const d = S.door, dd = Math.sign(d.x + 18 - pcx()) || 1;
+    if (pcx() > 16*T && fleeDoor(d, 2.4, {min:16*T - 12, max:28*T - 4, noHop:true, noFollow:true, come: () => P.face !== dd})) { if (P.face === dd) { d.bite = true; return die('door'); } return levelClear(); } },
+  draw(){ drawShy(S.door); drawLaw(); } },
+
+/* 72. it only hurts those who mean it, and it lets in only those who are leaving */
+{ id:'intention', was:[52, 96], start:1.5,
+  build(){ Gd(0,3); R('belt',4,12,14,16,{sp:3.6}); R('b',5,11,11,11); Gd(13,14); Gd(15,21,{ice:true}); R('b',16,20,11,11); R('belt',22,29,14,16,{sp:2.4}); R('b',23,25,11,11);
+    S.sp = [Sp(7,9,13,'up',{kill:false}), Sp(17,19,13,'up',{kill:false}), Sp(23,24,13,'up',{kill:false})];
+    S.door = Door(27.5,14,{onEnter(e){ if (P.face < 0) levelClear(); else { e.bite = true; die('door'); } }}); },
+  update(){ if (P.on && P.stand && P.stand.t === 'belt') P.x += P.stand.sp;
+    // the spikes only bite someone who is pressing on
+    const want = keys.left || keys.right; for (const s of S.sp) if (want && ov(pbox(3), {x:s.x + 2, y:s.y + 3, w:s.w - 4, h:s.h - 3})) return die('spike'); },
+  draw(){ const want = keys.left || keys.right;
+    for (const s of S.sp) { const n = Math.max(1, Math.round(s.w/14)), sw = s.w/n; for (let i = 0; i < n; i++) { const ex = s.x + i*sw + sw/2, ey = s.y + 10;
+        if (want) { ctx.fillStyle = C.white; ctx.beginPath(); ctx.arc(ex, ey, 3, 0, 7); ctx.fill(); ctx.fillStyle = C.red; ctx.beginPath(); ctx.arc(ex + (pcx() > ex ? 1 : -1), ey, 1.6, 0, 7); ctx.fill(); }
+        else { ctx.strokeStyle = C.paper; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(ex - 2.5, ey); ctx.lineTo(ex + 2.5, ey); ctx.stroke(); } } }
+    // the door's eye is on whoever faces it
+    const d = S.door, ex = d.x + 18, ey = d.y - 20, fac = P.face > 0 && pcx() < ex; drawEye(ex, ey, 10, fac ? pcx() : ex + 30, fac ? P.y + 8 : ey + 20, fac ? 0 : 0.85); } },
+
+/* 73. the light looks where you would have gone; fool it once, and it learns */
+{ id:'searchlight', was:[54], start:1.5,
+  build(){ Gd(0,29); R('b',0,3,12,12); R('b',11,13,12,12); R('b',22,24,11,11); Door(23,14);
+    // a watchman over the whole yard; three roofs to hide under
+    S.L = lampMake(400, 30, 0, 0, {post:[3.4*T, 23.5*T], see:40, look:130, learns:true}); },
+  update(){ lampStep(S.L); },
+  draw(){ drawLamp(S.L); } },
+
+/* 74. two guns that agree about nothing, except you; and what it aims at is your tool */
+{ id:'twoguns', was:[60, 40], start:2,
+  build(){ Gd(0,29); R('bb',24,24,9,13,{hp:1}); Door(27,14); S.gs = gunsMake(); },
+  update(){ gunsStep(S.gs); },
+  draw(){ drawGuns(S.gs); } },
+
+/* 75. one at a time, and everyone in their turn */
+{ id:'queue', start:1.5,
+  build(){ Gd(0,11); S.br = R('pt',12,17,14,14,{h:16}); Gd(18,29); Door(27,14);
+    const q = S.q = queueMake(0, 12*T, 18*T, 27*T + 16); queueAdd(q, 14.5*T, 'cross'); for (let i = 0; i < 3; i++) queueAdd(q, 12*T - 14 - i*q.gap).st = 'wait'; q.t = 40; },
+  update(){ const q = S.q;
+    if (S.broke) { for (const c of q.cr) if (c.st === 'fall') c.fy = (c.fy || 0) + 6; return; }
+    // two on it at once, and the bridge goes, with everyone on it
+    if (queueStep(q, S.br)) { S.broke = true; S.br.fall = 1; for (const c of q.cr) if (c.st === 'cross') c.st = 'fall'; shake = 8; } },
+  draw(){ drawQueue(S.q); } },
+
+/* 76. every leap makes you someone else; and at the door, only you will do */
+{ id:'identity', was:[68], start:1.5,
+  build(){ const hue = 'WWWW--BBBBBWW--RRRRRWW--RRRWWW';
+    S.col = 'R'; S.cyc = {R:'G', G:'B', B:'R'}; S.tl = [];
+    for (let c = 0; c < 30; c++) if (hue[c] !== '-') S.tl.push(R('g', c, c, 14, 16, {hue:hue[c], cond:e => e.hue === 'W' || e.hue === S.col}));
+    S.door = Door(28,14,{onEnter(e){ if (S.col === 'R') levelClear(); else { e.bite = true; die('door'); } }}); },
+  onJump(){ S.col = S.cyc[S.col]; S.flash = 10; },
+  update(){ if (S.flash) S.flash--; },
+  alpha(e){ return e.hue && !(e.hue === 'W' || e.hue === S.col) ? 0.3 : 1; },
+  draw(){ const hc = {R:C.red, G:C.gold, B:'#3E6FB0', W:C.white};
+    for (const e of S.tl) { ctx.globalAlpha = (e.hue === 'W' || e.hue === S.col) ? 1 : 0.35; ctx.fillStyle = hc[e.hue]; ctx.fillRect(e.x + 2, e.y + 4, e.w - 4, 6); ctx.globalAlpha = 1; }
+    const d = S.door; ctx.fillStyle = C.red; ctx.fillRect(d.x + 4, d.y - 8, 28, 5); },
+  drawPlayer(dx, dy, dw, dh){ const hc = {R:C.red, G:C.gold, B:'#3E6FB0'}; drawPlayerAt(dx, dy, dw, dh, P.face, hc[S.col], C.ink, false);
+    if (S.flash) { ctx.strokeStyle = hc[S.col]; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(pcx(), P.y + 14, 30 - S.flash*2, 0, 7); ctx.stroke(); } } },
+
+/* 77. no one gets there alone; each one carries it a little further */
+{ id:'relay', was:[66], start:1.5,
+  build(){ Gd(0,6); Gd(10,17); Sp(13,13,13,'up'); for (let c = 18; c <= 23; c++) R('pt',c,c,14,14,{h:16, crumble:24}); Gd(24,29);
+    S.door = Door(28,14,{slots:1, fill:() => S.has ? 1 : 0, onEnter(){ if (S.has) levelClear(); }});
+    S.life = 0; S.span = 120; S.has = false; S.key = M.key ? Object.assign({}, M.key) : {x:3*T + 9, y:GY - 22}; if (M.spawn != null) P.x = M.spawn;
+    S.rec = []; S.echo = (M.legs || []).map(l => ({l, i:0, p:null})); },
+  update(){ S.life++; if (S.rec.length < 400) S.rec.push([Math.round(P.x), Math.round(P.y)]);
+    for (const e of S.echo) e.p = e.i < e.l.length ? e.l[e.i++] : null;
+    if (!S.has && ov(pbox(), {x:S.key.x, y:S.key.y, w:14, h:20})) { S.has = true; sparkle(S.key.x + 7, S.key.y + 10); }
+    if (S.life >= S.span) return die('age'); },
+  // whoever runs out of time standing up passes the key on, right there; anyone else drops it, and it goes home
+  onDeath(c){ if (!S.has) return;
+    if (c === 'age' && P.on) { M.key = {x:P.x + 4, y:P.y + 8}; M.spawn = P.x; (M.legs || (M.legs = [])).push(S.rec); if (M.legs.length > 5) M.legs.shift(); }
+    else { M.key = null; M.spawn = null; M.legs = []; } },
+  drawPlayer(dx, dy, dw, dh){ const a = S.life/S.span, sh = Math.round(251 - 140*a); drawPlayerAt(dx, dy, dw, dh, P.face, `rgb(${sh},${sh + 1},${sh + 2})`, C.ink, false);
+    ctx.fillStyle = C.grid2; ctx.fillRect(P.x - 2, P.y - 9, PW + 4, 4); ctx.fillStyle = a > 0.75 ? C.red : C.ink; ctx.fillRect(P.x - 2, P.y - 9, (PW + 4)*(1 - a), 4);
+    if (S.has) drawKey(P.x + 4, P.y - 30); },
+  draw(){ ctx.globalAlpha = 0.3; for (const e of S.echo) if (e.p) drawPlayerAt(e.p[0], e.p[1], PW, PH, 1, C.white, C.soft, false); ctx.globalAlpha = 1;
+    if (!S.has) drawKey(S.key.x, S.key.y); } },
+
+/* 78. every line you climb past changes what your words mean */
+{ id:'babel', was:[87], start:2,
+  build(){ Gd(0,29); Sp(5,27,13,'up'); R('b',6,7,12,13); R('b',9,10,10,13); R('b',12,13,8,13); R('b',15,16,6,13); R('b',19,24,4,13); Door(22,4); S.band = 0; },
+  // what your keys mean is set by the height you last stood at
+  band(){ return clamp(Math.floor((GY + 14 - P.y - PH/2)/128), 0, 3); },
+  input(ax){ if (P.on) S.band = this.band(); const e = S.band === 1 || S.band === 3 ? -ax : ax; P.face = e; return {ax:e, acc:P.on ? 0.9 : 0.6, max:4.4}; },
+  update(){ if (P.on) S.band = this.band(); },
+  drawBack(){ const tint = ['rgba(0,0,0,0)', 'rgba(207,62,50,.07)', 'rgba(226,166,42,.08)', 'rgba(207,62,50,.07)'];
+    for (let b = 1; b < 4; b++) { const y1 = GY + 14 - b*128 - 14; ctx.fillStyle = tint[b]; ctx.fillRect(0, y1 - 128, W, 128);
+      ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([10,6]); ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(W, y1); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(30,43,71,.22)'; ctx.lineWidth = 2;
+      for (let x = 40 + b*13; x < W; x += 150) { const y = y1 - 64; ctx.beginPath();
+        if (b === 1) { ctx.moveTo(x, y); ctx.lineTo(x + 6, y - 8); ctx.lineTo(x + 12, y); ctx.lineTo(x + 18, y - 8); }
+        else if (b === 2) { ctx.arc(x + 6, y - 4, 5, 0, 7); ctx.moveTo(x + 22, y - 9); ctx.lineTo(x + 22, y + 1); }
+        else { ctx.moveTo(x, y - 8); ctx.lineTo(x + 12, y - 8); ctx.moveTo(x + 6, y - 8); ctx.lineTo(x + 6, y + 2); }
+        ctx.stroke(); } }
+    ctx.strokeStyle = 'rgba(30,43,71,.22)'; ctx.lineWidth = 2;
+    for (let x = 60; x < W; x += 150) { ctx.beginPath(); ctx.moveTo(x, GY - 72); ctx.lineTo(x + 8, GY - 72); ctx.lineTo(x + 4, GY - 64); ctx.stroke(); } } },
+
+/* 79. everything behind you is gone; ahead, it guesses, and then it guesses your guess */
+{ id:'guess', was:[22], start:1.5, w:40,
+  build(){ Gd(0,3); S.br = []; for (let c = 4; c <= 35; c++) S.br.push(R('pt',c,c,14,14,{h:16, ti:c})); Gd(36,39); Door(38,14);
+    S.front = null; S.cp = 0; S.sp = clamp(prof.spd ?? 4, 3.4, 4.0); },
+  crack(x0, x1, t){ for (const e of S.br) if (e.x + e.w > x0 && e.x < x1 && e.ct == null && !e.fall) { e.crumble = t; e.ct = t; } },
+  // where a jump that starts now comes down, if you keep doing what you are doing
+  landing(){ let x = P.x, y = P.y, vx = P.vx, vy = P.vy; const ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), hold = keys.jump;
+    for (let i = 0; i < 90; i++) { if (ax) vx = clamp(vx + ax*0.6, -4.4, 4.4); else vx *= 0.97; if (!hold && vy < -3.5) vy = -3.5; vy = Math.min(vy + 0.55, 12); y += vy; x += vx; if (vy > 0 && y + PH >= GY) break; }
+    return x + PW/2; },
+  onJump(){ const pc = pcx();
+    if (S.cp === 2 && !S.j2) { S.j2 = pc; const l = this.landing(); this.crack(l - 26, l + 26, 6); }
+    if (S.cp === 3 && !S.j3 && S.off2 != null) { S.j3 = pc; const l = pc + S.off2; this.crack(l - 30, l + 30, 6); } },
+  onLand(){ if (S.j2 && S.off2 == null) S.off2 = pcx() - S.j2; },
+  update(){ const pc = pcx();
+    if (S.front == null && pc > 5*T && P.on) S.front = 2*T;
+    if (S.front != null && S.front < 36*T) { S.front += S.sp; for (const e of S.br) { if (!e.fall && e.x + T < S.front) e.fall = 1; e.shk = !e.fall && e.ct == null && e.x < S.front + 40; } }
+    // three times it opens the floor where you are going
+    for (const [k, c] of [[1, 9], [2, 18], [3, 27]]) if (S.cp < k && pc > c*T && P.on) { S.cp = k; const at = Math.floor(whereIn(26)/T)*T; this.crack(at, at + (k === 1 ? 2 : 1)*T, 8); } } }
 ];
 
 // ground that remembers your feet and grows thorns there
@@ -1492,7 +1729,7 @@ function die(cause){
   save();
   burst(pcx(), clamp(P.y + PH/2, 10, H - 30)); shake = 14; flash = 1;
 }
-function levelClear(){ if (state !== 'play') return; state = 'clear'; clearT = 0; S.fake = false; markDone(); confetti(pcx(), P.y); }
+function levelClear(){ if (state !== 'play') return; if (lvl === LV.length - 1) return finalWin(); state = 'clear'; clearT = 0; S.fake = false; markDone(); confetti(pcx(), P.y); }
 function fakeClear(){ if (state !== 'play') return; state = 'clear'; clearT = 0; S.fake = true; confetti(pcx(), P.y); }
 const chapterEnd = () => finalWin();
 function finalWin(){ if (state !== 'play') return; state = 'win'; clearT = 0; prof.wins++; markDone(); for (let i = 0; i < 4; i++) confetti(pcx() + (i-1.5)*120, P.y - 40); }

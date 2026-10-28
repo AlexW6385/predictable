@@ -42,7 +42,20 @@
   // ---- 14 do nothing
   check('14 just walk', run(13, () => R), 'dead');
   check('14 mash', run(13, () => { let t = 0; return P => ({k:{right: (t++ >> 3) % 2 === 0}}); }), 'dead');
-  check('14 touch nothing, ever', run(13, () => P => ({k:{}}), {max:1500}), 'clear');
+  check('14 touch nothing, ever', run(13, () => P => ({k:{}}), {max:1500}), 'dead');
+  check('14 keep a hand on it', run(13, () => { let t = 0; return P => ({k:{left: (t++ % 12) === 0}}); }, {max:1500}), 'timeout');
+  // when a shadow lands on you, touch something so the raft stops and the cone falls ahead of you; a step back, or a hop where there is headroom
+  const raft14 = (how, delay, len) => () => { let n = null, seen = null; return P => { const c = (g.S.cones || []).find(c => c.st === 'fall');
+      if (g.S.raft.x >= 23*T - 1) return {k:{right:true}};
+      if (c && c !== seen) { seen = c; n = 0; } if (n != null) { n++; if (n > delay && n <= delay + (len || 4)) return how(P); }
+      // between cones, a step forward if you have drifted to the back of the raft
+      if (!c && P.on && cx() < g.S.raft.x + 36) return {k:{right:true}};
+      return {k:{}}; }; };
+  for (const d of [3, 15, 28]) check(`14 when the shadow comes, a step back (after ${d})`, run(13, raft14(() => ({k:{left:true}}), d), {max:1800}), 'clear');
+  check('14 when the shadow comes, a step back, too late', run(13, raft14(() => ({k:{left:true}}), 42), {max:1800}), 'dead');
+  check('14 when the shadow comes, walk on', run(13, raft14(() => ({k:{right:true}}), 3, 30), {max:1800}), 'dead');
+  check('14 when the shadow comes, hop (fine, except under the spikes)', run(13, raft14(() => ({k:{jump:true}}), 3, 10), {max:1800}), /clear|dead/);
+  check('14 when the shadow comes, hop, but step back under the spikes', run(13, raft14(P => cx() > 12.5*32 && cx() < 17.5*32 ? {k:{left:true}} : {k:{jump:true}}, 3, 6), {max:1800}), 'clear');
   // ---- 15 decoy
   const plats = () => script([S.JT(4.8, 384), S.JT(9.5, 352), S.R(12.3), S.JT(15.5, 352), S.R(19.3), S.JT(22.5, 352), S.R(29)]);
   check('15 walk the ground both times', run(14, life => R, {lives:2, freshMem:true}), 'dead');

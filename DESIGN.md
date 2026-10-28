@@ -43,6 +43,13 @@ Every level should meet one rule: **you only get through if you understand it, a
   - tapping counts as walking;
   - jump windows of at least one tile.
 - **Every death is explainable** from what was on screen. Every prediction is shown before it lands, with a shadow, the Eye's pupil, a twitching lid or cracks.
+- **Every rule has a reason and a tell.** A rule follows from what the thing is (a gun leads its target; a sleeper wakes at noise), and it belongs to the chapter's theme. The screen shows the rule before it kills, so a careful, observant player can read the pattern with few deaths, or none. No hidden trap without a tell, and no trial and error for its own sake.
+- **Standing still never clears a level**, except level 1, which teaches it.
+- **The answer is never what you would do anyway.** Each level asks for a real insight, and in the later chapters a plan of more than one step. If the obvious move works, the level is not finished.
+- **No two levels share an answer.** When a piece comes back, it asks something new. "Let go and it comes to you" is level 1's answer; later levels may build on it, but never end on it again unchanged.
+- **A duel, not a puzzle box.** The best levels are a game against something that models you: it predicts you, and you predict its prediction. Prefer feints, baits, teaching it a habit and then breaking it, and using its aim as a tool, over hidden properties that only have to be noticed.
+- **Make the tell plain and the reasoning hard.** A tell that is easy to miss turns the level into trial and error; a tell that gives the answer away ("that one is odd, don't touch it") makes it too simple. Show plainly what is happening; the puzzle is what to do about it.
+- **A finale is a new idea, not a stack.** The last level of a chapter makes its pieces act on each other: the answer to one is what another punishes, or one piece's prediction is turned against another. Running the earlier answers in a row is not enough.
 - **Pieces interact.** Most levels combine two or three pieces. Ideally, the habit one piece teaches is exactly what another piece punishes.
 
 ## The curve
@@ -286,7 +293,7 @@ The classic paradoxes and thought experiments, each made into a level that can a
 
 ## Testing
 
-Every level ships only after four kinds of test pass.
+Every level ships only after five kinds of check pass.
 
 1. **The plausible wrong moves fail.** These must all die or stall:
    - running right;
@@ -298,6 +305,7 @@ Every level ships only after four kinds of test pass.
 2. **Half an idea fails.** The "I've figured it out" approach dies to the next layer.
 3. **The intended route clears with human timing.** It still works with reaction delay, acting early or late, and uneven jump holds.
 4. **Random play almost never clears it.** Mash, jump spam, hold-right and a wandering bot with pauses each clear it about 2% of the time or less.
+5. **A careful first-timer can read it.** From what the screen shows, write down what an observant player would conclude after no deaths, one and two. The rule must be within reach by then, and every trap must have shown itself before it springs.
 
 A debug mode lets the tests snapshot, rewind and step the game frame by frame. A search-based solver confirms that every level can be solved.
 
