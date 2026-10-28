@@ -4,6 +4,8 @@ A wordless troll platformer that watches how you play and sets its traps for the
 
 **▶ Play it in your browser: https://alexw6385.github.io/predictable/**
 
+The next version of the level set is being built chapter by chapter and can be played at **https://alexw6385.github.io/predictable/next/** (see [DESIGN.md](DESIGN.md)).
+
 100 levels, no text, no hints. Every trap is meant to be fair: you can always work out afterwards why you died, and the next level is built on what you just learned. Then it uses that against you.
 
 ## Play

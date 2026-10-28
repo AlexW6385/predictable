@@ -26,6 +26,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html manifest.webmanifest icon-192.png icon-512.png _site/
+          mkdir -p _site/next && cp next/index.html _site/next/ && cp manifest.webmanifest icon-192.png icon-512.png _site/next/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
