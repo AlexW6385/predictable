@@ -16,7 +16,7 @@ Play online at **https://alexw6385.github.io/predictable/**, or open `index.html
 | Jump | ↑, W, Space or Z (hold for higher) |
 | Continue / retry | Enter or jump |
 
-Touch controls appear on phones. Progress, death marks and the habits the game has learned about you are kept in `localStorage`; the "forget" button under the game clears them.
+The page always fits the window and never scrolls. On phones the game fills the screen in landscape with touch controls over its corners (on Android the first touch also switches to real full screen; on iPhone, *Add to Home Screen* gives the same). Progress, death marks and the habits the game has learned about you are kept in `localStorage`; the ↺ button clears them.
 
 ## How it works
 
