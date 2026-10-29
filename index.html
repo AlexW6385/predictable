@@ -780,14 +780,15 @@ const LV = [
 
 /* 15. your last attempt walks ahead of you and uses the road up */
 { id:'decoy', was:[20], start:2,
-  build(){ Gt(0,29); for (const [a,b] of [[7,12],[14,19],[21,25]]) for (let c = a; c <= b; c++) R('b',c,c,11,11); R('b',4,5,12,12); Door(28,14);
-    S.path = []; S.gi = 50; S.coned = false; },
+  build(){ R('g',0,3,14,16,{firm:true}); Gt(4,29); for (const [a,b] of [[7,12],[14,19],[21,25]]) for (let c = a; c <= b; c++) R('b',c,c,11,11); R('b',4,5,12,12); Door(28,14);
+    S.path = []; S.gi = 0; S.coned = false; },
   update(){ S.path.length < 2400 && S.path.push([Math.round(P.x), Math.round(P.y), P.on ? 1 : 0]);
     const g = M.path; let gx = null, gvx = 0;
     if (g && !S.gDead && S.gi < g.length) { const p = g[S.gi]; gx = p[0]; gvx = S.gi > 0 ? p[0] - g[S.gi-1][0] : 0; S.gp = p; S.gi++;
-      if (p[2]) { const f = {x:p[0]+1, y:p[1]+PH, w:PW-2, h:3}; for (const e of ents) if ((e.t === 'g' || e.t === 'b') && e.ct == null && isSolid(e) && ov(f, e)) e.ct = 18; } }
+      if (p[2]) { const f = {x:p[0]+1, y:p[1]+PH, w:PW-2, h:3}; for (const e of ents) if ((e.t === 'g' || e.t === 'b') && !e.firm && e.ct == null && isSolid(e) && ov(f, e)) e.ct = 18; } }
     else S.gp = null;
-    const lead = gx != null && gx > P.x ? {x:gx, vx:gvx, ghost:true} : {x:P.x, vx:P.vx};
+    // it sets off with you; it is only in front if it is clearly ahead (level with it, the sky takes you)
+    const lead = gx != null && gx > P.x + 32 ? {x:gx, vx:gvx, ghost:true} : {x:P.x, vx:P.vx};
     if (!S.coned && lead.x + 11 > 22*T) { S.coned = true;
       // aimed at where the leader will be standing: the end of the current leap, or 17 frames down the road
       let ax = lead.x + 11 + lead.vx*17, ay = -40;

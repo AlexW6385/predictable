@@ -59,9 +59,12 @@
   check('14 touch nothing, ever', run(13, () => P => ({k:{}}), {max:1500}), 'timeout');
   check('14 touch nothing until the far bank, then walk off', run(13, raft14(() => ({k:{}}), 0), {max:1800}), 'clear');
   // ---- 15 decoy
-  const plats = () => script([S.JT(4.8, 384), S.JT(9.5, 352), S.R(12.3), S.JT(15.5, 352), S.R(19.3), S.JT(22.5, 352), S.R(29)]);
+  const plats = w => script([S.W(w), S.JT(4.8, 384), S.JT(9.5, 352), S.R(12.3), S.JT(15.5, 352), S.R(19.3), S.JT(22.5, 352), S.R(29)]);
   check('15 walk the ground both times', run(14, life => R, {lives:2, freshMem:true}), 'dead');
-  check('15 ground first, then the platforms', run(14, life => life === 0 ? R : plats(), {lives:2, freshMem:true}), 'clear');
+  check('15 ground first, then the platforms, level with the ghost', run(14, life => life === 0 ? R : plats(0), {lives:2, freshMem:true}), 'dead');
+  check('15 ground first, then the ground again, letting it go first', run(14, life => life === 0 ? R : script([S.W(30), S.R(29)]), {lives:2, freshMem:true}), 'dead');
+  check('15 ground first, then the platforms, letting it go first', run(14, life => life === 0 ? R : plats(30), {lives:2, freshMem:true}), 'clear');
+  check('15 platforms first, then the ground, letting it go first', run(14, life => life === 0 ? plats(0) : script([S.W(30), S.R(29)]), {lives:2, freshMem:true}), 'clear');
   // ---- 16 heavy
   const th = () => g.S.th, tap16 = () => ({k:{right: Math.abs(g.P.vx) < 2.4}}), N = () => ({k:{}});
   check('16 run straight', run(15, () => R), 'dead');
