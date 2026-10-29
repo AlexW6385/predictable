@@ -765,16 +765,16 @@ const LV = [
     updCones(); },
   draw(){ drawCones(); } },
 
-/* 14. it only carries you while you keep still, and the sky knows where it is carrying you */
-{ id:'nothing', was:[15], start:4.1, sy:388, noEntrance:true,
-  build(){ Gd(0,2); Sp(3,25,14,'up'); R('g',3,25,15,16); Gd(26,29); R('b',14,16,10,10); Sp(14,16,11,'down'); Door(28,14);
-    S.raft = E({t:'raft', x:3*T, y:416, w:3*T, h:12, solid:true}); S.idle = 0; S.mv = 0; S.next = 40; },
+/* 14. it only carries you while you keep still, and the sky expects you to flinch */
+{ id:'nothing', was:[15], start:3.5, sy:388, noEntrance:true,
+  build(){ Sp(0,25,14,'up'); R('g',0,25,15,16); Gd(26,29); Door(28,14);
+    S.raft = E({t:'raft', x:3*T, y:416, w:2*T, h:12, solid:true}); S.idle = 0; S.mv = 0; S.next = 40; },
   update(){ const r = S.raft;
     S.idle = (keys.left || keys.right || keys.jump) ? 0 : S.idle + 1;
-    const on = P.on && P.stand === r, vx = on && S.idle >= 20 && r.x < 23*T ? 1.2 : 0;
+    const on = P.on && P.stand === r, vx = on && S.idle >= 20 && r.x < 24*T ? 2 : 0;
     r.x += vx; if (on) P.x += vx;
-    // while it carries you, the sky drops on the place it is carrying you to
-    if (vx && r.x < 21*T && ++S.mv >= S.next) { S.mv = 0; S.next = 110; drop(pcx() + 1.2*50, 50, {floor:H + 60}); }
+    // while it carries you, the sky drops all around where you are now: it expects you to flinch, and a flinch stops the raft
+    if (vx && r.x < 22*T && ++S.mv >= S.next) { S.mv = 0; S.next = 100; const x = pcx(); for (let k = -2; k <= 2; k++) drop(x + k*32, 58, {floor:H + 60}); }
     updCones(); },
   draw(){ drawCones(); } },
 
@@ -2885,7 +2885,7 @@ function drawEnt(e){
       else { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash([4,4]); ctx.strokeRect(x+2, e.y+2, e.w-4, e.h-4); ctx.setLineDash([]); ctx.globalAlpha = 0.35; cross(x + 16, e.y + 16, 9, C.red, 3); ctx.globalAlpha = 1; }
       break; }
     case 'box': { ctx.fillStyle = C.door; ctx.fillRect(x, e.y, e.w, e.h); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.strokeRect(x+1, e.y+1, e.w-2, e.h-2); ctx.beginPath(); ctx.moveTo(x+3, e.y+3); ctx.lineTo(x+e.w-3, e.y+e.h-3); ctx.moveTo(x+e.w-3, e.y+3); ctx.lineTo(x+3, e.y+e.h-3); ctx.stroke(); break; }
-    case 'raft': { ctx.fillStyle = C.door; ctx.fillRect(x, e.y, e.w, e.h); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(x+1, e.y+1, e.w-2, e.h-2); for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.moveTo(x + i*16, e.y); ctx.lineTo(x + i*16, e.y + e.h); ctx.stroke(); } break; }
+    case 'raft': { ctx.fillStyle = C.door; ctx.fillRect(x, e.y, e.w, e.h); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(x+1, e.y+1, e.w-2, e.h-2); for (let i = 1; i < e.w/16; i++) { ctx.beginPath(); ctx.moveTo(x + i*16, e.y); ctx.lineTo(x + i*16, e.y + e.h); ctx.stroke(); } break; }
     case 'key': drawKey(e.x, e.y); break;
     case 'stk': { const a = Math.min(1, e.life/30); ctx.globalAlpha *= a; ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(x, e.y); ctx.lineTo(x + 26, e.y); ctx.lineTo(x + 13, e.y + 40); ctx.closePath(); ctx.fill(); ctx.fillStyle = C.ink2; ctx.fillRect(x, e.y, 26, 4); ctx.globalAlpha /= a || 1; break; }
     case 'door': drawDoor(e.x, e.y, {open:e.open, bite:e.bite, teeth:e.teeth, slots:e.slots, filled: e.fill ? e.fill() : (e.slots ? S.keys : 0), flip:e.flip}); break;

@@ -43,22 +43,21 @@
       if (ph === 4) { if (P.on && pc > 22.2*T && P.y > 400) return {jump:30, dir:1}; if (P.on && P.y < 400 && P.y > 330) return {jump:30, dir:1}; return R(); }
       return R(); }; }, {max:1200}), 'clear');
   // ---- 14 do nothing
+  const docked = () => g.S.raft.x >= 24*T - 1;
+  // ride with hands off; when a shadow comes, do something (or nothing) about it; at the far bank, walk to the door
+  const raft14 = (how, len) => () => { let n = null, seen = null; return P => { const c = fc()[0];
+      if (docked()) return R();
+      if (c && c !== seen) { seen = c; n = 0; } if (n != null && n < len) { n++; return how(P); }
+      return {k:{}}; }; };
   check('14 just walk', run(13, () => R), 'dead');
   check('14 mash', run(13, () => { let t = 0; return P => ({k:{right: (t++ >> 3) % 2 === 0}}); }), 'dead');
-  check('14 touch nothing, ever', run(13, () => P => ({k:{}}), {max:1500}), 'dead');
-  check('14 keep a hand on it', run(13, () => { let t = 0; return P => ({k:{left: (t++ % 12) === 0}}); }, {max:1500}), 'timeout');
-  // when a shadow lands on you, touch something so the raft stops and the cone falls ahead of you; a step back, or a hop where there is headroom
-  const raft14 = (how, delay, len) => () => { let n = null, seen = null; return P => { const c = (g.S.cones || []).find(c => c.st === 'fall');
-      if (g.S.raft.x >= 23*T - 1) return {k:{right:true}};
-      if (c && c !== seen) { seen = c; n = 0; } if (n != null) { n++; if (n > delay && n <= delay + (len || 4)) return how(P); }
-      // between cones, a step forward if you have drifted to the back of the raft
-      if (!c && P.on && cx() < g.S.raft.x + 36) return {k:{right:true}};
-      return {k:{}}; }; };
-  for (const d of [3, 15, 28]) check(`14 when the shadow comes, a step back (after ${d})`, run(13, raft14(() => ({k:{left:true}}), d), {max:1800}), 'clear');
-  check('14 when the shadow comes, a step back, too late', run(13, raft14(() => ({k:{left:true}}), 42), {max:1800}), 'dead');
-  check('14 when the shadow comes, walk on', run(13, raft14(() => ({k:{right:true}}), 3, 30), {max:1800}), 'dead');
-  check('14 when the shadow comes, hop (fine, except under the spikes)', run(13, raft14(() => ({k:{jump:true}}), 3, 10), {max:1800}), /clear|dead/);
-  check('14 when the shadow comes, hop, but step back under the spikes', run(13, raft14(P => cx() > 12.5*32 && cx() < 17.5*32 ? {k:{left:true}} : {k:{jump:true}}, 3, 6), {max:1800}), 'clear');
+  check('14 keep a hand on it', run(13, () => { let t = 0; return P => ({k:{left: (t % 24) === 0, right: (t++ % 24) === 12}}); }, {max:1500}), 'timeout');
+  check('14 when the shadow comes, a step back', run(13, raft14(() => Lf(), 8), {max:1800}), 'dead');
+  check('14 when the shadow comes, a step forward', run(13, raft14(() => R(), 6), {max:1800}), 'dead');
+  check('14 when the shadow comes, hop', run(13, raft14(() => ({k:{jump:true}}), 6), {max:1800}), 'dead');
+  check('14 when the shadow comes, freeze a moment late', run(13, () => { let n = null, seen = null; return P => { const c = fc()[0]; if (c && c !== seen) { seen = c; n = 0; } if (n != null && n++ === 30) return {k:{left:true}}; return {k:{}}; }; }, {max:1800}), 'dead');
+  check('14 touch nothing, ever', run(13, () => P => ({k:{}}), {max:1500}), 'timeout');
+  check('14 touch nothing until the far bank, then walk off', run(13, raft14(() => ({k:{}}), 0), {max:1800}), 'clear');
   // ---- 15 decoy
   const plats = () => script([S.JT(4.8, 384), S.JT(9.5, 352), S.R(12.3), S.JT(15.5, 352), S.R(19.3), S.JT(22.5, 352), S.R(29)]);
   check('15 walk the ground both times', run(14, life => R, {lives:2, freshMem:true}), 'dead');
