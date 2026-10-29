@@ -72,10 +72,11 @@
   check('39 take two keys and ride', run(38, () => script([...key39(3.875), ...key39(6.5), ...ride39]), {max:1800}), 'clear');
   // ---- 40 balance
   const hopOn = [S.L(13.0), S.W(10), S.R(13.25), S.J(30, 1), S.U(P => P.on, {right:true})];
-  const stopShort = [S.F(R, () => g.S.blk.st === 'fall'), S.W(80)], home40 = [S.L(1.6), S.W(30)];
+  const stopShort = [S.F(R, () => g.S.blk.st === 'fall'), S.R(20.4), S.W(80)], home40 = [S.L(1.6), S.W(30)];
   check('40 take the keys as you meet them', run(39, () => script([...upR(9.5), ...upR(11.5), ...hopOn, ...stopShort, ...home40]), {max:2400}), 'timeout');
   check('40 top key first, then walk on', run(39, () => script([...upR(11.5), ...upL(9.5), ...hopOn, S.R(29)]), {max:2000}), 'dead');
   check('40 no keys, stop short of it', run(39, () => script([...hopOn, ...stopShort, ...home40]), {max:2000}), 'timeout');
+  check('40 top key first, stop on the box\'s side of the middle', run(39, () => script([...upR(11.5), ...upL(9.5), ...hopOn, S.F(R, () => g.S.blk.st === 'fall'), S.W(80), ...home40]), {max:2400}), 'timeout');
   check('40 top key first, stop short of it on its side', run(39, () => script([...upR(11.5), ...upL(9.5), ...hopOn, ...stopShort, ...home40]), {max:2400}), 'clear');
   return out;
 })()
