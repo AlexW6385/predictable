@@ -104,7 +104,7 @@ These come back through the whole game, each time doing something new.
 | **The door** | Runs from whoever chases it, comes to whoever lets go (1). | Bites whoever looks at it (5), brings things with it (8), sleeps (9), is painted where it used to stand (27). Turns out to be alive (VI), halved (91) and frozen in time (92). In 100 you are the door. |
 | **The sky** | Cones fall where you are going (2). | Break bricks (12), plant stakes (13), aim at your reflection (18). Fall on your old ✕ (69) and plant seeds (57). |
 | **The Eye** | Bites the door you look at (5). | Blinks (6), aims the sky (20), prices what it has seen you hold (33), sweeps as a searchlight (73). Takes you for your double (94), hosts Monty Hall's doors (98), and at last sees itself (99). |
-| **The ✕** | Your deaths stay where they happened. | Get forged (22), light the dark (41), become your bodies (61), and draw the sky (69). |
+| **The ✕** | Your deaths stay where they happened. | Get forged (22), become your bodies (61), and draw the sky (69). |
 | **The ghost** | Your last attempt walks again (15). | Holds a plate for you (62), chases you (64), and in 70 every earlier life stands under you as a step. Carries a key further (77). In 100 it is you who walks toward the one you were. |
 | **The entrance** | Every level starts in front of the open door you came in by. | Usually scenery. In 7 it is the way out; in 100 the one you were goes home to it. |
 
@@ -193,7 +193,7 @@ Numbers start to matter. Keys and coins weigh something, a seesaw throws whateve
 
 ## V. Elements (41–50)
 
-Light, water, fire and air each have a rule, and most levels pair two that pull against each other. Water saves you from fire but drowns you. Sound lights the dark but calls the bat. Your deaths become the lamps of the dark levels.
+Light, water, fire and air each have a rule, and most levels pair two that pull against each other. Water saves you from fire but drowns you. Sound calls the bat, and in the dark the bat is the only light. Your own shadow is what closes the flowers.
 
 | # | Level | What is in it | The idea you need | Without it |
 | --- | --- | --- | --- | --- |
