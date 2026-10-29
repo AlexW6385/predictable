@@ -98,13 +98,27 @@
     check('45 onto the cable from a standstill at the edge', run(44, () => script([S.R(7.2), S.W(20), S.J(30, 1), onCab, ...off(19.0)]), {max:900}), 'clear');
     check('45 ... and a full jump through the hanging wire, then back to the door', run(44, () => script([...up, ...land(19.0), S.R(24.6), S.J(30, 1), toDoor]), {max:900}), 'clear');
     check('45 onto the cable from a run, a tile back', run(44, () => script([S.R(6.6), S.J(30, 1), onCab, ...off(19.0)]), {max:900}), 'clear'); }
-  // ---- 46 wind
-  check('46 run and jump', run(45, () => script([S.R(6.5), S.J(30, 1), S.R(28)]), {max:600}), 'dead');
-  const letgo = (x) => [S.R(x), S.F((P, k) => k === 1 ? {jump:30, dir:0} : {k:{}}, (P, k) => k > 2 && P.on)];
-  check('46 jump and let go, twice', run(45, () => script([...letgo(6.6), ...letgo(16.6), S.R(28)]), {max:900}), 'dead');
-  check('46 let go at the first; stand and jump at the second', run(45, () => script([...letgo(6.6), S.R(16.5), S.W(20), S.J(30, 1), S.R(28)]), {max:900}), 'dead');
-  check('46 let go at the first; leap backwards at the second', run(45, () => script([...letgo(6.6), S.R(16.5), S.U(P => P.vx < -0.2, {left:true}), S.F((P, k) => k === 1 ? {jump:30, dir:0, k:{left:true}} : {k:{right:true}}, (P, k) => k > 2 && P.on), S.R(28)]), {max:900}), 'dead');
-  check('46 let go at the first; at the second jump on and push back', run(45, () => script([...letgo(6.6), S.R(16.6), S.F((P, k) => k === 1 ? {jump:30, dir:0, k:{right:true}} : {k:{left:true}}, (P, k) => k > 2 && P.on), S.R(28)]), {max:900}), 'clear');
+  // ---- 46 wind: over each gap it blows against whatever you press, gently over the narrow one and hard over the wide one
+  { // run at a gap and jump when your centre is `at` tiles along; in the air press `pre` for d frames, then `post` until you land
+    const leap = (at, pre, d, post, hold) => S.F((P, k, st) => { if (st.t == null) { if (cx() < at*T) return R(); st.t = 0; return {jump:hold || 30, dir:0, k:{right:true}}; }
+        st.t++; const kk = st.t <= d ? pre : post; return {k:{right:kk === 'R', left:kk === 'L'}}; }, (P, k, st) => st.t > 3 && P.on);
+    const first = leap(6.6, 'R', 2, 'N'), toDoor = S.R(28);
+    check('46 run and jump', run(45, () => script([S.R(6.5), S.J(30, 1), S.R(28)]), {max:600}), 'dead');
+    check('46 jump and let go, twice', run(45, () => script([first, leap(16.6, 'R', 2, 'N'), toDoor]), {max:900}), 'dead');
+    check('46 let go at the first; at the second, jump at the very edge and let go', run(45, () => script([first, leap(17.2, 'R', 1, 'N'), toDoor]), {max:900}), 'dead');
+    check('46 let go at the first; push across the second', run(45, () => script([first, leap(16.6, 'R', 99, 'R'), S.W(30), S.R(17.3), S.U(() => !g.P.on, {right:true}), S.W(60)]), {max:900}), /dead|timeout/);
+    check('46 press back at the first too', run(45, () => script([leap(6.6, 'R', 2, 'L'), toDoor]), {max:900}), 'dead');
+    check('46 let go at the first; at the second, press back', run(45, () => script([first, leap(16.6, 'R', 2, 'L'), toDoor]), {max:900}), 'clear');
+    for (const [at, pre, d, hold, tag] of [[15.5, 'R', 2, 30, 'from a tile and a half back'], [17.2, 'R', 1, 30, 'from the very edge'], [16.6, 'R', 14, 30, 'late, after pushing a while'], [16.6, 'R', 26, 30, 'very late, after pushing'], [16.6, 'N', 20, 30, 'late, after letting go'], [16.0, 'N', 33, 30, 'at the last moment, after letting go'], [16.6, 'N', 4, 8, 'from a small hop']])
+      check(`46 ... ${tag}`, run(45, () => script([first, leap(at, pre, d, 'L', hold), toDoor]), {max:900}), 'clear');
+    // where a jump over the wide gap ends: on the far bank, or not
+    const far = (at, pre, d, post, hold) => { const r = run(45, () => script([first, leap(at, pre, d, post, hold), S.W(30)]), {max:700}); return r[0] !== 'clear' && g.state === 'play' && cx() > 20.75*T - 11; };
+    { let n = 0, bad = 0; for (const at of [15.0, 15.4, 15.8, 16.2, 16.6, 17.0, 17.15, 17.25, 17.3, 17.33]) for (const d of [0, 1, 2, 4, 8]) for (const hold of [30, 14]) { n++; if (far(at, 'R', d, 'N', hold)) bad++; }
+      check('46 let go over the wide gap, from any take-off', [bad + '/' + n + ' across', bad ? 'clear' : 'dead'], 'dead'); }
+    { let n = 0, ok = 0; for (let at = 15.5; at <= 17.2; at += 0.25) for (let d = 0; d <= 36; d += 4) { n++; if (far(at, 'N', d, 'L')) ok++; }
+      check('46 let go, then press back at any moment, from any take-off', [ok + '/' + n + ' across', ok === n ? 'clear' : 'dead'], 'clear'); }
+    { let n = 0, ok = 0; for (let at = 15.5; at <= 17.2; at += 0.25) for (let d = 0; d <= 30; d += 5) { n++; if (far(at, 'R', d, 'L')) ok++; }
+      check('46 push, then press back at any moment, from any take-off', [ok + '/' + n + ' across', ok === n ? 'clear' : 'dead'], 'clear'); } }
   // ---- 47 geyser
   const gy = () => g.S.gy;
   const wary47 = to => S.F(P => { const q = gy(); if (q && q.x > cx() - 20 && q.x - cx() < 110) return N(); return R(); }, () => cx() >= to*T);

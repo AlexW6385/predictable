@@ -1503,19 +1503,27 @@ const LV = [
 
 /* 46. it blows against whatever you want; so want nothing, or want the other way */
 { id:'wind', was:[95], start:2,
-  build(){ Gd(0,6); Gd(9,16); Gd(21,29); Door(27,14); S.tk = 0; S.wp = []; },
+  // two gaps (in tiles): a narrow one and a wide one, and the wind over each (how hard it blows against what you press)
+  gA:[7, 9], gB:[17, 20.75], kA:4, kB:9, hold:2.2,
+  build(){ const a = this.gA, b = this.gB; for (const [x0, x1] of [[0, a[0]], [a[1], b[0]], [b[1], 30]]) E({t:'g', x:x0*T, y:GY, w:(x1 - x0)*T, h:3*T, solid:true});
+    Door(27,14); S.wp = []; },
   ax(){ return (keys.right ? 1 : 0) - (keys.left ? 1 : 0); },
-  zone(){ const pc = pcx(); return pc > 6*T && pc < 10*T ? 'A' : pc > 16*T && pc < 22*T ? 'B' : null; },
-  // one rule at both gaps: it blows against whatever you push, harder over the wide one
-  wind(z){ return z === 'A' ? -4.0*this.ax() : z === 'B' ? -7.0*this.ax() : 0; },
-  onJump(){ S.tk = P.vx; },
-  update(){ if (P.on) S.tk = P.vx;
-    const z = this.zone(); if (z && !P.on) P.x += this.wind(z);
-    for (const zz of ['A', 'B']) { const x0 = zz === 'A' ? 7*T : 17*T, wd = zz === 'A' ? 2*T : 4*T, w = this.wind(zz); if (Math.abs(w) > 0.2 && Math.random() < 0.9) S.wp.push({x: w > 0 ? x0 - 20 : x0 + wd + 20, y: 60 + Math.random()*370, v: w*3.2, x0, wd}); }
+  // the wind reaches a little beyond each gap
+  zone(){ const pc = pcx(), a = this.gA, b = this.gB; return pc > (a[0] - 1)*T && pc < (a[1] + 1)*T ? 'A' : pc > (b[0] - 2)*T && pc < (b[1] + 1)*T ? 'B' : null; },
+  // one rule at both gaps: it blows against whatever you press, harder over the wide one
+  wind(z){ return z === 'A' ? -this.kA*this.ax() : z === 'B' ? -this.kB*this.ax() : 0; },
+  update(){ const z = this.zone();
+    if (z && !P.on) { P.x += this.wind(z);
+      // over the wide gap, a wind at your back also holds you up: you sink slowly while it carries you, and against the far cliff it lifts you over the lip
+      if (z === 'B' && this.ax() < 0) { if (P.vy > 0) P.vy = Math.max(0, P.vy - this.hold);
+        if (P.x + PW >= this.gB[1]*T - 2 && P.y + PH > GY && P.y + PH < GY + 48) P.vy = Math.min(P.vy, -3); } }
+    for (const zz of ['A', 'B']) { const g = zz === 'A' ? this.gA : this.gB, x0 = g[0]*T, wd = (g[1] - g[0])*T, w = this.wind(zz); if (Math.abs(w) > 0.2 && Math.random() < 0.9) S.wp.push({x: w > 0 ? x0 - 20 : x0 + wd + 20, y: 90 + Math.random()*340, v: w*3.2, x0, wd}); }
     S.wp = S.wp.filter(p => { p.x += p.v; return p.x > p.x0 - 40 && p.x < p.x0 + p.wd + 40; }); },
   drawBack(){ ctx.strokeStyle = 'rgba(30,43,71,.3)'; ctx.lineWidth = 1.5; for (const p of S.wp) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.v*3, p.y); ctx.stroke(); }
-    for (const [x0, zz] of [[8*T, 'A'], [19*T, 'B']]) { const w = this.wind(zz); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, 30); ctx.lineTo(x0, 66); ctx.stroke();
-      ctx.fillStyle = zz === 'A' ? C.gold : C.red; const d = Math.abs(w) < 0.2 ? 0 : Math.sign(w); ctx.beginPath(); ctx.moveTo(x0, 30); ctx.lineTo(x0 + (d || 0.2)*22, 36 + (d ? 0 : 10)); ctx.lineTo(x0, 42); ctx.fill(); } } },
+    // a vane over each gap shows which way it blows
+    for (const zz of ['A', 'B']) { const g = zz === 'A' ? this.gA : this.gB, x0 = (g[0] + g[1])/2*T, w = this.wind(zz), d = Math.abs(w) < 0.2 ? 0 : Math.sign(w);
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, 76); ctx.lineTo(x0, 116); ctx.stroke();
+      ctx.fillStyle = zz === 'A' ? C.gold : C.red; ctx.beginPath(); ctx.moveTo(x0, 76); ctx.lineTo(x0 + (d || 0.2)*22, 82 + (d ? 0 : 10)); ctx.lineTo(x0, 88); ctx.fill(); } } },
 
 /* 47. it bursts where you will be; it scalds whoever is in it, and soaks whoever is beside it */
 { id:'geyser', start:2,
