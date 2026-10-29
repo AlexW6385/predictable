@@ -2029,7 +2029,7 @@ const LV = [
 
 /* 77. no one gets there alone; each one carries it a little further */
 { id:'relay', was:[66], start:1.5,
-  build(){ Gd(0,13); Sp(5,5,13,'up'); Sp(9,9,13,'up'); R('g',16,29,6,16); S.lift = E({t:'b', lift:true, x:14*T, y:GY, w:2*T, h:12, solid:true});
+  build(){ Gd(0,13); R('g',16,29,6,16); S.lift = E({t:'b', lift:true, x:14*T, y:GY, w:2*T, h:12, solid:true});
     S.door = Door(27,6,{slots:1, fill:() => S.has ? 1 : 0, onEnter(){ if (S.has) levelClear(); }});
     S.life = 0; S.span = 195; S.has = false; S.key = M.key ? Object.assign({}, M.key) : {x:2.5*T, y:GY - 22};
     if (M.spawn) { P.x = M.spawn[0]; P.y = M.spawn[1]; }
