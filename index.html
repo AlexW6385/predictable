@@ -1429,10 +1429,12 @@ const LV = [
     else { ctx.fillStyle = C.door; ctx.save(); ctx.translate(tr.x + 6, GY - 3); ctx.rotate(1.3*(1 - (tr.fall || 0)/30)); ctx.fillRect(-3, -40, 6, 40); ctx.restore(); }
     drawBomb(S.bomb, S.boom); } },
 
-/* 45. it only hurts if you are standing on something else */
+/* 45. it only hurts if you are standing on something else; so stand on nothing but the wire, or on nothing at all */
 { id:'spark', was:[39], start:2,
   // the floor is live from here to past the end of the cable; a cable is strung above it, and it is the same wire
-  build(){ Gd(0,29); Door(27,14); S.live = {x:8*T, y:GY - 4, w:15*T, h:8}; S.cab = {x0:11*T, x1:20*T, on:false};
+  build(){ Gd(0,29); Door(27.6,14); S.live = {x:8*T, y:GY - 4, w:16*T, h:8}; S.cab = {x0:11*T, x1:20*T, on:false};
+    // past the floor, a wire hangs from the sky to the ground in front of the door: you can't go over it, only through it
+    S.hang = {x:26.4*T, y:0, w:8, h:GY}; S.zap = null;
     S.bugs = [{x:6*T, on:'floor', t:0, dead:false}, {x:15*T, on:'cable', t:0, d:1}]; },
   cy(x){ const c = S.cab; return GY - 44 + 18*Math.sin(Math.PI*clamp((x - c.x0)/(c.x1 - c.x0), 0, 1)); },
   update(){ const c = S.cab, x = pcx(), was = c.on; c.on = false;
@@ -1442,11 +1444,16 @@ const LV = [
       if (b.on === 'floor' && !b.dead) { b.x += 0.4; if (b.x > S.live.x - 2) { b.dead = true; for (let i = 0; i < 8; i++) parts.push({x:b.x, y:GY - 4, vx:(Math.random() - .5)*3, vy:-Math.random()*3, life:20, r:2, col:C.gold}); } }
       if (b.on === 'cable') { b.x += 0.35*b.d; if (b.x > c.x1 - 30 || b.x < c.x0 + 30) b.d = -b.d; } }
     // the wire and the ground at once: that is what it waits for
-    if (P.on && P.stand !== c && ov(pbox(1), S.live)) return die('shock'); },
+    if (P.on && P.stand !== c && ov(pbox(1), S.live)) { S.zap = [pcx(), P.y + PH]; return die('shock'); }
+    // touching the hanging wire is nothing in the air; with your feet on the ground, it goes through you
+    if (P.on && ov(pbox(1), S.hang)) { S.zap = [S.hang.x + 4, P.y + 8]; return die('shock'); } },
   draw(){ const c = S.cab, L = S.live; ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath();
     for (let x = L.x, i = 0; x <= L.x + L.w; x += 6, i++) ctx.lineTo(x, GY - 3 + (i % 2 ? -3 : 1)); ctx.stroke();
     ctx.strokeStyle = C.ink; ctx.lineWidth = 4; for (const px of [c.x0 - 2, c.x1 + 2]) { ctx.beginPath(); ctx.moveTo(px, GY - 4); ctx.lineTo(px, this.cy(px) - 6); ctx.stroke(); }
     ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath(); for (let x = c.x0, i = 0; x <= c.x1; x += 6, i++) ctx.lineTo(x, this.cy(x) + (i % 2 ? -2 : 2)); ctx.stroke();
+    const hg = S.hang; ctx.beginPath(); for (let y = 0, i = 0; y <= GY - 2; y += 6, i++) ctx.lineTo(hg.x + 4 + (i % 2 ? -2 : 2), y); ctx.stroke(); ctx.fillStyle = C.ink; ctx.fillRect(hg.x - 1, GY - 5, 10, 5);
+    // the spark that killed you: from where you touched the wire to your feet on the ground
+    if (S.zap && state === 'dead') { const [zx, zy] = S.zap; ctx.strokeStyle = C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(zx, zy); for (let k = 1; k <= 4; k++) ctx.lineTo(zx + (pcx() - zx)*k/4 + (k < 4 ? (Math.random() - .5)*8 : 0), zy + (P.y + PH - zy)*k/4); ctx.stroke(); }
     // the beetles: one walks onto the live floor, one walks along the cable
     for (const b of S.bugs) { const by = b.on === 'cable' ? this.cy(b.x) - 2 : GY - 2;
       ctx.fillStyle = b.dead ? C.soft : C.ink; ctx.beginPath(); ctx.ellipse(b.x, by - 3, 6, 4, 0, 0, 7); ctx.fill();

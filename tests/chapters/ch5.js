@@ -54,14 +54,17 @@
   check('44 burn the way, send the bomb, stand right by it', run(43, both(60), {max:3000}), 'dead');
   check('44 burn the way, send the bomb, wait not too near', run(43, both(140), {max:3000}), 'clear');
   // ---- 45 spark: the floor is live; stand on the cable, and leave it by a jump
-  { const onCab = S.U(P => P.on && P.stand === g.S.cab, {right:true}), up = [S.R(7.2), S.J(30, 1), onCab], off = x => [S.R(x), S.J(30, 1), S.U(P => P.on, {right:true}), S.R(27.5), S.W(30)];
+  { const onCab = S.U(P => P.on && P.stand === g.S.cab, {right:true}), up = [S.R(7.2), S.J(30, 1), onCab], land = x => [S.R(x), S.J(30, 1), S.U(P => P.on, {right:true})], toDoor = S.F(() => ({k:{right: cx() < 28.0*T, left: cx() > 28.4*T}}), () => false), off = x => [...land(x), S.R(25.4), S.J(8, 1), toDoor];
     check('45 walk', run(44, () => R), 'dead');
     check('45 hop over the start of the wire', run(44, () => script([S.R(7.0), S.J(8, 1), S.U(P => P.on, {right:true}), S.R(28)]), {max:900}), 'dead');
     check('45 wait before the wire', run(44, () => script([S.R(6.5), S.W(2000)]), {max:600}), 'timeout');
     check('45 onto the cable, walk off its end', run(44, () => script([...up, S.R(28)]), {max:900}), 'dead');
     check('45 onto the cable, jump off it too soon', run(44, () => script([...up, ...off(16.5)]), {max:900}), 'dead');
+    check('45 off the cable, then walk into the hanging wire', run(44, () => script([...up, ...land(19.0), S.R(28.2)]), {max:900}), 'dead');
+    check('45 jump at everything', run(44, () => P => P.on ? {jump:30, dir:1} : R(), {max:900}), 'dead');
     for (const x of [18.6, 19.4]) check(`45 onto the cable, jump off its end (at ${x})`, run(44, () => script([...up, ...off(x)]), {max:900}), 'clear');
     check('45 onto the cable from a standstill at the edge', run(44, () => script([S.R(7.2), S.W(20), S.J(30, 1), onCab, ...off(19.0)]), {max:900}), 'clear');
+    check('45 ... and a full jump through the hanging wire, then back to the door', run(44, () => script([...up, ...land(19.0), S.R(24.6), S.J(30, 1), toDoor]), {max:900}), 'clear');
     check('45 onto the cable from a run, a tile back', run(44, () => script([S.R(6.6), S.J(30, 1), onCab, ...off(19.0)]), {max:900}), 'clear'); }
   // ---- 46 wind
   check('46 run and jump', run(45, () => script([S.R(6.5), S.J(30, 1), S.R(28)]), {max:600}), 'dead');
