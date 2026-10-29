@@ -6,7 +6,12 @@
   // ---- 41 dark
   clean('dark'); check('41 walk in the dark', run(40, () => R), 'dead');
   clean('dark'); check('41 jump to look around, then stop', run(40, () => script([S.R(3.0), S.J(30, 0), S.W(90)]), {max:400}), 'dead');
-  clean('dark'); check('41 jump the gaps and the marks, keep moving', run(40, () => script([S.R(4.0), S.JT(7.8, GY), S.R(9.0), S.JT(11.6, GY), S.R(13.2), S.JT(17.0, GY), S.R(18.0), S.JT(20.6, GY), S.R(22.4), S.JT(26.4, GY), S.R(28.6)]), {max:900}), 'clear');
+  { const gone = S.U(() => g.S.bat.st === 'back' || g.S.bat.st === 'roost'), hop1 = [S.R(4.0), S.JT(7.8, GY)], hop2 = [S.R(9.0), S.JT(11.6, GY)], hop3 = [S.R(13.6), S.JT(17.5, GY)];
+    clean('dark'); check('41 jump the gaps and the spike, keep moving', run(40, () => script([...hop1, ...hop2, ...hop3, S.R(28.6)]), {max:900}), 'dead');
+    clean('dark'); check('41 full jumps under the roof', run(40, () => script([...hop1, S.R(9.0), S.J(30, 1), S.R(28.6)]), {max:900}), 'dead');
+    clean('dark'); check('41 let it pass under the roof only', run(40, () => script([...hop1, ...hop2, gone, ...hop3, S.R(28.6)]), {max:1500}), 'dead');
+    clean('dark'); check('41 after each landing, let it come down where you were going', run(40, () => script([...hop1, gone, ...hop2, gone, ...hop3, gone, S.R(28.6)]), {max:1800}), 'clear');
+    clean('dark'); check('41 ... or step back after each landing', run(40, () => script([...hop1, S.K({left:true}, 5), gone, ...hop2, S.K({left:true}, 8), gone, ...hop3, S.K({left:true}, 6), gone, S.R(28.6)]), {max:1800}), 'clear'); }
   // ---- 42 sun
   const board42 = X => [14,15,16,17,18,22,23].includes(Math.floor(X/T));
   const ride = gapMax => () => P => { const x = cx(), y = g.P.y + 14, lit = X => g.lv.lit(X, y);
@@ -46,13 +51,16 @@
   check('44 burn the way, then kick the bomb and follow it', run(43, () => { const a = script(lightIt); let done = false; return (P, f) => { if (!done && !burnt()) return a(P, f); done = true; return R(); }; }, {max:3000}), 'dead');
   check('44 burn the way, send the bomb, stand right by it', run(43, both(60), {max:3000}), 'dead');
   check('44 burn the way, send the bomb, wait not too near', run(43, both(140), {max:3000}), 'clear');
-  // ---- 45 spark
-  const wires45 = [S.R(3.6), S.J(30, 1), S.U(P => P.on), S.R(8.4), S.J(30, 1), S.U(P => P.on)];
-  check('45 walk', run(44, () => R), 'dead');
-  check('45 never touch a wire', run(44, () => script([S.R(3.6), S.W(2000)]), {max:600}), 'timeout');
-  check('45 over the ground wires, then jump under the roof', run(44, () => script([...wires45, S.R(18), S.J(30, 1), S.W(60)]), {max:900}), 'dead');
-  check('45 over the ground wires, then creep off the edge', run(44, () => script([...wires45, S.R(21.3), S.F(() => ({k:{right: Math.abs(g.P.vx) < 0.8}}), P => !P.on), S.W(60), S.R(26.8), S.W(30)]), {max:1200}), 'dead');
-  check('45 over the ground wires, then run off the edge through it', run(44, () => script([...wires45, S.R(26.8), S.W(30)]), {max:1200}), 'clear');
+  // ---- 45 spark: the floor is live; stand on the cable, and leave it by a jump
+  { const onCab = S.U(P => P.on && P.stand === g.S.cab, {right:true}), up = [S.R(7.2), S.J(30, 1), onCab], off = x => [S.R(x), S.J(30, 1), S.U(P => P.on, {right:true}), S.R(27.5), S.W(30)];
+    check('45 walk', run(44, () => R), 'dead');
+    check('45 hop over the start of the wire', run(44, () => script([S.R(7.0), S.J(8, 1), S.U(P => P.on, {right:true}), S.R(28)]), {max:900}), 'dead');
+    check('45 wait before the wire', run(44, () => script([S.R(6.5), S.W(2000)]), {max:600}), 'timeout');
+    check('45 onto the cable, walk off its end', run(44, () => script([...up, S.R(28)]), {max:900}), 'dead');
+    check('45 onto the cable, jump off it too soon', run(44, () => script([...up, ...off(16.5)]), {max:900}), 'dead');
+    for (const x of [18.6, 19.4]) check(`45 onto the cable, jump off its end (at ${x})`, run(44, () => script([...up, ...off(x)]), {max:900}), 'clear');
+    check('45 onto the cable from a standstill at the edge', run(44, () => script([S.R(7.2), S.W(20), S.J(30, 1), onCab, ...off(19.0)]), {max:900}), 'clear');
+    check('45 onto the cable from a run, a tile back', run(44, () => script([S.R(6.6), S.J(30, 1), onCab, ...off(19.0)]), {max:900}), 'clear'); }
   // ---- 46 wind
   check('46 run and jump', run(45, () => script([S.R(6.5), S.J(30, 1), S.R(28)]), {max:600}), 'dead');
   const letgo = (x) => [S.R(x), S.F((P, k) => k === 1 ? {jump:30, dir:0} : {k:{}}, (P, k) => k > 2 && P.on)];
@@ -68,12 +76,16 @@
   check('47 stop beside the first bubbles, then run for the fire', run(46, () => script([S.R(9), S.U(() => gy() && gy().st === 'bub'), S.F(R, () => cx() > gy().x - 45), S.U(() => !gy() || gy().st !== 'bub'), S.U(() => !gy()), S.R(28.5)]), {max:1500}), 'dead');
   check('47 wait by the fire, step aside toward it, run through', run(46, () => script([wary47(19.0), S.U(() => !gy()), S.U(() => gy() && gy().st === 'bub'), S.R(20.0), S.U(() => g.S.wet > 150), S.R(28.5), S.W(20)]), {max:2000}), 'clear');
   check('47 ... or step aside away from it, and go once the water falls', run(46, () => script([wary47(19.0), S.U(() => !gy()), S.U(() => gy() && gy().st === 'bub'), S.L(17.9), S.U(() => g.S.wet > 150), S.U(() => !gy()), S.R(28.5), S.W(20)]), {max:2000}), 'clear');
-  // ---- 48 bubble
-  const float48 = () => P => { if (cx() < 20*T) return R(); return (g.S.inB && Math.abs(P.vy) < 0.05) ? R() : N(); };
-  const back48 = [S.L(2.5), S.W(6), S.J(3, -1), S.U(P => P.on), S.R(2.2), S.U(P => P.on)];
-  check('48 walk on (two keys)', run(47, () => script([S.F(float48(), () => false)]), {max:1200}), 'timeout');
-  check('48 hop the first key (one)', run(47, () => script([S.R(5.9), S.J(8, 1), S.F(float48(), () => false)]), {max:1200}), 'timeout');
-  check('48 go back for the third key', run(47, () => script([...back48, S.F(float48(), () => false)]), {max:1500}), 'clear');
+  // ---- 48 bubble: come in light enough to reach the high key, then go back out for the weight you left
+  { const keys = () => g.S.keys, inB = () => g.S.inB;
+    const skip7 = [S.R(5.6), S.J(8, 1), S.U(P => P.on, {right:true})];
+    const enter = [S.R(16.6), S.U(() => Math.abs(g.P.vy) < 0.05 && inB(), {})];
+    const toDoor = S.F(P => ({k:{right: cx() < 24.6*T, left: cx() > 24.9*T}}), () => false);
+    const grab = S.F(() => ({k:{right: cx() < 18.6*T, left: cx() > 18.9*T}}), () => keys() >= 2);
+    check('48 walk on with both keys, float to the door', run(47, () => script([...enter, toDoor]), {max:1500}), 'timeout');
+    check('48 leave the open key, float up, take the high one, float to the door', run(47, () => script([...skip7, ...enter, grab, S.U(() => Math.abs(g.P.vy) < 0.05, {}), toDoor]), {max:1500}), 'timeout');
+    check('48 both keys, then go back out for nothing', run(47, () => script([...enter, S.L(14), S.L(2), S.R(16.6), S.U(() => Math.abs(g.P.vy) < 0.05 && inB(), {}), toDoor]), {max:2000}), 'timeout');
+    check('48 leave the open key, take the high one, go back out for it, float to the door', run(47, () => script([...skip7, ...enter, grab, S.L(14), S.L(6.6), S.R(16.6), S.U(() => Math.abs(g.P.vy) < 0.05 && inB(), {}), toDoor]), {max:2500}), 'clear'); }
   // ---- 49 light and dark
   const light49 = [S.R(4.3), S.W(5), S.J(10, 0), S.U(P => P.on)];
   const toGrey49 = [...light49, S.JT(7.5, 416, {tol:9}), S.U(P => P.on), S.JT(10.5, 416, {tol:9}), S.U(P => P.on), S.JT(13.7, 416, {tol:10}), S.U(P => P.on)];
@@ -83,17 +95,13 @@
   check('49 light it; then on to the grey, and straight onto the black', run(48, () => script([...toGrey49, S.R(21.6), S.W(100)]), {max:1200}), 'dead');
   check('49 light it; then to the grey, wait for the dark, walk the black', run(48, () => script([...toGrey49, S.W(185), ...end49]), {max:1500}), 'clear');
   check('49 ... but jump onto the black', run(48, () => script([...toGrey49, S.W(185), S.JT(16.5, 416, {tol:9}), S.W(60)]), {max:1500}), 'dead');
-  // ---- 50 storm
-  const J50 = [[4.0, 30, 0], [11.2, 3, 1], [14.0, 30, 1], [20.2, 3, 1], [22.4, 30, 0]], roofs50 = [8.5, 19.3];
-  const p50 = (letGo, shelter) => () => { let waitAt = -1; return P => { const x = cx();
-    if (!P.on) return letGo && ((x > 4.5*T && x < 7.5*T) || (x > 22.5*T && x < 25.5*T)) ? N() : R();
-    const ri = roofs50.findIndex(r => Math.abs(x - r*T) < 10);
-    if (shelter && ri >= 0 && waitAt !== ri) { if (g.S.rt > 80 - 38 || g.S.rt < 80 - 46) return N(); waitAt = ri; }
-    for (const [at, h, d] of J50) if (x >= at*T && x < (at + 0.45)*T) { if (Math.abs(g.P.vx) < 3) return R(); return {jump:h, dir: letGo ? d : 1}; }
-    return R(); }; };
-  clean('storm'); check('50 run through it', run(49, () => R), 'dead');
-  clean('storm'); check('50 keep pushing over the gaps', run(49, p50(false, true), {max:3000}), 'dead');
-  clean('storm'); check('50 let go over the gaps, never take shelter', run(49, p50(true, false), {max:3000}), 'dead');
-  clean('storm'); check('50 let go over the gaps, roof to roof', run(49, p50(true, true), {max:3000}), 'clear');
+  // ---- 50 storm: narrow stones in the dark; the bat dives at every sound, except while the thunder rolls, and the thunder comes after the flash
+  { const hops = [[5.3, 9.0], [9.4, 13.0], [13.4, 17.0], [17.4, 21.5]];
+    const plan = when => () => script([...hops.flatMap(([e, to]) => [S.R(e), S.U(when, {}), S.JT(to, GY, {tol:10}), S.W(6)]), S.R(28.4), S.W(30)]);
+    clean('storm'); check('50 run through it', run(49, () => R), 'dead');
+    clean('storm'); check('50 jump as soon as you get to each edge', run(49, plan(() => true), {max:3000}), 'dead');
+    clean('storm'); check('50 jump when the lightning shows the way', run(49, plan(() => g.S.flash > 14), {max:3000}), 'dead');
+    clean('storm'); check('50 jump in the quiet after the thunder', run(49, plan(() => g.S.lt > 165), {max:3000}), 'dead');
+    for (const [a, b] of [[2, 30], [20, 48]]) { clean('storm'); check(`50 jump while the thunder rolls (${a}-${b} frames into it)`, run(49, plan(() => g.S.th >= a && g.S.th <= b), {max:4000}), 'clear'); } }
   return out;
 })()

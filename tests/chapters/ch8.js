@@ -70,7 +70,7 @@
     check('76 four, three, five (the same, counted the long way)', run(75, go([4, 3, 5]), {freshMem:true, max:3000}), 'clear'); }
   // ---- 77 relay: each life lasts a few seconds; the key stays where a life ran out on firm ground
   { const leg = (plan) => life => plan[Math.min(life, plan.length - 1)]();
-    const toLift = [S.R(4.1), S.J(5, 1), S.U(P => P.on, R().k), S.R(8.1), S.J(5, 1), S.U(P => P.on, R().k), S.R(13.2)], ride = S.U(() => g.S.lift.y <= 6*T + 1, {});
+    const toLift = [S.R(13.2)], ride = S.U(() => g.S.lift.y <= 6*T + 1, {});
     check('77 one life, ride to the top', run(76, () => script([...toLift, S.R(14.6), ride, S.R(28)]), {freshMem:true, max:800}), 'dead');
     check('77 every life, straight on', run(76, leg([() => script([...toLift, S.R(14.6), ride, S.R(28)]), () => script([S.R(14.6), ride, S.R(28)])]), {freshMem:true, lives:5, max:2000}), 'dead');
     for (const w of [0, 40]) check(`77 run out of time at the foot of the lift; then ride it, step off, run out there; then run (waits ${w})`, run(76, leg([() => script([...toLift, S.W(400)]), () => script([S.W(w), S.R(14.6), ride, S.R(17), S.W(300)]), () => script([S.W(w), S.R(28)])]), {freshMem:true, lives:4, max:2000}), 'clear'); }
