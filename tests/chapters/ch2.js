@@ -7,19 +7,22 @@
   // a person who reads each shadow: if it would land on you, step back from it
   const dodge = P => { for (const c of fc()) { const m = left(c); if (Math.abs(cx() + g.P.vx*m - c.x) < 34) return g.P.vx > 0.5 ? Lf() : R(); } return null; };
   // ---- 11 shelter
-  const sheltered = () => g.S.roofs.some(r => !r.painted && r.alive && !r.fall && cx() > r.x + 6 && cx() < r.x + r.w - 6);
-  const inFlight = () => fc().length > 0;
-  // roof to roof: leave a real roof just after the rain lands on it; never trust the last one
-  const hop = skipPainted => { let leave = false; return P => { const pc = cx();
-      if (pc > 26.5*T) return R();
-      if (sheltered()) { if (inFlight()) { leave = true; return {k:{}}; } if (leave) { leave = false; return R(); } return R(); }
-      if (!skipPainted && pc > 24.3*T && pc < 25.6*T) return {k:{}};
-      return R(); }; };
-  check('11 hide under the first roof', run(10, () => script([S.R(6.5), S.W(3000)]), {max:900, freshMem:true}), 'dead');
+  // roof to roof: stop under each roof (except those in skip) until the rain has come down, then leave `d` frames later
+  const hop11 = (skip, d) => () => { let target = 0, seen = false, w = 0; return P => {
+      const r = g.S.roofs[target]; if (!r) return R();
+      if (skip.includes(target) && cx() > r.x) { target++; return R(); }
+      if (cx() < r.x + 18) return R();
+      if (fc().length) { seen = true; w = 0; return {k:{}}; }
+      if (seen && w++ >= d) { seen = false; target++; return R(); }
+      return {k:{}}; }; };
+  check('11 hide under the first roof', run(10, () => script([S.R(4.6), S.W(3000)]), {max:900}), 'timeout');
   check('11 just run', run(10, () => R), 'dead');
-  check('11 dodge the rain (and duck under roofs on the way)', run(10, () => P => dodge(P) || R(), {max:1500}), /dead|clear/);
-  check('11 roof to roof, resting under the last one', run(10, () => hop(false), {max:1500}), 'dead');
-  check('11 roof to roof, then straight past the last one', run(10, () => hop(true), {max:1500}), 'clear');
+  check('11 dodge the rain', run(10, () => P => dodge(P) || R(), {max:1500}), 'dead');
+  check('11 roof to roof, stopping under every one', run(10, hop11([], 0), {max:2500}), 'dead');
+  check('11 ... or stopping at the far edge of the third', run(10, () => { const h = hop11([], 0)(); return P => { const r = g.S.roofs[2]; if (cx() > r.x && cx() < r.x + 40 && g.S.streak >= 2) return R(); return h(P); }; }, {max:2500}), 'dead');
+  for (const d of [0, 15, 30]) check(`11 roof to roof, but run on past the third (leave after ${d})`, run(10, hop11([2], d), {max:2500}), 'clear');
+  check('11 skip the second instead, stop under the rest', run(10, hop11([1], 0), {max:2500}), 'dead');
+  check('11 skip the second and the fifth', run(10, hop11([1, 4], 0), {max:2500}), 'clear');
   // ---- 12 hammer
   check('12 run across', run(11, () => R), 'dead');
   check('12 walk to the lid and stand on it', run(11, () => script([S.R(20.5), S.W(600)])), 'dead');
@@ -40,26 +43,28 @@
       if (ph === 4) { if (P.on && pc > 22.2*T && P.y > 400) return {jump:30, dir:1}; if (P.on && P.y < 400 && P.y > 330) return {jump:30, dir:1}; return R(); }
       return R(); }; }, {max:1200}), 'clear');
   // ---- 14 do nothing
+  const docked = () => g.S.raft.x >= 24*T - 1;
+  // ride with hands off; when a shadow comes, do something (or nothing) about it; at the far bank, walk to the door
+  const raft14 = (how, len) => () => { let n = null, seen = null; return P => { const c = fc()[0];
+      if (docked()) return R();
+      if (c && c !== seen) { seen = c; n = 0; } if (n != null && n < len) { n++; return how(P); }
+      return {k:{}}; }; };
   check('14 just walk', run(13, () => R), 'dead');
   check('14 mash', run(13, () => { let t = 0; return P => ({k:{right: (t++ >> 3) % 2 === 0}}); }), 'dead');
-  check('14 touch nothing, ever', run(13, () => P => ({k:{}}), {max:1500}), 'dead');
-  check('14 keep a hand on it', run(13, () => { let t = 0; return P => ({k:{left: (t++ % 12) === 0}}); }, {max:1500}), 'timeout');
-  // when a shadow lands on you, touch something so the raft stops and the cone falls ahead of you; a step back, or a hop where there is headroom
-  const raft14 = (how, delay, len) => () => { let n = null, seen = null; return P => { const c = (g.S.cones || []).find(c => c.st === 'fall');
-      if (g.S.raft.x >= 23*T - 1) return {k:{right:true}};
-      if (c && c !== seen) { seen = c; n = 0; } if (n != null) { n++; if (n > delay && n <= delay + (len || 4)) return how(P); }
-      // between cones, a step forward if you have drifted to the back of the raft
-      if (!c && P.on && cx() < g.S.raft.x + 36) return {k:{right:true}};
-      return {k:{}}; }; };
-  for (const d of [3, 15, 28]) check(`14 when the shadow comes, a step back (after ${d})`, run(13, raft14(() => ({k:{left:true}}), d), {max:1800}), 'clear');
-  check('14 when the shadow comes, a step back, too late', run(13, raft14(() => ({k:{left:true}}), 42), {max:1800}), 'dead');
-  check('14 when the shadow comes, walk on', run(13, raft14(() => ({k:{right:true}}), 3, 30), {max:1800}), 'dead');
-  check('14 when the shadow comes, hop (fine, except under the spikes)', run(13, raft14(() => ({k:{jump:true}}), 3, 10), {max:1800}), /clear|dead/);
-  check('14 when the shadow comes, hop, but step back under the spikes', run(13, raft14(P => cx() > 12.5*32 && cx() < 17.5*32 ? {k:{left:true}} : {k:{jump:true}}, 3, 6), {max:1800}), 'clear');
+  check('14 keep a hand on it', run(13, () => { let t = 0; return P => ({k:{left: (t % 24) === 0, right: (t++ % 24) === 12}}); }, {max:1500}), 'timeout');
+  check('14 when the shadow comes, a step back', run(13, raft14(() => Lf(), 8), {max:1800}), 'dead');
+  check('14 when the shadow comes, a step forward', run(13, raft14(() => R(), 6), {max:1800}), 'dead');
+  check('14 when the shadow comes, hop', run(13, raft14(() => ({k:{jump:true}}), 6), {max:1800}), 'dead');
+  check('14 when the shadow comes, freeze a moment late', run(13, () => { let n = null, seen = null; return P => { const c = fc()[0]; if (c && c !== seen) { seen = c; n = 0; } if (n != null && n++ === 30) return {k:{left:true}}; return {k:{}}; }; }, {max:1800}), 'dead');
+  check('14 touch nothing, ever', run(13, () => P => ({k:{}}), {max:1500}), 'timeout');
+  check('14 touch nothing until the far bank, then walk off', run(13, raft14(() => ({k:{}}), 0), {max:1800}), 'clear');
   // ---- 15 decoy
-  const plats = () => script([S.JT(4.8, 384), S.JT(9.5, 352), S.R(12.3), S.JT(15.5, 352), S.R(19.3), S.JT(22.5, 352), S.R(29)]);
+  const plats = w => script([S.W(w), S.JT(4.8, 384), S.JT(9.5, 352), S.R(12.3), S.JT(15.5, 352), S.R(19.3), S.JT(22.5, 352), S.R(29)]);
   check('15 walk the ground both times', run(14, life => R, {lives:2, freshMem:true}), 'dead');
-  check('15 ground first, then the platforms', run(14, life => life === 0 ? R : plats(), {lives:2, freshMem:true}), 'clear');
+  check('15 ground first, then the platforms, level with the ghost', run(14, life => life === 0 ? R : plats(0), {lives:2, freshMem:true}), 'dead');
+  check('15 ground first, then the ground again, letting it go first', run(14, life => life === 0 ? R : script([S.W(30), S.R(29)]), {lives:2, freshMem:true}), 'dead');
+  check('15 ground first, then the platforms, letting it go first', run(14, life => life === 0 ? R : plats(30), {lives:2, freshMem:true}), 'clear');
+  check('15 platforms first, then the ground, letting it go first', run(14, life => life === 0 ? plats(0) : script([S.W(30), S.R(29)]), {lives:2, freshMem:true}), 'clear');
   // ---- 16 heavy
   const th = () => g.S.th, tap16 = () => ({k:{right: Math.abs(g.P.vx) < 2.4}}), N = () => ({k:{}});
   check('16 run straight', run(15, () => R), 'dead');
@@ -77,7 +82,7 @@
       return onLock ? R() : (t < 60 ? N() : R()); }; };
   check('17 run', run(16, () => R), 'dead');
   check('17 change as soon as it appears', run(16, act17(false), {max:1500}), 'dead');
-  check('17 wait until its ring stops, then change', run(16, act17(true), {max:1500}), 'clear');
+  check('17 wait until its shadow stops, then change', run(16, act17(true), {max:1500}), 'clear');
   // ---- 18 reflection
   const plant18 = x => [S.R(x), S.U(() => g.S.st >= 31), S.W(8)];
   const climbA = [S.R(17.4), S.JT(19.5, 408, {tol:8}), S.U(P => P.on), S.J(30, 1), S.U(P => P.on && P.y < 300)];
