@@ -963,12 +963,11 @@ const LV = [
     // past the line: the ground kills, the thorns hold you up, the door bites, and the hole is the way out
     S.inv = [17, 20, 23].map(c => Sp(c,c,13,'up',{kill:false, solid:true})).concat([Sp(26,29,13,'up',{kill:false, solid:true})]);
     Door(28,13.5,{onEnter(d){ d.bite = true; die('door'); }});
-    // two pebbles show it: one rolls across the line and bursts on the ground, one drops onto the thorns and rests there
-    S.peb = [{x:13.2*T, y:GY - 6, vx:1.6, vy:0, st:'roll'}, {x:17.5*T, y:-20, vx:0, vy:0, st:'fall'}]; },
+    // a pebble rolls across the line and bursts on the ground; the rest you learn by dying
+    S.peb = [{x:13.2*T, y:GY - 6, vx:1.6, vy:0, st:'roll'}]; },
   update(){ if (P.on && P.stand && P.stand.t === 'g' && pcx() > 15*T) return die('floor');
     if (pcx() > 24*T && pcx() < 26*T && P.y > 470) levelClear();
-    for (const q of S.peb) { if (q.st === 'gone' && ++q.t > 150) { q.st = 'roll'; q.x = 13.2*T; } if (q.st === 'roll') { q.x += q.vx; if (q.x > 16*T) { q.st = 'gone'; q.t = 0; for (let i = 0; i < 8; i++) parts.push({x:q.x, y:GY - 4, vx:(Math.random() - .5)*4, vy:-Math.random()*3, life:22, r:2, col:C.ink2}); } }
-      else if (q.st === 'fall') { q.vy += 0.5; q.y += q.vy; if (q.y >= GY - 16 - 6) { q.y = GY - 16 - 6; q.st = 'rest'; } } } },
+    for (const q of S.peb) { if (q.st === 'gone' && ++q.t > 150) { q.st = 'roll'; q.x = 13.2*T; } if (q.st === 'roll') { q.x += q.vx; if (q.x > 16*T) { q.st = 'gone'; q.t = 0; for (let i = 0; i < 8; i++) parts.push({x:q.x, y:GY - 4, vx:(Math.random() - .5)*4, vy:-Math.random()*3, life:22, r:2, col:C.ink2}); } } } },
   drawBack(){ ctx.fillStyle = 'rgba(30,43,71,.10)'; ctx.fillRect(15*T, 0, 15*T, H); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.setLineDash([6,6]); ctx.beginPath(); ctx.moveTo(15*T, 0); ctx.lineTo(15*T, GY); ctx.stroke(); ctx.setLineDash([]);
     drawDoor(25*T - 18, 482, {flip:true}); },
   draw(){ for (const q of S.peb) if (q.st !== 'gone') { ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 7); ctx.fill(); } } },
