@@ -107,6 +107,9 @@
     clean('storm'); check('50 jump as soon as you get to each edge', run(49, plan(() => true), {max:3000}), 'dead');
     clean('storm'); check('50 jump when the lightning shows the way', run(49, plan(() => g.S.flash > 14), {max:3000}), 'dead');
     clean('storm'); check('50 jump in the quiet after the thunder', run(49, plan(() => g.S.lt > 165), {max:3000}), 'dead');
+    { const res = []; for (let off = 0; off < 210; off += 10) for (const w of [0, 3]) res.push(run(49, () => script([S.W(off), ...hops.flatMap(([e, to]) => [S.R(e), S.JT(to, GY, {tol:10}), S.W(w)]), S.R(28.4), S.W(30)]), {max:3000})[0]);
+      // a chain that starts in the quiet is heard at least once on the stones; it may only clear when the thunder happens to cover every jump
+      check('50 chain-jump the stones to outrun it (any start)', [res.filter(r => r === 'clear').length + '/' + res.length, res.some(r => r === 'clear') ? 'clear' : 'dead'], 'dead'); }
     for (const [a, b] of [[2, 30], [20, 48]]) { clean('storm'); check(`50 jump while the thunder rolls (${a}-${b} frames into it)`, run(49, plan(() => g.S.th >= a && g.S.th <= b), {max:4000}), 'clear'); } }
   return out;
 })()

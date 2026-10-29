@@ -1539,18 +1539,29 @@ const LV = [
       ctx.strokeStyle = e.tone === 'L' ? C.ink : C.white; ctx.lineWidth = 2; ctx.setLineDash(on ? [] : [4, 3]); ctx.strokeRect(e.x + 2, e.y + 1, e.w - 4, e.h - 2); ctx.setLineDash([]); ctx.globalAlpha = 1; } },
   alpha(e){ return e.tone ? 0 : 1; } },
 
-/* 50. by the light of the storm; and the light comes before the sound */
+/* 50. by the light of the storm; and the light comes before the sound, and only the sound hides you */
 { id:'storm', start:1.5, dark:true, seeR:52,
   darkA(){ return S.flash > 0 ? clamp(1 - S.flash/10, 0, 1) : 1; },
   // narrow stones over the dark; you can stand only where you landed
   build(){ Gd(0,5); Gd(8,9); Gd(12,13); Gd(16,17); Gd(20,29); Door(28,14);
-    S.flash = 0; S.lt = 150; S.th = 0; S.rain = []; S.bat = {x:14*T, y:30, st:'roost', t:0}; },
+    S.flash = 0; S.lt = 150; S.th = 0; S.track = false; S.rain = []; S.bat = {x:14*T, y:30, st:'roost', t:0}; },
   // the flash, and a little later the thunder; while it rolls, the bat hears nothing else
   deaf(){ return S.th > 0; },
-  ping(x, y){ if (this.deaf()) return; const b = S.bat; b.st = 'dive'; b.tx = x; b.ty = y - 14; },
-  onJump(){ this.ping(pcx(), P.y + PH); },
+  // it hears a landing or a jump and makes for where you will be by the time it gets there; a jump it follows down, and waits for you
+  ping(x, y, jump){ if (this.deaf()) return; const b = S.bat; S.track = !!jump; b.st = 'dive'; b.tx = clamp(this.comeDown(), 10, lvW() - 10); b.ty = GY - 14; },
+  // where you will be by the time it gets there: down on a stone, and stopped at its edge
+  comeDown(){ const b = S.bat, ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0); let tx = pcx();
+    for (let k = 0; k < 3; k++) { const n = Math.round(Math.hypot(tx - b.x, GY - 14 - b.y)/11); let px = P.x, py = P.y, vx = P.vx, vy = P.vy, on = P.on;
+      for (let i = 0; i < Math.max(n, 1) && i < 120; i++) {
+        if (!on) { if (ax) vx = clamp(vx + ax*0.6, -4.4, 4.4); else vx *= 0.97; if (!keys.jump && vy < -3.5) vy = -3.5; vy = Math.min(vy + 0.55, 12); py += vy; if (vy > 0 && py + PH >= GY && groundAt(px + PW/2, GY)) { py = GY - PH; vy = 0; on = true; } else if (py > GY + 40) break; }
+        else { vx = ax ? clamp(vx + ax*0.9, -4.4, 4.4) : vx*0.7; if (!groundAt(px + PW/2 + vx, GY)) vx = 0; }
+        px += vx; }
+      tx = px + PW/2; }
+    return tx; },
+  onJump(){ this.ping(pcx(), P.y + PH, true); },
   onLand(){ this.ping(pcx(), P.y + PH); },
-  update(){ if (++S.lt >= 210) { S.lt = 0; S.flash = 26; shake = 3; }
+  update(){ if (P.on) S.track = false; if (S.track) { const b = S.bat; if (b.st === 'hover') b.t = Math.max(b.t, 2); b.tx = clamp(this.comeDown(), 10, lvW() - 10); if (b.st === 'hover' && Math.abs(b.tx - b.x) > 9) b.st = 'dive'; }
+    if (++S.lt >= 210) { S.lt = 0; S.flash = 26; shake = 3; }
     if (S.flash > 0) S.flash--;
     S.th = S.lt >= 70 && S.lt < 160 ? S.th + 1 : 0; if (S.th) shake = Math.max(shake, S.th < 20 ? 7 : 2);
     batStep(S.bat, 14*T, 30); if (S.bat.st === 'dive') { const b = S.bat, dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy); if (d > 9) { b.x += dx/d*2; b.y += dy/d*2; } }
