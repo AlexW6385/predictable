@@ -46,15 +46,27 @@
   check('84 wait on the near set as the curtain falls', run(83, () => script([S.R(3.4), S.JT(6.0, 416, {tol:14}), S.W(600)]), {freshMem:true, max:800}), 'dead');
   check('84 race up while the first set stands, and leap from the last fixed platform to the far bank', run(83, () => script([S.R(3.4), S.JT(6.0, 416, {tol:14}), S.W(4), S.JT(10.5, 384, {tol:14}), S.W(4), S.JT(14.0, 352, {tol:14}), S.W(4), S.JT(18.5, 352, {tol:14}), S.R(19.8), S.J(30, 1), S.R(28.5), S.W(30)]), {freshMem:true, max:1500}), 'dead');
   check('84 go while the set is up, wait out each change on a fixed platform', run(83, route84, {freshMem:true, max:1500}), 'clear');
-  // ---- 85 keystone: the veil hangs over the keystone; your body, left in it, brings the arch down; stand over the gap in the thorns
-  check('85 keep away from the veil', run(84, () => script([S.R(16.3), S.W(600)]), {freshMem:true, max:600}), 'timeout');
-  check('85 walk into the veil; then stand where you rise', run(84, life => life === 0 ? R : script([S.W(300)]), {freshMem:true, lives:2, max:800}), 'dead');
-  check('85 walk into the veil; then run on for the far end', run(84, life => life === 0 ? R : R, {freshMem:true, lives:2, max:800}), 'dead');
-  check('85 walk into the veil; then go back through it', run(84, life => life === 0 ? R : script([S.L(15), S.W(300)]), {freshMem:true, lives:2, max:800}), 'dead');
-  check('85 jump into the veil; then stand where you rise', run(84, life => life === 0 ? script([S.R(15.5), S.J(30, 1), S.R(29)]) : script([S.W(300)]), {freshMem:true, lives:2, max:800}), 'dead');
-  check('85 walk into the veil; then walk on and stop over the gap', run(84, life => life === 0 ? R : script([S.R(21.6), S.W(300)]), {freshMem:true, lives:2, max:800}), 'clear');
-  check('85 ... slowly: a moment to look, then over the gap', run(84, life => life === 0 ? R : script([S.W(16), S.R(21.2), S.W(300)]), {freshMem:true, lives:2, max:800}), 'clear');
-  check('85 jump into the veil; then stop over the far half of the gap, and step to the door', run(84, life => life === 0 ? script([S.R(15.5), S.J(30, 1), S.R(29)]) : script([S.R(22.4), S.W(90), S.L(21.4), S.W(60)]), {freshMem:true, lives:2, max:800}), 'clear');
+  // ---- 85 keystone: an arch stands by itself once its keystone is in; so put the stone in, then knock the scaffold away from under it
+  { const tapL = (x) => ({until: () => cx() <= x*T, rule: (P, k) => ({k:{left: k % 12 < 3}})});
+    // walk left along the deck, hopping out of the gap at the crown if you drop into it
+    const backL = (x) => ({until: () => cx() <= x*T, rule: P => P.on && P.y > 232 ? {jump:12, dir:-1} : {k:{left:true}}});
+    const behind = [S.K({left:true}, 25), S.J(30, -1), S.U(P => P.on, {})], over = [S.J(30, -1), S.U(P => P.on, {})];
+    const down = [S.R(27.3), S.U(P => P.on, {})], acrossGap = [S.R(15.6), S.J(30, 1), S.U(P => P.on, R().k)];
+    const climb = [to(27.2), S.J(30, 1), S.U(P => P.on, {}), S.J(30, 1), S.U(P => P.on, {}), S.J(30, -1), S.U(P => P.on, {})];
+    check('85 run', run(84, () => R, {freshMem:true, max:900}), 'timeout');
+    check('85 stand', run(84, () => N, {freshMem:true, max:900}), 'timeout');
+    check('85 jump at everything', run(84, () => P => P.on ? {jump:30, dir:1} : R(), {freshMem:true, max:1200}), /timeout|dead/);
+    check('85 jump the gap, go down, pull the pin', run(84, () => script([...acrossGap, ...down, S.L(13.5), S.W(60)]), {freshMem:true, max:1500}), 'dead');
+    check('85 ... and run back out from under the arch', run(84, () => script([...acrossGap, ...down, S.L(17.9), S.R(29), S.W(60)]), {freshMem:true, max:1500}), 'dead');
+    check('85 ... and stand still at the pin', run(84, () => script([...acrossGap, ...down, S.L(17.9), S.W(120)]), {freshMem:true, max:1500}), 'dead');
+    check('85 go down, jump at the scaffold to get past it', run(84, () => script([...acrossGap, ...down, to(18.8), S.J(30, -1), S.U(P => P.on, {}), S.J(30, -1), S.W(200)]), {freshMem:true, max:1500}), /timeout|dead/);
+    check('85 push the keystone halfway, go down, pull', run(84, () => script([...behind, S.R(10), S.W(10), S.J(30, 1), S.U(P => P.on, R().k), ...acrossGap, ...down, S.L(13.5), S.W(60)]), {freshMem:true, max:2000}), 'dead');
+    check('85 keystone in, then wait on the deck', run(84, () => script([...behind, S.R(20), S.W(600)]), {freshMem:true, max:1500}), 'timeout');
+    check('85 keystone in, go down, pull the pin, walk in', run(84, () => script([...behind, ...down, S.L(13.5), S.W(40)]), {freshMem:true, max:1500}), 'clear');
+    check('85 ... jumping straight over it', run(84, () => script([...over, ...down, S.L(13.5), S.W(40)]), {freshMem:true, max:1500}), 'clear');
+    check('85 ... with pauses: after it drops in, and under the arch', run(84, () => script([...behind, S.R(17.5), S.W(90), ...down, to(21), S.W(120), tapL(13.5), S.W(40)]), {freshMem:true, max:2500}), 'clear');
+    check('85 down first to look, back up, keystone in, down, pull', run(84, () => script([...acrossGap, ...down, to(20), S.W(30), ...climb, backL(3.5), ...behind, ...down, S.L(13.5), S.W(40)]), {freshMem:true, max:3000}), 'clear');
+    check('85 stone pushed back to the wall: you can still get behind it', run(84, () => script([...behind, S.R(9), S.J(30, 1), S.U(P => P.on, {}), S.K({left:true}, 200), S.J(30, -1), S.U(P => P.on, {}), ...down, S.L(13.5), S.W(40)]), {freshMem:true, max:3000}), 'clear'); }
   // ---- 86 leap: it holds whoever walks off the edge and keeps walking
   check('86 jump the gap', run(85, () => P => P.on && cx() > 6.4*T && cx() < 7*T ? {jump:30, dir:1} : R(), {freshMem:true, max:800}), 'dead');
   check('86 wait at the edge', run(85, () => script([S.R(6.4), S.W(600)]), {freshMem:true, max:600}), 'timeout');

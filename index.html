@@ -235,7 +235,7 @@ function drawCones(){
 }
 function pushBox(b, dx){
   const nx = b.x + dx, test = {x:nx, y:b.y, w:b.w, h:b.h - 1};
-  if (nx < 0 || nx + b.w > lvW()) return;
+  if (nx < 0 || nx + b.w > lvW() || (b.minX != null && nx < b.minX)) return;
   for (const o of ents) if (o !== b && isSolid(o) && ov(test, o)) return;
   b.x = nx;
 }
@@ -2288,30 +2288,57 @@ const LV = [
         for (const e of next) ctx.fillRect(e.x, e.y + 2, e.w, 6); ctx.fillRect(10*T, 12*T + 2, 2*T, 6); ctx.fillRect(18*T, 11*T + 2, 2*T, 6); ctx.globalAlpha = 1; } }
     ctx.fillStyle = '#8E2A22'; ctx.fillRect(camX, 0, W, 18); ctx.fillStyle = C.gold; for (let x = 0; x < W; x += 24) { ctx.beginPath(); ctx.arc(camX + x + 12, 18, 7, 0, Math.PI); ctx.fill(); } } },
 
-/* 85. the veil hangs over the stone that holds it all: no one living can stand there, but the dead leave their bodies behind */
-{ id:'keystone', was:[83, 76], start:1.5,
-  build(){ Gd(0,9); R('g',25,29,10,16); R('g',10,24,16,16); Sp(10,20,15,'up'); Sp(23,24,15,'up'); Door(21.5,16);
-    // the veil hangs over the keystone, from the sky to the floor of the pit
-    S.veil = {x:18*T - 10, w:20};
-    S.deck = []; for (let c = 10; c <= 24; c++) S.deck.push(E({t:'b', x:c*T, y:GY, w:T, h:12, solid:true, deck:true, key:c === 17 || c === 18, c})); S.fallT = null;
-    // whoever died in the veil left their body there, and it lies on the keystone: the arch feels the weight
-    S.body = M.body ? {x:M.body.x, y:M.body.y, vy:0} : null; M.body = null;
-    if (M.rise) { P.x = M.rise.x; P.y = M.rise.y; P.vy = 0; P.face = 1; M.rise = null; } },
-  update(){ const v = S.veil;
-    // the veil kills whoever enters it, and they rise on the far side; the body stays where it fell
-    if (ov(pbox(2), {x:v.x, y:0, w:v.w, h:H})) { M.body = {x:clamp(P.x, 17*T, 19*T - PW), y:Math.min(P.y, GY - PH)}; M.rise = {x:19*T + 6, y:Math.min(P.y, GY - PH) - 2}; return die('veil'); }
-    const b = S.body, k = S.deck.find(d => d.key);
-    if (b) { const floor = k.fall ? k.y : GY; if (b.y + PH < floor) { b.vy = Math.min(b.vy + 0.6, 12); b.y = Math.min(b.y + b.vy, floor - PH); } else { b.y = floor - PH; b.vy = 0; }
-      if (S.fallT == null && !k.fall && b.y + PH >= GY - 1) S.fallT = 0; }
-    // it falls from the middle outward, a stone at a time; the far end is a cliff, and the thorns are broken in one place only
-    if (S.fallT != null) { S.fallT++; for (const d of S.deck) { const delay = 24 + Math.abs(d.c - 17.5)*8; d.shk = S.fallT > delay - 18 && S.fallT < delay; if (S.fallT === Math.round(delay)) d.fall = 1; } } },
-  drawBack(){ const v = S.veil; for (let i = 0; i < 6; i++) { ctx.fillStyle = `rgba(207,62,50,${0.08 + 0.05*Math.sin(frame*0.1 + i)})`; ctx.fillRect(v.x - 6 + i*5, 0, 6, H); } ctx.fillStyle = C.red; ctx.fillRect(v.x + v.w/2 - 1, 0, 2, H);
-    ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(17.5*T, GY + 150, 7.75*T, Math.PI*1.12, Math.PI*1.88); ctx.stroke(); },
-  // the keystone is only a wedge cut a little differently from its neighbours
-  draw(){ const k = S.deck.find(d => d.key), b = S.body;
-    if (b) { ctx.fillStyle = 'rgba(30,43,71,.55)'; ctx.fillRect(b.x + 2, b.y + 10, PW - 4, PH - 10); ctx.beginPath(); ctx.arc(b.x + PW/2, b.y + 6, 6, 0, 7); ctx.fill(); }
-    if (!k.alive || k.fall) return; const x0 = 17*T, x1 = 19*T, y = k.y + (k.shk ? ((frame>>1)%2 ? 1.5 : -1.5) : 0);
-    ctx.strokeStyle = 'rgba(231,236,241,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0 - 3, y + 1); ctx.lineTo(x0 + 4, y + 11); ctx.lineTo(x1 - 4, y + 11); ctx.lineTo(x1 + 3, y + 1); ctx.stroke(); } },
+/* 85. an arch whose keystone is in holds itself up; then its scaffold can be knocked away, even from under it */
+{ id:'keystone', was:[83, 76], start:3.5, sy:228,
+  // the underside of the arch: from the high ground (x 256) to the far pier (x 800), its crown at x 528
+  arc(x){ const u = (x - 528)/272; return 384 - 80*Math.sqrt(Math.max(0, 1 - u*u)); },
+  build(){ R('g',0,7,8,16); Gd(8,29); R('g',28,29,12,13); R('g',29,29,10,11); R('b',25,26,8,11);
+    // the arch, a stone to a column; the one at the crown is missing, down to its seat
+    S.arch = []; for (let c = 8; c <= 24; c++) { const y0 = c === 16 ? 288 : 256; S.arch.push(E({t:'b', x:c*T, y:y0, w:T, h:this.arc(c*T + 16) - y0, solid:true, hidden:true, c})); }
+    // ... and it lies behind you: the same stone, cut as a wedge
+    S.key = E({t:'box', x:48, y:224, w:T, h:T, solid:true, hidden:true, minX:32});
+    // a wooden scaffold under the crown holds the arch up, in front of the door; a pin at its foot
+    S.scaf = E({t:'b', x:15*T, y:306, w:3*T, h:GY - 306, solid:true, hidden:true}); S.pin = {x:18*T, y:GY - 22, w:16, h:22};
+    S.door = Door(13,14); S.set = null; S.pulled = null; S.fall = null; S.planks = []; },
+  update(){ const k = S.key;
+    // pushed over the gap at the crown, it drops in and wedges there, flush with the deck
+    if (S.set == null && k.t === 'box' && Math.abs(k.x - 16*T) < 9 && Math.abs(k.y + k.h - 256) < 2 && !ov(pbox(), {x:16*T, y:256, w:T, h:32})) {
+      k.t = 'stone'; k.x = 16*T; k.y = 256; k.vy = 0; S.set = frame; shake = 6; dust(16*T + 16, 256); }
+    // walk into the pin and the scaffold comes apart and falls away
+    if (S.pulled == null && ov(pbox(), S.pin)) { S.pulled = frame; S.scaf.alive = false; shake = 5;
+      for (let i = 0; i < 9; i++) S.planks.push({x:15*T + 8 + (i % 3)*36, y:330 + Math.floor(i/3)*40, a:0, va:(i % 2 ? 1 : -1)*(0.04 + i*0.006), vx:(i % 3 - 1)*1.2, vy:-1 - (i % 4)*0.5}); }
+    // the planks come down and lie on the floor a while
+    for (const q of S.planks) { if (q.y < GY - 3) { q.vy += 0.5; q.x += q.vx; q.y = Math.min(GY - 3, q.y + q.vy); q.a += q.va; } else { q.a = 0; q.t = (q.t || 0) + 1; } } S.planks = S.planks.filter(q => !(q.t > 90));
+    // without its keystone, the arch falls from the crown outward, onto whoever is under it, and buries the door
+    if (S.pulled != null && S.set == null && S.fall == null && frame - S.pulled >= 8) { S.fall = frame; S.door.inert = true; }
+    if (S.fall != null) { const t = frame - S.fall;
+      for (const e of S.arch) { if (!e.down && !e.fall && t >= Math.max(0, Math.abs(e.c - 16) - 1)*2) { e.fall = 1; e.killFall = true; e.vy = 0; }
+        // what falls stays where it lands, on the floor of the gorge, over the door
+        if (e.fall && e.y + e.h >= GY) { e.fall = 0; e.down = true; e.y = GY - e.h; e.vy = 0; shake = Math.max(shake, 4); dust(e.x + 16, GY); } }
+      if (k.t === 'box' && k.y > H) k.alive = false; } },
+  draw(){ const arc = x => this.arc(x);
+    // the stones of the arch, with the curve of its underside and the joints of its ring
+    for (const e of S.arch) { if (!e.alive) continue; const x0 = e.x, x1 = e.x + T, dy = e.y - (e.c === 16 ? 288 : 256), top = e.y;
+      ctx.fillStyle = C.ink2; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, top); ctx.lineTo(x1, top);
+      for (let x = x1; x >= x0; x -= 8) ctx.lineTo(x, arc(x) + dy); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(231,236,241,.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let x = x0 + 1; x <= x1 - 1; x += 6) ctx.lineTo(x, arc(x) + dy - 22); ctx.stroke(); }
+    // the empty seat at the crown is a wedge, wider at the top
+    if (S.set == null && S.fall == null) { ctx.fillStyle = C.paper; ctx.beginPath(); ctx.moveTo(16*T - 3, 256); ctx.lineTo(17*T + 3, 256); ctx.lineTo(17*T - 5, 290); ctx.lineTo(16*T + 5, 290); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(16*T - 3, 256); ctx.lineTo(16*T + 5, 290); ctx.lineTo(17*T - 5, 290); ctx.lineTo(17*T + 3, 256); ctx.stroke(); }
+    // the keystone
+    const k = S.key; if (k.alive) { const x = k.x, y = k.y, w = k.t === 'stone' ? 1 : 0;
+      ctx.fillStyle = C.ink2; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 3, y); ctx.lineTo(x + T + 3, y); ctx.lineTo(x + T - 5, y + T + 4*w); ctx.lineTo(x + 5, y + T + 4*w); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(231,236,241,.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 4, y + 8); ctx.lineTo(x + T - 4, y + 8); ctx.stroke(); }
+    // the scaffold: posts, braces and wedges under the crown; once the arch carries itself, its top no longer presses
+    if (S.scaf.alive) { const x0 = 15*T, gap = S.set != null ? 3 : 0;
+      ctx.strokeStyle = C.door; ctx.lineWidth = 6; ctx.beginPath(); for (const x of [x0 + 6, x0 + 48, x0 + 90]) { ctx.moveTo(x, GY); ctx.lineTo(x, 314 + gap); } ctx.stroke();
+      ctx.lineWidth = 4; ctx.beginPath(); for (const y of [436, 380]) { ctx.moveTo(x0 + 6, y); ctx.lineTo(x0 + 48, y - 48); ctx.moveTo(x0 + 48, y - 48); ctx.lineTo(x0 + 90, y); } ctx.stroke();
+      ctx.fillStyle = C.door; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.fillRect(x0, 306 + gap, 3*T, 8); ctx.strokeRect(x0, 306 + gap, 3*T, 8);
+      // the pin
+      const p = S.pin; ctx.fillStyle = C.gold; ctx.fillRect(p.x - 4, p.y + 6, 16, 6); ctx.strokeRect(p.x - 4, p.y + 6, 16, 6); ctx.beginPath(); ctx.arc(p.x + 14, p.y + 9, 4, 0, 7); ctx.fill(); ctx.stroke(); }
+    // a low passage under the far pier
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(25*T, 12*T); ctx.quadraticCurveTo(26*T, 12*T - 18, 27*T, 12*T); ctx.stroke();
+    for (const q of S.planks) { ctx.save(); ctx.globalAlpha = q.t ? Math.max(0, 1 - q.t/90) : 1; ctx.translate(q.x, q.y); ctx.rotate(q.a); ctx.fillStyle = C.door; ctx.fillRect(-18, -3, 36, 6); ctx.restore(); } } },
 
 /* 86. it holds whoever walks off the edge and keeps walking */
 { id:'leap', start:1.5,
