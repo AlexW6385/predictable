@@ -82,7 +82,7 @@
     for (let f = 0; f < (max || 4000); f++) { const st = g.state; if (st === 'dead' && was !== 'dead') deaths++; was = st; if (st === 'clear') return `clear after ${deaths}`; window.LIB.frame(st === 'play' ? pol(g.P, deaths) : {k:{}}); }
     return `timeout after ${deaths}`; };
   const jumpAt = (xs, h) => P => { for (const x of xs) if (P.on && Math.abs(cx() - x*T) < 4) return {jump:h, dir:1}; return R(); };
-  const sp68 = [5.6, 12.6, 19.6];
+  const sp68 = [5.6, 11.6, 18.6];
   check('68 walk into the first spike', [life68(R, 900)], /timeout/);
   check('68 jump each spike, the same way every time', [life68(jumpAt(sp68, 30))], /clear after 3/);
   check('68 then from closer, the same way every time', [life68(jumpAt(sp68.map(x => x + 0.9), 30))], /clear after 3/);

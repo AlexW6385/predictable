@@ -1906,9 +1906,9 @@ const LV = [
 
 /* 68. you may take it back, but whatever you do instead is what it waits for */
 { id:'regret', start:2,
-  build(){ Gd(0,29); Sp(7,7,13,'up'); Sp(14,14,13,'up'); Sp(21,21,13,'up'); Door(28,14);
+  build(){ Gd(0,29); Sp(7,7,13,'up'); Sp(13,14,13,'up'); Sp(20,22,13,'up'); Door(28,14);
     // past each spike the ground gives way wherever you first come down
-    S.sp = [7, 14, 21]; S.i = 0; S.air = false; S.f = 0; S.pop = null; this.snaps = []; M.ref = M.ref || {}; },
+    S.sp = [7, 14, 22]; S.i = 0; S.air = false; S.f = 0; S.pop = null; this.snaps = []; M.ref = M.ref || {}; },
   update(){ S.f++;
     if (S.f % 5 === 1) { this.snaps.push(dclone({P, S, ents}, new Map())); if (this.snaps.length > 40) this.snaps.shift(); }
     if (!P.on) S.air = true;
@@ -1923,9 +1923,9 @@ const LV = [
     const c = dclone(z, new Map()); P = c.P; S = c.S; ents = c.ents; S.pop = null; parts = []; shake = 6; flash = 0.6;
     this.snaps = this.snaps.filter(s => s.S.f <= S.f); return true; },
   draw(){ // past each spike something waits under the ground: its teeth show along the floor, except where it has already bitten
-    const ends = [14, 21, 27]; for (let i = S.i; i < 3; i++) { const x0 = (S.sp[i] + 1)*T, x1 = ends[i]*T, ref = M.ref && M.ref[i];
+    const ends = [13, 20, 27]; for (let i = S.i; i < 3; i++) { const x0 = (S.sp[i] + 1)*T, x1 = ends[i]*T, ref = M.ref && M.ref[i];
       ctx.fillStyle = 'rgba(255,255,255,.85)'; for (let x = x0 + 4; x < x1 - 6; x += 12) { if (ref !== undefined && Math.abs(x + 4 - ref) < 22) continue; ctx.beginPath(); ctx.moveTo(x, GY + 7); ctx.lineTo(x + 4, GY + 1); ctx.lineTo(x + 8, GY + 7); ctx.fill(); }
-      if (ref !== undefined) { ctx.fillStyle = '#8B6A4A'; ctx.fillRect(ref - 18, GY, 36, 6); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(ref - 18, GY, 36, 6); } }
+      } 
     if (S.pop) { const p = S.pop; ctx.fillStyle = C.ink; ctx.beginPath(); for (let i = 0; i < 3; i++) { ctx.moveTo(p.x - 18 + i*12, GY); ctx.lineTo(p.x - 12 + i*12, GY - 22); ctx.lineTo(p.x - 6 + i*12, GY); } ctx.fill(); }
     if (state === 'dead' && deathT > 8) { ctx.globalAlpha = Math.min(0.5, (deathT - 8)/40); ctx.fillStyle = C.ink; ctx.fillRect(camX, 0, W, H); ctx.globalAlpha = 1; ctx.strokeStyle = C.white; ctx.lineWidth = 3; for (let i = 0; i < 3; i++) { const a = -deathT*0.2 + i*2.1; ctx.beginPath(); ctx.arc(camX + W/2, H/2, 30, a, a + 1.2); ctx.stroke(); } } } },
 
