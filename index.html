@@ -1612,16 +1612,28 @@ const LV = [
     if (bullStep(S.bull)) return die('bull'); },
   draw(){ drawNoise(S.rings); for (const g of S.gd) drawGuard(g); drawCarpets(); drawBull(S.bull); } },
 
-/* 55. asleep, you walk on what you dreamed; a jump wakes you */
+/* 55. asleep, you walk on what you dreamed, and you snore; a jump, or a crash, wakes you */
 { id:'dream', was:[47], start:2,
-  build(){ Gd(0,4); R('g',12,13,14,16); R('g',18,22,14,16); Sp(18,18,13,'up'); Gd(25,29); Door(27,14);
-    for (const [a,b] of [[5,11],[14,24]]) R('cloud',a,b,14,14,{h:12, dream:true, solid:true, cond:() => S.sleep}); S.still = 0; S.sleep = false; S.zt = 0; },
-  update(){ S.still = still() ? S.still + 1 : 0; if (S.still > 70 && !S.sleep) { S.sleep = true; S.zt = 0; } if (S.sleep) S.zt++; },
+  build(){ Gd(0,3); R('g',10,12,14,16); Gd(20,29); Door(28,14);
+    for (const [a,b] of [[4,9],[13,19]]) R('cloud',a,b,14,14,{h:12, dream:true, solid:true, cond:() => S.sleep}); S.still = 0; S.sleep = false; S.zt = 0; S.rings = [];
+    // someone sleeps on the far bank, where you would come down
+    S.gd = {x:21*T, y:GY - 24, vy:0, awake:false, gone:false}; },
+  noise(x, r){ S.rings.push({x, r, t:0}); const g = S.gd; if (!g.gone && Math.abs(g.x + 12 - x) < r) g.awake = true; if (S.sleep && Math.abs(pcx() - x) < r) { S.sleep = false; S.still = 0; shake = 3; } },
+  update(){ S.still = still() ? S.still + 1 : 0; if (S.still > 70 && !S.sleep) { S.sleep = true; S.zt = 0; } if (S.sleep) S.zt++;
+    // asleep, you snore
+    if (S.sleep && S.zt > 30 && S.zt % 45 === 0) { const g = S.gd; S.rings.push({x:pcx(), r:330, t:0}); if (!g.gone && Math.abs(g.x + 12 - pcx()) < 330) g.awake = true; }
+    for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 24);
+    // awake, he runs at you; he does not dream, so the clouds are not there for him, and his fall is loud
+    const g = S.gd; if (!g.gone && g.awake) { const gc = g.x + 12, ground = gc < 4*T || (gc > 10*T && gc < 13*T) || gc > 20*T;
+      if (!ground || g.vy > 0) { g.vy += 0.6; g.y += g.vy; if (g.y > GY + 30) { g.gone = true; shake = 6; this.noise(gc, 400); } }
+      else g.x += Math.sign(pcx() - gc)*5.6; }
+    if (!g.gone && ov(pbox(3), {x:g.x + 2, y:g.y + 2, w:20, h:20})) return die('guard'); },
   onJump(){ if (S.sleep) { S.sleep = false; S.still = 0; shake = 3; } },
   alpha(e){ if (e.dream) return S.sleep ? 1 : 0; if (e.t === 'door') return 1; return S.sleep ? 0.3 : 1; },
   drawBack(){ if (!S.sleep) return; ctx.fillStyle = 'rgba(110,90,170,.16)'; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = 'rgba(110,90,170,.5)'; for (let i = 0; i < 24; i++) { const x = (i*173) % W, y = 30 + (i*97) % 260, r = 1.5 + (i % 3)*0.6 + Math.sin(frame*0.05 + i)*0.5; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); } },
-  draw(){ if (S.still > 20 && !S.sleep) { ctx.globalAlpha = Math.min(1, (S.still - 20)/50); txt('z', pcx() + 10, P.y - 6, `12px ${FD}`, C.soft); ctx.globalAlpha = 1; }
+  draw(){ drawNoise(S.rings); if (!S.gd.gone) drawGuard(S.gd);
+    if (S.still > 20 && !S.sleep) { ctx.globalAlpha = Math.min(1, (S.still - 20)/50); txt('z', pcx() + 10, P.y - 6, `12px ${FD}`, C.soft); ctx.globalAlpha = 1; }
     if (S.sleep) for (let i = 0; i < 3; i++) { const t = (S.zt*0.6 + i*20) % 60; ctx.globalAlpha = 1 - t/60; txt('z', pcx() + 8 + t*0.3, P.y - 4 - t*0.6, `${11 + i*3}px ${FD}`, 'rgb(110,90,170)'); ctx.globalAlpha = 1; } } },
 
 /* 56. it follows exactly where you went, a little after you; and where its way crosses itself, it bites its own tail */

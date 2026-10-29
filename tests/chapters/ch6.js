@@ -44,11 +44,12 @@
   check('54 sneak past the guards, wake the bull at the wall, dodge it', run(53, () => { const a = script([...sneak, S.JT(21.2, GY, {tol:16}), S.U(P => P.on), S.F(slowR, () => cx() > 22.1*T), S.W(8), S.J(30, 0), S.W(2)]); let done = false; return (P, f) => { if (!done) { const r = a(P, f); if (g.S.bull.st !== 'sleep' && P.on) done = true; return r; } return dodge()(P, f); }; }, {max:2000}), 'clear');
   // ---- 55 dream
   const sleepW = () => S.U(() => g.S.sleep, {});
+  const sleepWalk = x => S.F(P => ({k:{right: Math.abs(g.P.vx) < 2.4}}), () => cx() > x*T || !g.S.sleep);
   check('55 run', run(54, () => R), 'dead');
-  check('55 jump the pit', run(54, () => script([S.R(4.3), S.J(30, 1), S.W(200)])), 'dead');
-  check('55 fall asleep, then walk across', run(54, () => script([S.R(4.3), S.W(10), sleepW(), S.R(27.5)]), {max:2400}), 'dead');
-  check('55 asleep, jump the gap in the dream', run(54, () => script([S.R(4.3), S.W(10), sleepW(), S.R(11.3), S.J(30, 1), S.R(27.5)]), {max:2400}), 'dead');
-  check('55 asleep, hop the thorn, sleep again', run(54, () => script([S.R(4.3), S.W(10), sleepW(), S.F(P => ({k:{right: cx() < 17.3*T && Math.abs(g.P.vx) < 2.5}}), () => cx() > 17.25*T), S.JT(20.4, GY, {tol:12}), S.W(10), sleepW(), S.R(27.5)]), {max:2400}), 'clear');
+  check('55 jump the pit', run(54, () => script([S.R(3.3), S.J(30, 1), S.W(200)])), 'dead');
+  check('55 fall asleep, then walk across everything', run(54, () => script([S.R(3.3), S.W(10), sleepW(), sleepWalk(27.5), S.R(27.5)]), {max:2400}), 'dead');
+  check('55 asleep to the island, wait for him there, then sleep and cross', run(54, () => script([S.R(3.3), S.W(10), sleepW(), sleepWalk(11.3), S.W(4), S.U(() => g.S.gd.gone), S.W(20), sleepW(), sleepWalk(27.6), S.R(27.6), S.W(30)]), {max:3000}), 'clear');
+  check('55 asleep to the island, walk on while he comes', run(54, () => script([S.R(3.3), S.W(10), sleepW(), sleepWalk(11.3), S.W(4), S.U(() => g.S.gd.awake), sleepWalk(27.6), S.R(27.6)]), {max:3000}), 'dead');
   // ---- 56 snake
   check('56 get the key, come back', run(55, () => script([S.R(28.4), S.L(1.5)]), {max:1500}), 'dead');
   check('56 get the key, stop to think', run(55, () => script([S.R(28.4), S.W(150)]), {max:600}), 'dead');
