@@ -1017,11 +1017,11 @@ const LV = [
 /* 29. follow its hands, not its door */
 { id:'mime', start:1,
   build(){ Gd(0,9); Gd(17,22); S.hole = Gt(23,24); Gd(25,29); Door(27.5,14); Sp(10,16,14,'up',{y:GY + 24});
-    // what is there but not drawn: a step, a wall, a bridge
-    S.inv = [R('b',4,5,12,13,{hidden:true}), R('b',6,7,10,13,{hidden:true}), R('b',10,16,14,14,{hidden:true, h:12}), E({t:'s', x:12*T, y:330, w:10*T, h:16, dir:'down', kill:true, inv:true})];
+    // what is there but not drawn: a rung in the air, a wall too tall to climb from the floor, a bridge
+    S.inv = [E({t:'b', x:4*T, y:376, w:2*T, h:16, solid:true, hidden:true}), R('b',7,8,10,13,{hidden:true}), R('b',10,16,14,14,{hidden:true, h:12}), E({t:'s', x:12*T, y:330, w:10*T, h:16, dir:'down', kill:true, inv:true})];
     for (const t of S.hole) t.falsef = true;
     S.mi = {x:2.2*T, y:GY - 30, i:0, pose:'walk', t:0, gone:false};
-    S.path = [[3.2*T, 'walk'], [3.2*T, 'push', 40], [4.4*T, 'step', 0, 384], [5.2*T, 'walk', 0, 384], [5.2*T, 'push', 40], [6.3*T, 'climb', 0, 320], [7.7*T, 'walk', 0, 320], [8.4*T, 'drop', 0, GY], [11.6*T, 'walk', 0, GY], [17*T, 'low', 0, GY], [21.9*T, 'low', 0, GY], [22.3*T, 'walk', 0, GY], [22.3*T, 'door', 60], [23.4*T, 'fall', 0, GY]]; },
+    S.path = [[3.0*T, 'walk'], [3.0*T, 'rung', 40], [4.3*T, 'climb', 0, 376], [5.6*T, 'walk', 0, 376], [5.6*T, 'push', 40], [7.2*T, 'climb', 0, 320], [8.6*T, 'walk', 0, 320], [9.2*T, 'drop', 0, GY], [11.6*T, 'walk', 0, GY], [17*T, 'low', 0, GY], [21.9*T, 'low', 0, GY], [22.3*T, 'walk', 0, GY], [22.3*T, 'door', 60], [23.4*T, 'fall', 0, GY]]; },
   update(){ const m = S.mi;
     for (const t of S.hole) if (t.alive && P.on && ov({x:P.x + 2, y:P.y + PH, w:PW - 4, h:3}, t)) t.alive = false;
     if (m.gone) return; const tgt = S.path[m.i]; if (!tgt) return;
@@ -1040,6 +1040,7 @@ const LV = [
     ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath();
     if (m.pose === 'push') { ctx.moveTo(x + 20, y + 14); ctx.lineTo(x + 28, y + 12); ctx.moveTo(x + 20, y + 20); ctx.lineTo(x + 28, y + 22); ctx.moveTo(x + 28, y + 6 + b); ctx.lineTo(x + 28, y + 28 - b); }
     else if (m.pose === 'door') { ctx.moveTo(x + 20, y + 16); ctx.lineTo(x + 30, y + 18 + b); ctx.moveTo(x + 30, y - 10); ctx.lineTo(x + 30, y + 30); ctx.lineTo(x + 46, y + 30); ctx.lineTo(x + 46, y - 10); ctx.closePath(); }
+    else if (m.pose === 'rung') { ctx.moveTo(x + 8, y + 14); ctx.lineTo(x + 26, y + 6 + b/2); ctx.moveTo(x + 16, y + 14); ctx.lineTo(x + 34, y + 6 + b/2); ctx.moveTo(x + 22, y + 6 + b/2); ctx.lineTo(x + 54, y + 6 + b/2); }
     else if (m.pose === 'look') { ctx.moveTo(x + 4, y + 16); ctx.lineTo(x - 4, y + 10); }
     else if (m.pose === 'low') { ctx.moveTo(x + 6, y + 12); ctx.lineTo(x + 2, y - 14); ctx.moveTo(x + 18, y + 12); ctx.lineTo(x + 22, y - 14); ctx.moveTo(x - 4, y - 14 + b/2); ctx.lineTo(x + 28, y - 14 + b/2); }
     else { ctx.moveTo(x + 4, y + 16); ctx.lineTo(x - 2, y + 22 + b); ctx.moveTo(x + 20, y + 16); ctx.lineTo(x + 26, y + 22 - b); }
