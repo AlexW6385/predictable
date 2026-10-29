@@ -2128,7 +2128,9 @@ const LV = [
 { id:'dancer', was:[74], start:1.5,
   build(){ Gd(0,29); S.my = [4, 6, 8].map(c => ({x:c*T})); S.dn = [20, 22, 24].map(c => ({x:c*T}));
     // facing you, its steps are mirrored in yours; with its back to you, they are the same
-    S.ph = 0; S.seqs = [[0, 2, 1], [1, 0, 2]]; S.got = 0; S.dt = 0; S.dx = 22*T; S.turn = false; S.pit = null;
+    // it dances something new every time, so the steps can't be learned by heart, only the rule
+    const n = M.tries = (M.tries || 0) + 1, A = [[0, 2, 1], [2, 1, 0], [2, 0, 1], [0, 1, 2]], B = [[1, 0, 2], [2, 1, 0], [0, 2, 1], [1, 2, 0]];
+    S.ph = 0; S.seqs = [A[(n - 1) % 4], B[(n*3 - 2) % 4]]; S.got = 0; S.dt = 0; S.dx = 22*T; S.turn = false; S.pit = null;
     S.door = Door(14,14,{inert:true}); },
   onLand(){ if (!S.turn || S.pit) return; const i = S.my.findIndex(p => Math.abs(pcx() - (p.x + 16)) < 14); if (i < 0) return;
     const j = S.seqs[S.ph][S.got], want = S.ph === 0 ? 2 - j : j;
@@ -2145,7 +2147,7 @@ const LV = [
 
 /* 84. when the curtain falls, the stage is changed; the curtain shows what it will be */
 { id:'curtain', was:[79], start:1,
-  build(){ Gd(0,3); R('g',4,25,16,16); Sp(4,25,15,'up'); Gd(26,29); Door(27,14); R('b',10,11,12,12); R('b',18,19,11,11);
+  build(){ Gd(0,3); R('g',4,26,16,16); Sp(4,26,15,'up'); Gd(27,29); Door(28,14); R('b',10,11,12,12); R('b',18,19,11,11);
     S.A = [[5,7,13],[13,15,11]].map(([a, b, r]) => R('b',a,b,r,r,{prop:'A', cond:() => S.act === 'A'}));
     S.B = [[6,8,11],[14,16,13],[22,24,10]].map(([a, b, r]) => R('b',a,b,r,r,{prop:'B', cond:() => S.act === 'B'})); S.t = 0; S.act = 'A'; },
   cur(){ const t = S.t % 300; return t < 220 ? 0 : t < 245 ? (t - 220)/25 : t < 285 ? 1 : 1 - (t - 285)/15; },
