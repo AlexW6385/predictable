@@ -1354,10 +1354,10 @@ const LV = [
 /* 42. the sun is moving, and so is every shade; on the boards, your own shadow is the hole you fall through */
 { id:'sun', was:[37, 64], start:2,
   build(){ S.pl = []; for (let c = 0; c <= 29; c++) { if ((this.boards || []).includes(c)) S.pl.push(E({t:'b', x:c*T, y:GY, w:T, h:10, solid:true, plank:true, hidden:true, cond:e => !e.shad})); else Gd(c, c); }
-    Door(28,14); S.pil = [[25,28,9],[17,20,5],[7,11,7]].map(([c0,c1,r]) => R('b',c0,c1,r,r)); S.lx = 940; S.burn = 0; },
+    Door(28,14); S.pil = [[25,27,9],[17,19,5],[8,10,7]].map(([c0,c1,r]) => R('b',c0,c1,r,r)); S.lx = 940; S.burn = 0; },
   boards: [14,15,16,17,18,22,23],
   lit(x, y){ const lx = S.lx, ly = 40; for (let s = 0.02; s < 1; s += 0.02) { const px = lx + (x - lx)*s, py = ly + (y - ly)*s; for (const p of S.pil) if (px > p.x && px < p.x + p.w && py > p.y && py < p.y + p.h) return false; } return true; },
-  update(){ S.lx = Math.max(-200, S.lx - 0.5); const l = this.lit(pcx(), P.y + 14); S.burn = l ? S.burn + 1 : Math.max(0, S.burn - 2); if (S.burn > 45) return die('sun');
+  update(){ S.lx = Math.max(-200, S.lx - 0.5); const l = this.lit(pcx(), P.y + 14); S.burn = l ? S.burn + 1 : Math.max(0, S.burn - 2); if (S.burn > 40) return die('sun');
     // in the light, where your head's shadow falls, the boards give way
     S.sh = null; if (l) { const k = (GY - 40)/(P.y - 40); const a = S.lx + (P.x - S.lx)*k, b = S.lx + (P.x + PW - S.lx)*k; S.sh = [Math.min(a, b), Math.max(a, b)]; }
     for (const e of S.pl) { if (S.sh && e.x < S.sh[1] - 3 && e.x + T > S.sh[0] + 3) e.dark = 10; else if (e.dark) e.dark--; e.shad = e.dark > 0; } },
@@ -1365,7 +1365,7 @@ const LV = [
     ctx.fillStyle = C.gold; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(S.lx, 40, 22, 0, 7); ctx.fill(); ctx.stroke(); },
   draw(){ for (const e of S.pl) { if (e.shad) { ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,4]); ctx.strokeRect(e.x + 1, e.y + 1, T - 2, 8); ctx.setLineDash([]); } else { ctx.fillStyle = C.door; ctx.fillRect(e.x + 1, e.y, T - 2, 10); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(e.x + 1, e.y + 1, T - 2, 8); } }
     if (S.sh) { const [a, b] = S.sh; ctx.fillStyle = 'rgba(30,43,71,.45)'; ctx.beginPath(); ctx.ellipse((a + b)/2, GY + 2, (b - a)/2 + 3, 4, 0, 0, 7); ctx.fill(); }
-    if (S.burn > 0) { ctx.fillStyle = `rgba(207,62,50,${Math.min(0.8, S.burn/45)})`; ctx.fillRect(P.x, P.y, PW, PH); } } },
+    if (S.burn > 0) { ctx.fillStyle = `rgba(207,62,50,${Math.min(0.8, S.burn/40)})`; ctx.fillRect(P.x, P.y, PW, PH); } } },
 
 /* 43. you can't hold your breath forever, and water lets you walk through fire, for a while */
 { id:'water', was:[41, 42], start:1.2, sy:228,
@@ -1429,10 +1429,12 @@ const LV = [
     else { ctx.fillStyle = C.door; ctx.save(); ctx.translate(tr.x + 6, GY - 3); ctx.rotate(1.3*(1 - (tr.fall || 0)/30)); ctx.fillRect(-3, -40, 6, 40); ctx.restore(); }
     drawBomb(S.bomb, S.boom); } },
 
-/* 45. it only hurts if you are standing on something else */
+/* 45. it only hurts if you are standing on something else; so stand on nothing but the wire, or on nothing at all */
 { id:'spark', was:[39], start:2,
   // the floor is live from here to past the end of the cable; a cable is strung above it, and it is the same wire
-  build(){ Gd(0,29); Door(27,14); S.live = {x:8*T, y:GY - 4, w:15*T, h:8}; S.cab = {x0:11*T, x1:20*T, on:false};
+  build(){ Gd(0,29); Door(27.6,14); S.live = {x:8*T, y:GY - 4, w:16*T, h:8}; S.cab = {x0:11*T, x1:20*T, on:false};
+    // past the floor, a wire hangs from the sky to the ground in front of the door: you can't go over it, only through it
+    S.hang = {x:26.4*T, y:0, w:8, h:GY}; S.zap = null;
     S.bugs = [{x:6*T, on:'floor', t:0, dead:false}, {x:15*T, on:'cable', t:0, d:1}]; },
   cy(x){ const c = S.cab; return GY - 44 + 18*Math.sin(Math.PI*clamp((x - c.x0)/(c.x1 - c.x0), 0, 1)); },
   update(){ const c = S.cab, x = pcx(), was = c.on; c.on = false;
@@ -1442,11 +1444,16 @@ const LV = [
       if (b.on === 'floor' && !b.dead) { b.x += 0.4; if (b.x > S.live.x - 2) { b.dead = true; for (let i = 0; i < 8; i++) parts.push({x:b.x, y:GY - 4, vx:(Math.random() - .5)*3, vy:-Math.random()*3, life:20, r:2, col:C.gold}); } }
       if (b.on === 'cable') { b.x += 0.35*b.d; if (b.x > c.x1 - 30 || b.x < c.x0 + 30) b.d = -b.d; } }
     // the wire and the ground at once: that is what it waits for
-    if (P.on && P.stand !== c && ov(pbox(1), S.live)) return die('shock'); },
+    if (P.on && P.stand !== c && ov(pbox(1), S.live)) { S.zap = [pcx(), P.y + PH]; return die('shock'); }
+    // touching the hanging wire is nothing in the air; with your feet on the ground, it goes through you
+    if (P.on && ov(pbox(1), S.hang)) { S.zap = [S.hang.x + 4, P.y + 8]; return die('shock'); } },
   draw(){ const c = S.cab, L = S.live; ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath();
     for (let x = L.x, i = 0; x <= L.x + L.w; x += 6, i++) ctx.lineTo(x, GY - 3 + (i % 2 ? -3 : 1)); ctx.stroke();
     ctx.strokeStyle = C.ink; ctx.lineWidth = 4; for (const px of [c.x0 - 2, c.x1 + 2]) { ctx.beginPath(); ctx.moveTo(px, GY - 4); ctx.lineTo(px, this.cy(px) - 6); ctx.stroke(); }
     ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath(); for (let x = c.x0, i = 0; x <= c.x1; x += 6, i++) ctx.lineTo(x, this.cy(x) + (i % 2 ? -2 : 2)); ctx.stroke();
+    const hg = S.hang; ctx.beginPath(); for (let y = 0, i = 0; y <= GY - 2; y += 6, i++) ctx.lineTo(hg.x + 4 + (i % 2 ? -2 : 2), y); ctx.stroke(); ctx.fillStyle = C.ink; ctx.fillRect(hg.x - 1, GY - 5, 10, 5);
+    // the spark that killed you: from where you touched the wire to your feet on the ground
+    if (S.zap && state === 'dead') { const [zx, zy] = S.zap; ctx.strokeStyle = C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(zx, zy); for (let k = 1; k <= 4; k++) ctx.lineTo(zx + (pcx() - zx)*k/4 + (k < 4 ? (Math.random() - .5)*8 : 0), zy + (P.y + PH - zy)*k/4); ctx.stroke(); }
     // the beetles: one walks onto the live floor, one walks along the cable
     for (const b of S.bugs) { const by = b.on === 'cable' ? this.cy(b.x) - 2 : GY - 2;
       ctx.fillStyle = b.dead ? C.soft : C.ink; ctx.beginPath(); ctx.ellipse(b.x, by - 3, 6, 4, 0, 0, 7); ctx.fill();
@@ -1532,18 +1539,29 @@ const LV = [
       ctx.strokeStyle = e.tone === 'L' ? C.ink : C.white; ctx.lineWidth = 2; ctx.setLineDash(on ? [] : [4, 3]); ctx.strokeRect(e.x + 2, e.y + 1, e.w - 4, e.h - 2); ctx.setLineDash([]); ctx.globalAlpha = 1; } },
   alpha(e){ return e.tone ? 0 : 1; } },
 
-/* 50. by the light of the storm; and the light comes before the sound */
+/* 50. by the light of the storm; and the light comes before the sound, and only the sound hides you */
 { id:'storm', start:1.5, dark:true, seeR:52,
   darkA(){ return S.flash > 0 ? clamp(1 - S.flash/10, 0, 1) : 1; },
   // narrow stones over the dark; you can stand only where you landed
   build(){ Gd(0,5); Gd(8,9); Gd(12,13); Gd(16,17); Gd(20,29); Door(28,14);
-    S.flash = 0; S.lt = 150; S.th = 0; S.rain = []; S.bat = {x:14*T, y:30, st:'roost', t:0}; },
+    S.flash = 0; S.lt = 150; S.th = 0; S.track = false; S.rain = []; S.bat = {x:14*T, y:30, st:'roost', t:0}; },
   // the flash, and a little later the thunder; while it rolls, the bat hears nothing else
   deaf(){ return S.th > 0; },
-  ping(x, y){ if (this.deaf()) return; const b = S.bat; b.st = 'dive'; b.tx = x; b.ty = y - 14; },
-  onJump(){ this.ping(pcx(), P.y + PH); },
+  // it hears a landing or a jump and makes for where you will be by the time it gets there; a jump it follows down, and waits for you
+  ping(x, y, jump){ if (this.deaf()) return; const b = S.bat; S.track = !!jump; b.st = 'dive'; b.tx = clamp(this.comeDown(), 10, lvW() - 10); b.ty = GY - 14; },
+  // where you will be by the time it gets there: down on a stone, and stopped at its edge
+  comeDown(){ const b = S.bat, ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0); let tx = pcx();
+    for (let k = 0; k < 3; k++) { const n = Math.round(Math.hypot(tx - b.x, GY - 14 - b.y)/11); let px = P.x, py = P.y, vx = P.vx, vy = P.vy, on = P.on;
+      for (let i = 0; i < Math.max(n, 1) && i < 120; i++) {
+        if (!on) { if (ax) vx = clamp(vx + ax*0.6, -4.4, 4.4); else vx *= 0.97; if (!keys.jump && vy < -3.5) vy = -3.5; vy = Math.min(vy + 0.55, 12); py += vy; if (vy > 0 && py + PH >= GY && groundAt(px + PW/2, GY)) { py = GY - PH; vy = 0; on = true; } else if (py > GY + 40) break; }
+        else { vx = ax ? clamp(vx + ax*0.9, -4.4, 4.4) : vx*0.7; if (!groundAt(px + PW/2 + vx, GY)) vx = 0; }
+        px += vx; }
+      tx = px + PW/2; }
+    return tx; },
+  onJump(){ this.ping(pcx(), P.y + PH, true); },
   onLand(){ this.ping(pcx(), P.y + PH); },
-  update(){ if (++S.lt >= 210) { S.lt = 0; S.flash = 26; shake = 3; }
+  update(){ if (P.on) S.track = false; if (S.track) { const b = S.bat; if (b.st === 'hover') b.t = Math.max(b.t, 2); b.tx = clamp(this.comeDown(), 10, lvW() - 10); if (b.st === 'hover' && Math.abs(b.tx - b.x) > 9) b.st = 'dive'; }
+    if (++S.lt >= 210) { S.lt = 0; S.flash = 26; shake = 3; }
     if (S.flash > 0) S.flash--;
     S.th = S.lt >= 70 && S.lt < 160 ? S.th + 1 : 0; if (S.th) shake = Math.max(shake, S.th < 20 ? 7 : 2);
     batStep(S.bat, 14*T, 30); if (S.bat.st === 'dive') { const b = S.bat, dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy); if (d > 9) { b.x += dx/d*2; b.y += dy/d*2; } }

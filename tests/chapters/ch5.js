@@ -24,7 +24,9 @@
   check('42 stand still in the shade', run(41, () => N, {max:3000}), 'dead');
   check('42 go whenever you have cooled down', run(41, () => P => { const here = !g.lv.lit(cx(), g.P.y + 14); if (here && g.S.burn > 0) return N(); return R(); }, {max:3000}), 'dead');
   check('42 go as soon as the boards are in shade', run(41, () => script([S.U(() => !g.lv.lit(16*T, 434)), S.R(28.5)]), {max:3000}), 'dead');
-  check('42 move with the shade', run(41, ride(96), {max:3000}), 'clear');
+  { const waits = []; for (let w = 0; w <= 1400; w += 100) for (const at of [2, 10]) waits.push(run(41, () => script([S.R(at), S.W(w), S.R(28.5), S.W(20)]), {max:3000})[0]);
+    check('42 wait in some shade, then run for it (any wait)', [waits.filter(r => r.startsWith('dead')).length + '/' + waits.length, waits.some(r => r === 'clear') ? 'clear' : 'dead'], 'dead'); }
+  for (const gm of [0, 96]) check(`42 move with the shade (crossing lit gaps up to ${gm}px)`, run(41, ride(gm), {max:3000}), 'clear');
   // ---- 43 water
   const swimTo = (tx, ty) => P => { const k = {right: cx() < tx*T, left: cx() > tx*T + 20}; return (g.P.y + 14 > ty) && g.P.vy > -1 ? {k, edge:true} : {k}; };
   const wet = [S.L(0.5), S.W(5)], dive = [S.R(5.6)], exitTo = [S.F(swimTo(24.4, 300), () => cx() > 24.2*T), S.F(P => ({k:{right:true}, edge: g.P.y < 262 || g.P.vy > -1}), () => g.P.on && g.P.y < 240), S.R(28.8)];
@@ -52,14 +54,17 @@
   check('44 burn the way, send the bomb, stand right by it', run(43, both(60), {max:3000}), 'dead');
   check('44 burn the way, send the bomb, wait not too near', run(43, both(140), {max:3000}), 'clear');
   // ---- 45 spark: the floor is live; stand on the cable, and leave it by a jump
-  { const onCab = S.U(P => P.on && P.stand === g.S.cab, {right:true}), up = [S.R(7.2), S.J(30, 1), onCab], off = x => [S.R(x), S.J(30, 1), S.U(P => P.on, {right:true}), S.R(27.5), S.W(30)];
+  { const onCab = S.U(P => P.on && P.stand === g.S.cab, {right:true}), up = [S.R(7.2), S.J(30, 1), onCab], land = x => [S.R(x), S.J(30, 1), S.U(P => P.on, {right:true})], toDoor = S.F(() => ({k:{right: cx() < 28.0*T, left: cx() > 28.4*T}}), () => false), off = x => [...land(x), S.R(25.4), S.J(8, 1), toDoor];
     check('45 walk', run(44, () => R), 'dead');
     check('45 hop over the start of the wire', run(44, () => script([S.R(7.0), S.J(8, 1), S.U(P => P.on, {right:true}), S.R(28)]), {max:900}), 'dead');
     check('45 wait before the wire', run(44, () => script([S.R(6.5), S.W(2000)]), {max:600}), 'timeout');
     check('45 onto the cable, walk off its end', run(44, () => script([...up, S.R(28)]), {max:900}), 'dead');
     check('45 onto the cable, jump off it too soon', run(44, () => script([...up, ...off(16.5)]), {max:900}), 'dead');
+    check('45 off the cable, then walk into the hanging wire', run(44, () => script([...up, ...land(19.0), S.R(28.2)]), {max:900}), 'dead');
+    check('45 jump at everything', run(44, () => P => P.on ? {jump:30, dir:1} : R(), {max:900}), 'dead');
     for (const x of [18.6, 19.4]) check(`45 onto the cable, jump off its end (at ${x})`, run(44, () => script([...up, ...off(x)]), {max:900}), 'clear');
     check('45 onto the cable from a standstill at the edge', run(44, () => script([S.R(7.2), S.W(20), S.J(30, 1), onCab, ...off(19.0)]), {max:900}), 'clear');
+    check('45 ... and a full jump through the hanging wire, then back to the door', run(44, () => script([...up, ...land(19.0), S.R(24.6), S.J(30, 1), toDoor]), {max:900}), 'clear');
     check('45 onto the cable from a run, a tile back', run(44, () => script([S.R(6.6), S.J(30, 1), onCab, ...off(19.0)]), {max:900}), 'clear'); }
   // ---- 46 wind
   check('46 run and jump', run(45, () => script([S.R(6.5), S.J(30, 1), S.R(28)]), {max:600}), 'dead');
@@ -102,6 +107,9 @@
     clean('storm'); check('50 jump as soon as you get to each edge', run(49, plan(() => true), {max:3000}), 'dead');
     clean('storm'); check('50 jump when the lightning shows the way', run(49, plan(() => g.S.flash > 14), {max:3000}), 'dead');
     clean('storm'); check('50 jump in the quiet after the thunder', run(49, plan(() => g.S.lt > 165), {max:3000}), 'dead');
+    { const res = []; for (let off = 0; off < 210; off += 10) for (const w of [0, 3]) res.push(run(49, () => script([S.W(off), ...hops.flatMap(([e, to]) => [S.R(e), S.JT(to, GY, {tol:10}), S.W(w)]), S.R(28.4), S.W(30)]), {max:3000})[0]);
+      // a chain that starts in the quiet is heard at least once on the stones; it may only clear when the thunder happens to cover every jump
+      check('50 chain-jump the stones to outrun it (any start)', [res.filter(r => r === 'clear').length + '/' + res.length, res.some(r => r === 'clear') ? 'clear' : 'dead'], 'dead'); }
     for (const [a, b] of [[2, 30], [20, 48]]) { clean('storm'); check(`50 jump while the thunder rolls (${a}-${b} frames into it)`, run(49, plan(() => g.S.th >= a && g.S.th <= b), {max:4000}), 'clear'); } }
   return out;
 })()
