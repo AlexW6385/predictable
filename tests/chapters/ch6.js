@@ -80,15 +80,13 @@
   check('59 never trust the same look twice in a row', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(17.5, 416), ...hop(20.5, 352), ...hop(23.5, 416), ...hop(26.0, GY), S.R(27.6), S.W(30)]), {max:1500}), 'clear');
   check('59 ... or skip the last stone', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(17.5, 416), ...hop(20.5, 352), ...hop(26.0, GY), S.R(27.6), S.W(30)]), {max:1500}), 'clear');
   // ---- 60 life
-  const across60 = [S.F(tap, () => cx() > 20.3*T), S.W(20)];
-  const scare60 = [S.R(7.4), S.W(10)];
-  const grow60 = [S.U(P => P.y + 28 <= 226), S.R(24.5), S.W(30)];
+  const soft60 = x => S.F(tap, () => cx() > x*T), stamp60 = [S.W(6), S.J(30, 0), S.U(P => P.on), S.U(() => !g.S.fl.away)];
   check('60 run', run(59, () => R), 'dead');
-  check('60 walk softly across, wait by the sleeper', run(59, () => script([S.F(tap, () => cx() > 18.8*T), S.W(600)]), {max:1500}), 'timeout');
-  check('60 walk softly across, wake him, go back softly', run(59, () => script([S.F(tap, () => cx() > 18.5*T), S.J(30, 0), S.F(P => ({k:{left: Math.abs(g.P.vx) < 2.4}}), () => cx() < 4*T), S.W(300)]), {max:1500}), 'dead');
-  check('60 land hard on the first bird', run(59, () => script([S.R(8.3), S.J(30, 1), S.W(200)]), {max:900}), 'dead');
-  check('60 frighten the birds from the bank; then across, and grow', run(59, () => script([...scare60, S.U(() => g.S.gd.gone), S.U(() => !g.S.fl.away), ...across60, ...grow60]), {max:2400}), 'clear');
-  check('60 frighten the birds, but do not wait for them', run(59, () => script([...scare60, S.U(() => g.S.gd.gone), S.R(20.5), S.W(300)]), {max:2400}), 'dead');
+  check('60 walk softly across both', run(59, () => script([soft60(28)]), {max:1500}), /dead|timeout/);
+  check('60 birds to the second gap, then across to the sleeper', run(59, () => script([soft60(12.6), ...stamp60, soft60(28)]), {max:2000}), 'dead');
+  check('60 wake him from the start bank', run(59, () => script([S.F(tap, () => cx() > 4.6*T), S.W(10), S.J(30, 0), S.W(300)]), {max:900}), 'timeout');
+  check('60 birds across, wake him, birds back, across', run(59, () => script([soft60(12.6), ...stamp60, S.F(tap, () => cx() > 16.3*T), ...stamp60, S.U(() => g.S.gd.gone),
+    S.L(12.6), ...stamp60, soft60(28)]), {max:3000}), 'clear');
 
   return out;
 })()

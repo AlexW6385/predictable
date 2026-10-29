@@ -1696,29 +1696,35 @@ const LV = [
         ctx.lineWidth = 1.5; for (let yy = b.y + 16, r = 0; yy < b.y + b.h; yy += 16, r++) { ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + w, yy); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + (r % 2 ? 10 : 22), yy - 16); ctx.lineTo(x + (r % 2 ? 10 : 22), yy); ctx.stroke(); }
         if (bite) { ctx.fillStyle = C.ink; ctx.fillRect(b.x, b.y - 2, b.w, 10); ctx.fillStyle = C.white; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(b.x + i*8, b.y - 2); ctx.lineTo(b.x + i*8 + 4, b.y + 7); ctx.lineTo(b.x + i*8 + 8, b.y - 2); } ctx.fill(); } } } } },
 
-/* 60. everything alive answers to everything alive: the birds fly from a threat, their flight is a noise, and the sleeper runs at a noise */
-{ id:'life', start:1.5,
-  build(){ Gd(0,8); Sp(9,16,14,'up'); R('g',9,16,15,16); Gd(17,29); R('b',21,26,7,7); Door(24,7);
-    // the only soil is under the sleeper; a vine on it would reach the door's ledge
-    S.vg = vineGarden([{x:20*T, w:T}], 224); S.fl = flockOf(9, 16); S.rings = [];
-    S.gd = {x:20*T + 4, y:GY - 24, vy:0, awake:false, gone:false}; },
-  noise(x, r){ if (r <= 0) return; S.rings.push({x, r, t:0}); const g = S.gd; if (!g.gone && Math.abs(g.x + 12 - x) < r) g.awake = true; },
-  onLand(){ this.noise(pcx(), P.landV > 6 ? 40 + 10*P.landV : 0); flockLand(S.fl); },
-  update(){ const pc = pcx(), fl = S.fl, g = S.gd, wasAway = fl.away;
-    S.runG = P.on && Math.abs(P.vx) >= 3.2 ? (S.runG || 0) + 1 : 0; if (S.runG > 10 && frame % 14 === 0) this.noise(pc, 80);
-    flockStep(fl); if (state !== 'play') return;
-    // a flock taking off all at once is loud
-    if (fl.away && !wasAway) this.noise(12.5*T + 16, 300);
-    // awake, the sleeper runs at you; over the pit, the birds take him for a threat, and without them there is nothing under him
-    if (!g.gone && g.awake) { const over = g.x + 12 > 9*T && g.x + 12 < 17*T;
-      if (over && !fl.away && g.vy === 0) flockScare(fl);
-      if ((over && fl.away) || g.vy > 0) { g.vy += 0.6; g.y += g.vy; if (g.y > GY + 30) { g.gone = true; dust(g.x + 12, GY + 10); shake = 6; } }
-      else g.x += Math.sign(pc - g.x - 12)*5.6;
-      if (ov(pbox(3), {x:g.x + 2, y:g.y + 2, w:20, h:20})) return die('guard'); }
-    else if (!g.gone && ov(pbox(3), {x:g.x + 2, y:g.y + 2, w:20, h:20})) return die('guard');
+/* 60. everything alive answers to everything alive: the birds fly from a noise and settle as far from it as they can, their flight is a noise, a sleeper runs at a noise, and his fall is a noise */
+{ id:'life', start:2,
+  build(){ Gd(0,5); Sp(6,11,15,'up'); R('g',6,11,16,16); Gd(12,16); Sp(17,22,15,'up'); R('g',17,22,16,16); Gd(23,29); Door(28,14);
+    // two gaps the birds can bridge, and a sleeper on the far bank, between you and the door
+    S.perch = [[6, 11], [17, 22]]; S.at = 0; S.rings = [];
+    S.fl = {away:0, birds:[0,1,2,3,4,5].map(k => E({t:'b', x:(6 + k)*T + 3, y:GY, w:26, h:10, solid:true, hidden:true, bird:true, hx:(6 + k)*T + 3, k}))};
+    S.gd = {x:24.3*T, y:GY - 24, vy:0, awake:false, gone:false}; },
+  mid(i){ return (S.perch[i][0] + S.perch[i][1] + 1)/2*T; },
+  near(x){ return S.fl.birds.some(b => Math.abs(b.x + 13 - x) < 160); },
+  // a noise: it wakes the sleeper if it reaches him, and puts up the birds if it is near them
+  noise(x, r, birds){ S.rings.push({x, r, t:0}); const g = S.gd; if (!g.gone && Math.abs(g.x + 12 - x) < r) g.awake = true;
+    if (birds && !S.fl.away && this.near(x)) this.scare(x); },
+  scare(x){ const fl = S.fl, from = S.at, d = [0, 1].map(i => Math.abs(this.mid(i) - x)); S.at = d[1] > d[0] ? 1 : 0;
+    fl.away = 200; for (const b of fl.birds) { b.ghost = true; b.hx = (S.perch[S.at][0] + b.k)*T + 3; b.vx = ((b.k*37) % 7 - 3)*0.6; b.vy = -2.5 - (b.k % 3)*0.6; } shake = Math.max(shake, 3);
+    // a whole flock taking off is loud
+    this.noise(this.mid(from), 300, false); },
+  onLand(){ if (P.landV > 6) this.noise(pcx(), 40 + 10*P.landV, true); },
+  update(){ const fl = S.fl, pc = pcx(), g = S.gd;
+    S.runG = P.on && Math.abs(P.vx) >= 3.2 ? (S.runG || 0) + 1 : 0; if (S.runG > 10 && frame % 14 === 0) this.noise(pc, 120, true);
     for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 24);
-    vineStep(S.vg); },
-  draw(){ drawNoise(S.rings); drawVines(S.vg); if (!S.gd.gone) drawGuard(S.gd); drawFlock(S.fl); } },
+    if (fl.away) { fl.away--; for (const b of fl.birds) { if (fl.away > 70) { b.x += b.vx; b.y += b.vy; b.vy = Math.max(b.vy - 0.02, -3.5); }
+      else { b.x += (b.hx - b.x)*0.08; b.y += (GY - b.y)*0.08; if (fl.away <= 1) { b.x = b.hx; b.y = GY; b.ghost = false; } } } }
+    // awake, he runs at you; the birds take him for a threat, and where there are no birds there is nothing under him
+    if (!g.gone && g.awake) { const pit = S.perch.findIndex(([a, b]) => g.x + 12 > a*T && g.x + 12 < (b + 1)*T);
+      if (pit >= 0 && !fl.away && S.at === pit && g.vy === 0) this.scare(g.x + 12);
+      if ((pit >= 0 && (fl.away || S.at !== pit)) || g.vy > 0) { g.vy += 0.6; g.y += g.vy; if (g.y > GY + 30) { g.gone = true; dust(g.x + 12, GY + 10); shake = 6; this.noise(g.x + 12, 300, true); } }
+      else g.x += Math.sign(pc - g.x - 12)*5.6; }
+    if (!g.gone && ov(pbox(3), {x:g.x + 2, y:g.y + 2, w:20, h:20})) return die('guard'); },
+  draw(){ drawNoise(S.rings); if (!S.gd.gone) drawGuard(S.gd); drawFlock(S.fl); } },
 
 /* ===================== VII. Self ===================== */
 
