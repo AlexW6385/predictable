@@ -577,12 +577,12 @@ const LV = [
 /* 2. a bridge that only exists while you are moving; and it sees where you are going */
 { id:'becoming', was:[2], start:2,
   build(){ Gd(0,4); Gd(25,29); Door(27,14); S.mt = 0; R('mb',5,24,14,14,{h:16, cond:() => S.mt > 0});
-    S.cq = [{c:9, m:'v'}, {c:15, m:'d'}, {c:20, m:'v'}]; },
+    S.cq = [{c:9, m:'v'}, {c:15, m:'v'}, {c:20, m:'v'}]; },
   update(){ S.mt = Math.abs(P.vx) > 0.8 ? 6 : Math.max(0, S.mt - 1);
     const pc = pcx();
     for (const q of S.cq) if (!q.done && pc > q.c*T) { q.done = true;
-      // it falls for 40 frames, so there is time to see where it is aimed: where your speed takes you, or where your last dodge took you
-      const lead = q.m === 'v' ? P.vx*40 : (S.dodge ?? P.vx*40);
+      // it falls for 40 frames, so there is time to see where it is aimed: where your speed takes you
+      const lead = P.vx*40;
       cone(clamp(pc + lead, 5*T + 12, 25*T - 12), {y:GY - 40 - 26*40, floor:H + 60, first:q === S.cq[0], sx:pc, onGround(c){ if (c.first) S.dodge = pcx() - c.sx; }}); }
     updCones(); },
   draw(){ drawCones(); } },
@@ -590,16 +590,23 @@ const LV = [
 /* 3. the right edge of the world is its left edge, and the door you can see is a lie */
 { id:'otherside', was:[5], start:3, wrapX:true,
   build(){ Gd(0,29); R('b',24,25,6,13); Door(27,14); S.door = {x:16*T, y:0}; },
-  update(){ if (fleeDoor(S.door, 1.8, {max:24*T - 40})) fakeClear(); },
+  update(){ const d = S.door, had = !!d.hop;
+    if (fleeDoor(d, 1.8, d.right ? {min:25.5*T, max:W - 40} : {max:24*T - 40})) return fakeClear();
+    // cornered at the wall, it hops over you the other way: off the left edge, and in again beside the other door
+    if (!had && d.hop && !d.right) { d.hop.to = 26*T - W; d.wrap = true; }
+    if (d.wrap && !d.hop) { d.x += W; d.wrap = false; d.right = true; } },
   hudOffset(){ return M.fake || 0; },
-  draw(){ drawShy(S.door); } },
+  draw(){ const d = S.door; drawShy(d); if (d.x < 0) { ctx.save(); ctx.translate(W, 0); drawShy(d); ctx.restore(); } } },
 
 /* 4. every jump turns the world inside out */
 { id:'insideout', was:[3], start:2,
-  build(){ Gd(0,4); Sp(5,21,14,'up'); R('g',5,21,15,16); Gd(22,29); Door(27,14); S.tog = 'A';
+  build(){ Gd(0,4); Sp(5,21,14,'up'); R('g',5,21,15,16); Gd(22,29); S.tog = 'A';
+    // the door is a door in one world and a mouth in the other
+    S.door = Door(27,14,{onEnter(d){ if (S.tog === 'A') levelClear(); else { d.bite = true; die('door'); } }});
     const tg = (c0,c1,r,set) => R('tog', c0, c1, r, r, {set, cond:e => e.set === S.tog});
     tg(7,9,12,'A'); tg(12,14,12,'B'); tg(17,19,12,'A'); },
-  onJump(){ S.tog = S.tog === 'A' ? 'B' : 'A'; } },
+  onJump(){ S.tog = S.tog === 'A' ? 'B' : 'A'; },
+  update(){ S.door.teeth = S.tog === 'A' ? 0 : 1; } },
 
 /* 5. it will not be looked at */
 { id:'bashful', start:2,
@@ -617,16 +624,16 @@ const LV = [
     const far = S.ds.every(d => Math.abs(d.x + 18 - pcx()) > 6*T), calm = still() && !keys.left && !keys.right && !keys.jump;
     if (S.ph === 'open') { S.t = far && calm ? S.t + 1 : 0; if (S.t > 40) { S.ph = 'closing'; S.t = 0; } }
     else if (S.ph === 'closing') { if (!calm) { S.ph = 'open'; S.t = 0; S.snap = 12; } else if (++S.t >= 30) { S.ph = 'shut'; S.t = 0; } }
-    else if (S.ph === 'shut') { if (++S.t >= 110) { S.ph = 'opening'; S.t = 0; } }
+    else if (S.ph === 'shut') { if (++S.t >= 170) { S.ph = 'opening'; S.t = 0; } }
     else if (++S.t >= 8) { S.ph = 'open'; S.t = 0; }
     S.lid = S.ph === 'open' ? 0 : S.ph === 'closing' ? S.t/30*0.9 : S.ph === 'shut' ? 1 : 1 - S.t/8; if (S.snap) S.snap--;
     for (const d of S.ds) d.teeth = S.lid >= 1 ? 0 : 1; },
-  draw(){ drawEye(480, 96, 30, pcx(), P.y + 14, S.lid); if (S.snap) { ctx.strokeStyle = C.red; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(480, 96, 56 + S.snap, 0, 7); ctx.stroke(); } } },
+  draw(){ const nd = S.ds.find(d => Math.abs(d.x + 18 - pcx()) < 6*T); drawEye(480, 96, 30, nd ? nd.x + 18 : pcx(), nd ? GY - 30 : P.y + 14, S.lid); if (S.snap) { ctx.strokeStyle = C.red; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(480, 96, 56 + S.snap, 0, 7); ctx.stroke(); } } },
 
 /* 7. three ways forward, and the way you came */
-{ id:'wayyoucame', start:5, noEntrance:true,
+{ id:'wayyoucame', start:11, noEntrance:true,
   build(){ Gd(0,6); Gd(9,29); P.face = -1; S.look = 0; S.ent = {x:1*T, y:0, feet:true, open:true};
-    S.bt = [13, 19, 25].map(c => ({x:c*T - 2, y:GY - 56, vy:0, fall:false, gone:false})); },
+    S.bt = [17, 22, 27].map(c => ({x:c*T - 2, y:GY - 56, vy:0, fall:false, gone:false})); },
   update(){ const e = S.ent, dir = Math.sign(e.x + 18 - pcx()) || 1;
     S.look = (P.face === dir) ? 0 : S.look + 1; e.teeth = clamp(1 - S.look/90, 0, 1);
     if (fleeDoor(e, 1.4, {noFlee:true})) { if (S.look >= 90) return levelClear(); e.bite = true; return die('door'); }
@@ -636,7 +643,7 @@ const LV = [
       if (rush) { b.x += Math.sign(pcx() - b.x - 18)*3.4; b.rush = true; } else b.rush = false;
       if (!groundAt(b.x + 18, GY)) { b.fall = true; b.vy = 0; }
       if (ov(pbox(4), {x:b.x + 4, y:b.y + 4, w:28, h:52})) { b.bite = true; return die('door'); } } },
-  draw(){ for (const b of S.bt) if (!b.gone) drawDoor(b.x, b.y, {bite:b.rush || b.bite});
+  draw(){ for (const b of S.bt) if (!b.gone) drawDoor(b.x, b.y, {bite:true});
     drawShy(S.ent);
     let best = null, bd = 1e9; for (const b of S.bt) if (!b.gone && !b.fall) { const k = Math.abs(b.x + 18 - pcx()); if (k < bd) { bd = k; best = b; } }
     drawEye(560, 100, 26, best && bd < 6*T ? best.x + 18 : pcx(), best && bd < 6*T ? best.y + 28 : P.y + 14, 0); } },
@@ -674,22 +681,39 @@ const LV = [
     else { ctx.strokeStyle = C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(d.x + 9, GY - 38); ctx.lineTo(d.x + 15, GY - 38); ctx.moveTo(d.x + 21, GY - 38); ctx.lineTo(d.x + 27, GY - 38); ctx.stroke();
       const z = (frame >> 4) % 3; txt('z', d.x + 34 + z*4, GY - 66 - z*8, `${11 + z*3}px ${FD}`, C.soft); } } },
 
-/* 10. the beginning */
+/* 10. the beginning: it sleeps out of reach, wakes to a noise, comes to whoever lets go, bites whoever faces it; and the Eye shoots whoever is still in the open */
 { id:'beginning', was:[30], start:3,
-  build(){ S.tiles = Gt(0,29,{life:true}); R('b',14,15,13,13); R('b',13,16,10,10,{roof:true}); S.door = {x:24*T, y:0}; S.las = {ph:'idle', t:0}; S.st = 0; },
-  update(){ grow(S.tiles, 150);
-    const sheltered = pcx() > 13*T && pcx() < 17*T && P.y > 352;
+  build(){ Gd(0,21); R('g',22,29,11,16); R('b',11,11,12,13); R('b',12,16,10,10,{roof:true});
+    S.door = {x:25*T, y:-96}; S.awake = 0; S.rings = []; S.las = {ph:'idle', t:0}; S.st = 0; S.drop = 0; },
+  noise(x, r){ if (r <= 0) return; S.rings.push({x, r, t:0}); if (Math.abs(S.door.x + 18 - x) < r) S.awake = 420; },
+  onLand(){ this.noise(pcx(), P.landV > 6 ? 60 + 12*P.landV : 0); },
+  update(){ const pc = pcx(); if (P.on && running() && frame % 8 === 0) this.noise(pc, 260);
+    for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 26);
+    // the Eye shoots whoever stands still in the open
+    const sheltered = pc > 12*T && pc < 17*T && P.y > 352;
     S.st = still() ? S.st + 1 : 0;
     const L = S.las;
-    if (L.ph === 'idle' && S.st > 50 && !sheltered) { L.ph = 'aim'; L.t = 30; L.tx = pcx(); L.ty = P.y + PH/2; }
+    if (L.ph === 'idle' && S.st > 50 && !sheltered) { L.ph = 'aim'; L.t = 30; L.tx = pc; L.ty = P.y + PH/2; }
     else if (L.ph === 'aim' && --L.t <= 0) { L.ph = 'fire'; L.t = 10; const r = ray(480, 96, L.tx, L.ty); L.ex = r.x; L.ey = r.y; shake = 5; if (r.hit) return die('laser'); }
     else if (L.ph === 'fire' && --L.t <= 0) L.ph = 'idle';
-    if (fleeDoor(S.door, 2.2)) chapterEnd(); },
+    // the door: asleep on its ledge until a noise reaches it; awake, it runs from whoever comes and comes to whoever lets go, for a while
+    const d = S.door, dir = Math.sign(d.x + 18 - pc) || 1, base = d.x + 18 > 22*T ? -96 : 0;
+    if (d.y < base) d.y = base; else if (d.y > base) { S.drop += 0.6; d.y = Math.min(base, d.y + S.drop); } else S.drop = 0;
+    if (S.awake > 0) { S.awake--; const y0 = d.y; d.teeth = P.face === dir ? 1 : 0;
+      if (fleeDoor(d, 2.2, {min:2*T, max:28*T, noHop:true})) { if (P.face !== dir) return chapterEnd(); d.bite = true; return die('door'); }
+      d.y = y0; }
+    else { d.walk = false; d.teeth = 0; } },
   draw(){ const L = S.las;
+    for (const r of S.rings) { ctx.strokeStyle = `rgba(207,62,50,${1 - r.t/26})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r.x, GY, r.r*(0.25 + r.t/34), Math.PI, 0); ctx.stroke(); }
     if (L.ph === 'aim' && (frame >> 2) % 2) { ctx.strokeStyle = C.red; ctx.lineWidth = 1.5; ctx.setLineDash([6,5]); ctx.beginPath(); ctx.moveTo(480, 96); ctx.lineTo(L.tx, L.ty); ctx.stroke(); ctx.setLineDash([]); }
     if (L.ph === 'fire') { ctx.strokeStyle = C.red; ctx.lineWidth = 2 + L.t*0.6; ctx.beginPath(); ctx.moveTo(480, 96); ctx.lineTo(L.ex, L.ey); ctx.stroke(); }
     drawEye(480, 96, 24, L.ph === 'idle' ? pcx() : L.tx, L.ph === 'idle' ? P.y + 14 : L.ty, 0);
-    drawShy(S.door); } },
+    const d = S.door; drawShy(d);
+    // its eyes: shut while it sleeps, open while awake, drooping as it grows sleepy
+    const ey = GY - 56 + d.y - 6 + 16;
+    if (S.awake > 0) { const lid = S.awake < 120 ? (120 - S.awake)/120*4 : 0; ctx.fillStyle = C.white; ctx.fillRect(d.x + 9, ey, 6, 6 - lid); ctx.fillRect(d.x + 21, ey, 6, 6 - lid); }
+    else { ctx.strokeStyle = C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(d.x + 9, ey + 4); ctx.lineTo(d.x + 15, ey + 4); ctx.moveTo(d.x + 21, ey + 4); ctx.lineTo(d.x + 27, ey + 4); ctx.stroke();
+      const z = (frame >> 4) % 3; txt('z', d.x + 34 + z*4, ey - 24 - z*8, `${11 + z*3}px ${FD}`, C.soft); } } },
 
 /* ===================== II. Sky ===================== */
 
@@ -699,12 +723,15 @@ const LV = [
     S.uT = S.roofs.map(() => 0); S.lim = clamp(Math.round((avg(M.sh) ?? 90)*0.75), 45, 120); S.rt = 50; },
   update(){ const pc = pcx();
     S.roofs.forEach((r, i) => { const under = pc > r.x && pc < r.x + r.w && P.y > r.y && !r.fall && r.alive;
-      if (under && !r.painted) { if (++S.uT[i] > S.lim && r.ct == null) { r.crumble = 16; r.ct = 16; } } else if (S.uT[i] > 0) { M.sh = M.sh || []; push(M.sh, S.uT[i], 6); S.uT[i] = 0; } });
+      if (under && !r.painted) { if (++S.uT[i] > S.lim && r.ct == null) { r.crumble = 16; r.ct = 16; } r.shk = S.uT[i] > S.lim - 30; } else if (S.uT[i] > 0) { M.sh = M.sh || []; push(M.sh, S.uT[i], 6); S.uT[i] = 0; r.shk = false; } else r.shk = false; });
     // a curtain of rain, every so often, centred on where you will be: in the open there is nowhere to go
     if (--S.rt <= 0 && pc < 26*T) { S.rt = 54; const at = whereIn(36), bk = P.vx >= 0 ? 170 : 70, fw = P.vx >= 0 ? 70 : 170;
       for (let x = Math.min(pc, at) - bk; x <= Math.max(pc, at) + fw; x += 30) drop(x, 36, {block:true}); }
     updCones(); },
-  draw(){ drawCones(); } },
+  draw(){ // cracks spread through a roof the longer you shelter under it
+    S.roofs.forEach((r, i) => { const k = Math.min(1, S.uT[i]/S.lim); if (k <= 0 || r.painted || !r.alive || r.fall) return; ctx.strokeStyle = C.white; ctx.lineWidth = 1.5; ctx.beginPath();
+      for (let j = 0; j < Math.ceil(k*5); j++) { const x0 = r.x + 6 + j*11; ctx.moveTo(x0, r.y + 2); ctx.lineTo(x0 + 4, r.y + 12*k + 4); ctx.lineTo(x0 + 1, r.y + 28*k + 2); } ctx.stroke(); });
+    drawCones(); } },
 
 /* 12. its aim is your tool */
 { id:'hammer', start:2, sy:324,
@@ -713,7 +740,9 @@ const LV = [
     const lid = ents.find(e => e.t === 'bb'); if (pc < 12*T && lid && lid.alive) S.armed = true; if (!lid || !lid.alive) S.armed = false;
     if (S.armed && pc > 15*T && P.vx > 0.5) { S.armed = false; drop(pc + P.vx*40, 40, {floor:352}); }
     updCones(); },
-  draw(){ drawCones(); } },
+  draw(){ ctx.strokeStyle = 'rgba(207,62,50,.6)'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(15*T, 352); ctx.lineTo(15*T, 300); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = S.armed ? C.gold : 'rgba(30,43,71,.25)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(12*T, 352); ctx.lineTo(12*T, 322); ctx.stroke();
+    drawCones(); } },
 
 /* 13. it always aims where you were */
 { id:'behind', start:3,
@@ -755,61 +784,83 @@ const LV = [
   onDeath(){ M.path = S.path; },
   draw(){ drawCones(); if (S.gp && !S.gDead) { ctx.globalAlpha = 0.5; drawPlayerAt(S.gp[0], S.gp[1], PW, PH, 1, C.ink2, C.ink, true); ctx.globalAlpha = 1; } } },
 
-/* 16. three heavy things, three opinions about you */
+/* 16. three heavy things, three opinions about you: where you are going, where you would be at full speed, and only exactly where you are */
 { id:'heavy', was:[10], start:1,
   build(){ Gd(0,29); Door(28,14);
-    S.th = ['pred','ambush','dash'].map((m,i) => E({t:'th', mode:m, x:[7.5,15.5,23.5][i]*T - 20, y:GY - 150, top:GY - 150, w:40, h:40, solid:true, st:'wait', tm:0})); },
+    S.th = [['pred', 8.5], ['ambush', 11.5], ['dash', 21.5]].map(([m, c]) => E({t:'th', mode:m, x:c*T - 20, y:GY - 150, top:GY - 150, w:40, h:40, solid:true, st:'wait', tm:0})); },
+  mark(b){ const pc = pcx(); if (b.st !== 'wait') return null;
+    if (b.mode === 'pred') return pc + P.vx*13;
+    if (b.mode === 'dash') return Math.abs(P.vx) >= 3.2 ? pc + Math.sign(P.vx)*57 : null;
+    return null; },
   update(){ const pc = pcx();
     for (const b of S.th) { const bc = b.x + 20;
-      if (b.st === 'wait') { let go = Math.abs(pc - bc) < 31;
-        if (b.mode === 'pred') go = go || Math.abs(pc + P.vx*13 - bc) < 10;
-        if (b.mode === 'ambush') go = Math.abs(pc - bc) < 5;
-        if (b.mode === 'dash') go = go || (P.vx > 0.3 && Math.abs(pc + 4.4*13 - bc) < 10);
+      if (b.st === 'wait') { const m = this.mark(b); let go;
+        // the first falls on where you are going; the second only on exactly where you are; the third only on where a full run would put you
+        if (b.mode === 'pred') go = Math.abs(pc - bc) < 31 || Math.abs(m - bc) < 10;
+        else if (b.mode === 'ambush') go = Math.abs(pc - bc) < 5;
+        else go = m != null && Math.abs(m - bc) < 10;
         if (go) { b.st = 'fall'; b.vy = 0; b.ghost = true; } }
-      else if (b.st === 'fall') { b.vy += b.mode === 'ambush' ? 2 : 1.2; b.y += b.vy; if (ov(pbox(3), b)) return die('crush'); if (b.y + 40 >= GY) { b.y = GY - 40; b.st = 'down'; b.tm = 40; b.ghost = false; shake = 8; dust(bc, GY); } }
+      else if (b.st === 'fall') { b.vy += b.mode === 'ambush' ? 2 : 1.2; b.y += b.vy; if (ov(pbox(3), b)) return die('crush');
+        if (b.y + b.h >= GY) { b.y = GY - b.h; b.st = 'down'; b.tm = 40; b.ghost = false; shake = 8; dust(bc, GY);
+          // the third, having missed, stays where it fell, and stands up tall
+          if (b.mode === 'dash') { b.st = 'wall'; } } }
+      else if (b.st === 'wall') { if (b.h < 3*T) { b.h += 6; b.y = GY - b.h; } }
       else if (b.st === 'down') { if (--b.tm <= 0) b.st = 'rise'; }
-      else if (b.st === 'rise') { b.y -= 2; if (b.y <= b.top) { b.y = b.top; b.st = 'wait'; } } } } },
+      else if (b.st === 'rise') { b.y -= 2; if (b.y <= b.top) { b.y = b.top; b.st = 'wait'; } } } },
+  draw(){ for (const b of S.th) { const bc = b.x + 20, m = this.mark(b), ey = b.y + 14;
+      if (m != null && Math.abs(m - bc) < 260) { ctx.strokeStyle = b.mode === 'dash' ? C.gold : C.red; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(m - 6, GY - 8); ctx.lineTo(m + 6, GY + 4); ctx.moveTo(m + 6, GY - 8); ctx.lineTo(m - 6, GY + 4); ctx.stroke();
+        ctx.setLineDash([3, 5]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(bc, b.y + b.h); ctx.lineTo(m, GY - 8); ctx.stroke(); ctx.setLineDash([]); }
+      if (b.mode === 'ambush' && b.st === 'wait') { ctx.strokeStyle = C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bc - 12, ey + 3); ctx.lineTo(bc - 4, ey + 3); ctx.moveTo(bc + 4, ey + 3); ctx.lineTo(bc + 12, ey + 3); ctx.stroke(); }
+      else { ctx.fillStyle = C.white; ctx.fillRect(bc - 12, ey, 7, 7); ctx.fillRect(bc + 5, ey, 7, 7); const lk = m != null ? Math.sign(m - bc)*2 : Math.sign(pcx() - bc)*2; ctx.fillStyle = C.ink; ctx.fillRect(bc - 10 + lk, ey + 2, 3, 4); ctx.fillRect(bc + 7 + lk, ey + 2, 3, 4); }
+      if (b.st === 'wait') { ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bc, 0); ctx.lineTo(bc, b.y); ctx.stroke(); } } } },
 
 /* 17. on ice, where you will be is already decided */
 { id:'ice', was:[33], start:2,
   build(){ Gd(0,29,{ice:true}); Door(27.5,14); S.rt = 24; },
-  update(){ const pc = pcx(); if (pc > 3*T && pc < 25.5*T && --S.rt <= 0) { S.rt = 56; cone(clamp(pc + P.vx*33, 3*T, 26.5*T), {y:-440}); }
-    // it keeps re-aiming at where your speed is taking you, until it is a moment from the ground
+  update(){ const pc = pcx(); if (pc > 3*T && pc < 22*T && --S.rt <= 0) { S.rt = 72; cone(clamp(pc + P.vx*60, 3*T, 25*T), {y:GY - 40 - 26*60}); }
+    // it keeps re-aiming at where your speed is taking you, and you can see it doing so; half a second from the ground it stops
     const ax = P.on ? P.vx - (S.pvx ?? P.vx) : 0; S.pvx = P.vx;
-    for (const c of S.cones) if (c.st === 'fall') { const left = (GY - (c.y + 40))/26; if (left > 27) c.x = clamp(pc + P.vx*left + 0.5*ax*left*left, 3*T, 26.5*T); }
+    for (const c of S.cones) if (c.st === 'fall') { const left = (GY - (c.y + 40))/26; c.locked = left <= 30; if (!c.locked) c.x = clamp(pc + P.vx*left + 0.5*ax*left*left, 3*T, 25*T); }
     updCones(); },
-  draw(){ drawCones(); } },
+  draw(){ for (const c of (S.cones || [])) if (c.st === 'fall') { ctx.strokeStyle = C.red; ctx.lineWidth = 2; if (!c.locked) ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.ellipse(c.x, GY - 2, 18, 5, 0, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
+    drawCones(); } },
 
 /* 18. it aims at you in the mirror */
 { id:'reflection', start:3,
-  build(){ Gd(0,29); R('g',24,29,10,13); Door(27,10); S.st = 0; },
-  update(){ S.st = still() ? S.st + 1 : 0; if (S.st === 30) drop(W - pcx(), 40, {plant:300});
+  build(){ Gd(0,29); R('g',20,29,10,13); R('g',25,29,6,9); Door(27.5,6); S.st = 0; },
+  // a cone that falls on the ledges stops on them
+  floorAt(x){ return x >= 25*T ? 192 : x >= 20*T ? 320 : GY; },
+  update(){ S.st = still() ? S.st + 1 : 0; if (S.st === 30) { const x = W - pcx(); drop(x, 40, {plant:360, floor:this.floorAt(x)}); }
     updCones(); },
   drawBack(){ ctx.strokeStyle = 'rgba(30,43,71,.22)'; ctx.lineWidth = 2; ctx.setLineDash([2,7]); ctx.beginPath(); ctx.moveTo(W/2, 40); ctx.lineTo(W/2, GY); ctx.stroke(); ctx.setLineDash([]);
-    if (state === 'play') { ctx.globalAlpha = 0.16 + 0.5*clamp(S.st/30, 0, 1); drawPlayerAt(W - P.x - PW, P.y, PW, PH, -P.face, C.white, C.ink, false); ctx.globalAlpha = 1; } },
+    if (state === 'play') { const mx = W - P.x - PW, my = this.floorAt(mx + PW/2) - PH; ctx.globalAlpha = 0.16 + 0.5*clamp(S.st/30, 0, 1); drawPlayerAt(mx, my, PW, PH, -P.face, C.white, C.ink, false); ctx.globalAlpha = 1; } },
   draw(){ drawCones(); } },
 
 /* 19. it knows where you will come down */
 { id:'landing', start:2,
-  build(){ Gd(0,6); Gd(9,14); Gd(17,22); Gd(25,29); Door(27,14); },
-  onJump(){ drop(pcx() + P.vx*38, 38); },
+  build(){ Gd(0,6); Gd(9,14); Gd(17,22); Gd(25,29); Door(27.5,14); },
+  // the moment you leave the ground, it sends a cone to where the keys you are holding would bring you down
+  onJump(){ drop(whereIn(38), 38); },
   update(){ updCones(); },
   draw(){ drawCones(); } },
 
-/* 20. the Eye aims the sky, and it blinks */
-{ id:'eyesky', start:1,
-  build(){ Gd(0,29); S.roofs = [[5,false],[11,true],[17,false],[23,false]].map(([c, p]) => R('b', c, c+2, 10, 10, {roof:true, fakeRoof:p, painted:p, killFall:true}));
-    S.uT = [0,0,0,0]; S.door = {x:28*T - 18, y:0}; S.look = 90; S.eye = {t:0}; S.rt = 30; },
-  update(){ const pc = pcx(), e = S.eye; e.t = (e.t + 1) % 300; S.lid = e.t < 200 ? 0 : e.t < 210 ? (e.t - 200)/10 : e.t < 290 ? 1 : 1 - (e.t - 290)/10;
-    S.roofs.forEach((r, i) => { const under = pc > r.x && pc < r.x + r.w && P.y > r.y && !r.fall && r.alive;
-      if (under) { if (++S.uT[i] > 150 && r.ct == null) { r.crumble = 16; r.ct = 16; } r.shk = S.uT[i] > 110 && !r.painted; } else { S.uT[i] = 0; r.shk = false; } });
-    if (S.lid < 0.5 && pc > 2*T && --S.rt <= 0) { S.rt = 50; drop(pc + P.vx*36, 36, {block:true}); }
-    const d = S.door, dir = Math.sign(d.x + 18 - pc) || 1;
-    S.look = (P.face === dir) ? 0 : S.look + 1; d.teeth = clamp(1 - S.look/60, 0, 1);
-    // it keeps to its post until you are near it
-    if (pc > 21*T && fleeDoor(d, 2.0, {min:22*T, noFlee:true, wait:60})) { if (S.look >= 60) return chapterEnd(); d.bite = true; return die('door'); }
+/* 20. the Eye aims the sky: open, it aims where you are going; shut, where it last saw you */
+{ id:'eyesky', start:2,
+  build(){ Gd(0,19); R('g',20,24,10,16); R('g',27,29,10,16); R('g',25,26,13,16); R('bb',25,26,10,10,{hp:2}); Door(25.5,13);
+    S.eye = {t:0}; S.ct = 40; S.seen = null; },
+  // what a cone falling at x will land on: the ground, the ledge, or the bottom of the well under the lid
+  floorAt(x){ return x >= 20*T && x < 25*T || x >= 27*T ? 320 : x >= 25*T && x < 27*T ? 416 : GY; },
+  update(){ const pc = pcx(), e = S.eye; e.t = (e.t + 1) % 300; const was = S.shut;
+    S.lid = e.t < 200 ? 0 : e.t < 210 ? (e.t - 200)/10 : e.t < 290 ? 1 : 1 - (e.t - 290)/10; S.shut = S.lid > 0.5;
+    // the moment it shuts, it keeps the last place it saw you
+    if (S.shut && !was) { S.seen = pc; S.ct = 12; }
+    if (!S.shut && was) S.ct = 40;
+    if (pc > 2*T && --S.ct <= 0) {
+      if (!S.shut) { S.ct = 64; const x = clamp(whereIn(40), 2*T, 29*T); drop(x, 40, {floor:this.floorAt(x)}); }
+      else { S.ct = 1e9; const x = S.seen; drop(x, 40, {floor:this.floorAt(x), plant:420}); } }
     updCones(); },
-  draw(){ drawCones(); drawShy(S.door); drawEye(480, 70, 26, pcx() + P.vx*30, P.y + 14, S.lid); } },
+  draw(){ drawCones(); drawEye(480, 70, 26, S.shut ? (S.seen ?? pcx()) : pcx() + P.vx*30, S.shut ? GY : P.y + 14, S.lid);
+    if (S.shut && S.seen != null) { ctx.strokeStyle = 'rgba(207,62,50,.45)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(S.seen, 60); ctx.lineTo(S.seen, this.floorAt(S.seen)); ctx.stroke(); ctx.setLineDash([]); } } },
 
 /* ===================== III. Seeming ===================== */
 
@@ -2492,7 +2543,7 @@ function step(){
     jumpEdge = false; pressEdge = false; return;
   }
   if (state === 'clear') { clearT++; updParts();
-    if (clearT > 100) { if (S.fake) { M.fake = (M.fake || 0) + 1; if (M.fake > 3) { M.fake = 0; flash = 1; } respawn(); }
+    if (clearT > 100) { if (S.fake) { M.fake = (M.fake || 0) + 1; if (M.fake > 1) { M.fake = 0; flash = 1; } respawn(); }
       else startLevel(Math.min(LV.length - 1, lvl + 1)); state = 'play'; }
     jumpEdge = false; pressEdge = false; return; }
   if (state === 'win') { clearT++; updParts(); if ((clearT > 120 && jumpEdge) || clearT > 900) {

@@ -9,7 +9,7 @@
   const cones = () => g.S.cones.filter(c => c.st === 'fall');
   check('2 stop when something falls', run(1, () => P => cones().length ? {k:{}} : R()), 'dead');
   check('2 just run', run(1, () => R), 'dead');
-  check('2 same dodge every time (reverse 10f)', run(1, () => { let n = 0, seen = 0; return P => { const c = g.S.cones.length; if (c > seen) { seen = c; n = 10; } if (n > 0) { n--; return Lf(); } return R(); }; }), 'dead');
+  check('2 turn back briefly at each cone', run(1, () => { let n = 0, seen = 0; return P => { const c = g.S.cones.length; if (c > seen) { seen = c; n = 10; } if (n > 0) { n--; return Lf(); } return R(); }; }), 'clear');
   check('2 let go like in 1', run(1, () => script([S.R(8), S.W(400)])), 'dead');
   check('2 read each cone, never stop', run(1, () => P => { for (const c of cones()) { const m = Math.max(0, (GY - c.y - 40)/26); const px = cx() + g.P.vx*m; if (Math.abs(px - c.x) < 34) return Lf(); } return R(); }), 'clear');
   check('2 step back from each shadow ahead (a person)', run(1, () => { let back = 0, seen = 0; return P => { const cs = cones(); if (g.S.cones.length > seen) { seen = g.S.cones.length; const c = g.S.cones[seen-1]; back = c.x > cx() - 10 ? 34 : 0; } if (back > 0) { back--; return Lf(); } return R(); }; }), 'clear');
@@ -19,8 +19,9 @@
   check('3 walk left off the screen', run(2, () => Lf, {freshMem:true}), 'clear');
   // ---- 4 inside out
   check('4 jump straight onto the first block', run(3, () => script([S.R(3.5), S.JT(8, 384), S.W(60)])), 'dead');
-  check('4 hop first, then block to block', run(3, () => script([S.R(3), S.J(1, 0), S.JT(8, 384), S.JT(13, 384), S.JT(18, 384), S.JT(24, GY, {tol:40}), S.R(28)])), 'clear');
-  check('4 the same with full jumps from near each edge', run(3, () => script([S.R(3), S.J(1, 0), S.R(3.6), S.J(30, 1), S.R(9.2), S.J(30, 1), S.R(14.2), S.J(30, 1), S.R(19.2), S.J(30, 1), S.R(28)])), 'clear');
+  check('4 hop first, then block to block, straight in', run(3, () => script([S.R(3), S.J(1, 0), S.JT(8, 384), S.JT(13, 384), S.JT(18, 384), S.JT(24, GY, {tol:40}), S.R(28)])), 'dead');
+  check('4 hop first, block to block, hop again before the door', run(3, () => script([S.R(3), S.J(1, 0), S.JT(8, 384), S.JT(13, 384), S.JT(18, 384), S.JT(24, GY, {tol:40}), S.U(P => P.on), S.J(1, 0), S.U(P => P.on), S.R(28)])), 'clear');
+  check('4 the same with full jumps from near each edge', run(3, () => script([S.R(3), S.J(1, 0), S.R(3.6), S.J(30, 1), S.R(9.2), S.J(30, 1), S.R(14.2), S.J(30, 1), S.R(19.2), S.J(30, 1), S.U(P => P.on), S.J(1, 0), S.U(P => P.on), S.R(28)])), 'clear');
   // ---- 5 bashful
   check('5 walk into it', run(4, () => R), 'dead');
   check('5 let go and wait for it', run(4, () => script([S.R(4), S.W(1500)]), {max:1200}), 'timeout');
@@ -35,11 +36,11 @@
   check('6 stop on the stone, wait for the lid, run', run(5, () => script([S.R(14.7), S.U(() => g.S.lid >= 1), S.R(28)])), 'clear');
   check('6 ... or run back to the near one', run(5, () => script([S.R(14.7), S.U(() => g.S.lid >= 1), S.L(1)])), 'clear');
   // ---- 7 the way you came
-  check('7 go for the doors ahead', run(6, () => script([S.R(6), S.J(30, 1), S.R(29)])), 'dead');
+  check('7 go for the doors ahead', run(6, () => R), 'dead');
   check('7 let go where you spawn (facing it)', run(6, () => script([S.W(900)])), 'dead');
-  check('7 stop on the far side to think', run(6, () => script([S.R(6), S.J(30, 1), S.R(11), S.W(600)])), 'dead');
+  check('7 turn your back where you spawn and let go', run(6, () => script([S.K({right:true}, 2), S.W(900)])), 'dead');
   check('7 walk back into it', run(6, () => Lf), 'dead');
-  check('7 turn your back and let go', run(6, () => script([S.K({right:true}, 2), S.W(900)])), 'clear');
+  check('7 back over the pit, turn your back, let go', run(6, () => script([S.L(9.6), S.J(30, -1), S.U(P => P.on && cx() < 6.5*T), S.L(4.5), S.K({right:true}, 2), S.W(900)])), 'clear');
   // ---- 8 what it brings
   check('8 let go where you start', run(7, () => script([S.W(1200)])), 'dead');
   check('8 walk at it', run(7, () => R), 'dead');
@@ -50,8 +51,12 @@
   check('9 let go and wait (it does not come)', run(8, () => script([S.R(5), S.W(1200)]), {max:900}), 'timeout');
   check('9 run near, then creep the rest', run(8, () => { let t = 0; return P => cx() < 13*T ? R() : {k:{right:(t++ % 8) === 0}}; }, {max:1500}), 'clear');
   // ---- 10 the beginning
+  const wake10 = [S.R(10.2), S.J(30, 1), S.R(19.6)];
   check('10 chase the door', run(9, () => P => ({k: g.S.door.x + 18 > cx() ? {right:true} : {left:true}}), {max:900}), /timeout|dead/);
-  check('10 let go on the floor like in 1', run(9, () => script([S.R(5), S.W(2000)]), {max:900}), 'dead');
-  check('10 let go under the roof, off the ground', run(9, () => script([S.R(12.0), S.JT(14.6, 416, {tol:12, maxPeak:62, minPeak:36}), S.W(3000)]), {max:1500}), 'win');
+  check('10 let go in the open like in 1', run(9, () => script([S.R(5), S.W(2000)]), {max:900}), 'dead');
+  check('10 let go under the roof while it sleeps', run(9, () => script([S.R(10.2), S.J(30, 1), S.R(14.5), S.W(2000)]), {max:900}), 'timeout');
+  check('10 wake it, then let go out in the open', run(9, () => script([...wake10, S.W(900)]), {max:1200}), 'dead');
+  check('10 wake it, under the roof, let go facing it', run(9, () => script([...wake10, S.L(14.6), S.K({right:true}, 2), S.W(900)]), {max:1500}), 'dead');
+  check('10 wake it, under the roof, back to it, let go', run(9, () => script([...wake10, S.L(14.6), S.W(900)]), {max:1500}), 'win');
   return out;
 })()

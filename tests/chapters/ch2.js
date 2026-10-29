@@ -61,43 +61,50 @@
   check('15 walk the ground both times', run(14, life => R, {lives:2, freshMem:true}), 'dead');
   check('15 ground first, then the platforms', run(14, life => life === 0 ? R : plats(), {lives:2, freshMem:true}), 'clear');
   // ---- 16 heavy
-  const th = () => g.S.th;
+  const th = () => g.S.th, tap16 = () => ({k:{right: Math.abs(g.P.vx) < 2.4}}), N = () => ({k:{}});
   check('16 run straight', run(15, () => R), 'dead');
-  check('16 careful: walk slow, stop when one falls', run(15, () => { let t = 0; return P => { for (const b of th()) if (b.st === 'fall' || b.st === 'down' || (b.st === 'rise' && b.y + 40 > GY - 34)) { if (b.x + 20 - cx() > 0 && b.x + 20 - cx() < 140) return {k:{}}; } return {k:{right:(t++ % 3) !== 0}}; }; }), 'dead');
-  check('16 learned: dash under everything', run(15, () => P => { for (const b of th()) if (b.mode === 'pred' && (b.st === 'fall' || b.st === 'down' || (b.st === 'rise' && b.y + 40 > GY - 34)) && b.x + 20 - cx() > 0 && b.x + 20 - cx() < 140) return {k:{}}; return R(); }), 'dead');
-  check('16 stop / dash / creep', run(15, () => { let t = 0; return P => { const [a, b2, c] = th(), pc = cx();
-      const busy = b => (b.st === 'fall' || b.st === 'down' || (b.st === 'rise' && b.y + 40 > GY - 34)) && b.x + 20 - pc > 0 && b.x + 20 - pc < 140;
-      if (busy(a) || busy(c)) return {k:{}};
-      if (pc > 17*T && pc < c.x + 40) return {k:{right:(t++ % 2) === 0}};
-      return R(); }; }), 'clear');
+  check('16 creep the whole way', run(15, () => tap16, {max:2000}), 'dead');
+  check('16 run, and stop whenever one falls', run(15, () => P => th().some(b => b.st === 'fall') ? N() : R(), {max:2000}), /dead|timeout/);
+  check('16 stop for the first, jump it, run under the second, creep under the third', run(15, () => script([S.U(() => th()[0].st === 'fall', {right:true}), S.U(() => th()[0].st === 'down'), S.J(30, 1), S.R(18.5), S.F(tap16, () => cx() > 23.5*T), S.R(28.5), S.W(20)]), {max:2000}), 'clear');
+  check('16 ... but stop under the second', run(15, () => script([S.U(() => th()[0].st === 'fall', {right:true}), S.U(() => th()[0].st === 'down'), S.J(30, 1), S.U(P => P.on), S.R(11.5), S.W(60)]), {max:2000}), 'dead');
+  check('16 ... and run under the third too', run(15, () => script([S.U(() => th()[0].st === 'fall', {right:true}), S.U(() => th()[0].st === 'down'), S.J(30, 1), S.R(28.5), S.W(20)]), {max:2000}), /dead|timeout/);
   // ---- 17 ice
+  const fc17 = () => (g.S.cones || []).filter(c => c.st === 'fall');
+  const act17 = (onLock) => () => { const done = new Set(); let t = 99, mode = null; return P => { t++;
+      const c = fc17().find(c => !done.has(c) && (onLock ? c.locked : true));
+      if (c) { done.add(c); t = 0; mode = Math.abs(g.P.vx) > 2.4 ? 'brake' : 'go'; }
+      if (t < 26) return mode === 'brake' ? {k:{left:true}} : {k:{right:true}};
+      return onLock ? R() : (t < 60 ? N() : R()); }; };
   check('17 run', run(16, () => R), 'dead');
-  check('17 slow down when it falls (as before)', run(16, () => { let n = 0, t = 99; return P => { const c = fc().length; if (c > n) t = 0; n = c; t++; return {k: t < 20 ? {left:true} : {right:true}}; }; }), 'dead');
-  const p17 = () => { let t = 99, dirA = 1; const fired = new Set(); return P => { t++;
-      const c = fc().find(c => !fired.has(c));
-      if (c && P.on && left(c) <= 25) { fired.add(c); dirA = Math.abs(g.P.vx) > 2.6 ? -1 : 1; t = 0; }
-      const k = dirA < 0 ? (t < 14 ? {left:true} : {}) : {right:true};
-      if (t === 0) return {jump:30, dir:0, k}; if (!P.on) return {k}; return {k:{right:true}}; }; };
-  check('17 wait until the shadow stops, then change', run(16, p17, {max:1500}), 'clear');
+  check('17 change as soon as it appears', run(16, act17(false), {max:1500}), 'dead');
+  check('17 wait until its ring stops, then change', run(16, act17(true), {max:1500}), 'clear');
   // ---- 18 reflection
-  check('18 stand at the foot of the ledge', run(17, () => script([S.R(23.2), S.W(400)]), {max:600}), /dead|timeout/);
+  const plant18 = x => [S.R(x), S.U(() => g.S.st >= 31), S.W(8)];
+  const climbA = [S.R(17.4), S.JT(19.5, 408, {tol:8}), S.U(P => P.on), S.J(30, 1), S.U(P => P.on && P.y < 300)];
+  const climbB = [S.R(22.2), S.JT(24.4, 280, {tol:8}), S.U(P => P.on), S.J(30, 1), S.U(P => P.on && P.y < 170), S.R(27.6), S.W(30)];
+  check('18 stand at the foot of the ledge', run(17, () => script([S.R(19.2), S.W(400)]), {max:600}), /dead|timeout/);
   check('18 walk to the middle and wait', run(17, () => script([S.R(14.6), S.W(400)]), {max:600}), 'dead');
-  check('18 plant it from the mirror point, cross, climb', run(17, () => { let ph = 0, mark = 0; return P => {
-      const pc = cx(), t = g.frame;
-      if (ph === 0) { if (pc < 6.4*T) return R(); ph = 1; }
-      if (ph === 1) { if (g.S.st === 30) { ph = 2; mark = t; } return {k:{}}; }
-      if (ph === 2) { if (t - mark < 42) return {k:{}}; ph = 3; }
-      if (ph === 3) { const d = dodge(P); if (d && pc > 10*T && pc < 21*T) return {k:{}};
-        const ahead = g.ents.some(e => e.stk && e.alive && e.x > pc && e.x - pc < 40 && e.x < 22*T);
-        if (P.on && (ahead || (pc > 22.0*T && P.y > 400))) return {jump:30, dir:1}; if (P.on && P.y < 400 && P.y > 330) return {jump:30, dir:1}; return R(); }
-      return R(); }; }, {max:1500}), 'clear');
+  check('18 one stake, from the mirror of the low ledge\'s foot', run(17, () => script([...plant18(10.6), ...climbA, S.R(25), S.W(200)]), {max:1500}), /timeout|dead/);
+  check('18 two stakes: the mirror of each ledge\'s foot, then cross and climb', run(17, () => script([...plant18(5.2), ...plant18(10.2), ...climbA, ...climbB]), {max:1500}), 'clear');
   // ---- 19 landing
   check('19 jump the pits', run(18, () => P => P.on && [6.2, 14.2, 22.2].some(x => Math.abs(cx() - x*T) < 8) ? {jump:30, dir:1} : R()), 'dead');
+  check('19 stop at each edge, then jump', run(18, () => script([S.R(6.4), S.W(20), S.J(30, 1), S.R(14.4), S.W(20), S.J(30, 1), S.R(22.4), S.W(20), S.J(30, 1), S.R(28)]), {max:1500}), 'dead');
   check('19 jump, then let go of the way you were going', run(18, () => { let air = 0; return P => { if (P.on) { air = 0; if ([6.4, 14.4, 22.4].some(x => Math.abs(cx() - x*T) < 6)) return {jump:30, dir:0, k:{right:true}}; return R(); } air++; return air < 3 ? R() : {k:{}}; }; }, {max:1500}), 'clear');
   // ---- 20 the eye and the sky
+  const cones20 = () => (g.S.cones || []).filter(c => c.st === 'fall');
+  // walk toward x, but turn back from any cone about to come down where you are going
+  const goDodge = x => P => { const pc = cx(), d = x - pc, dir = Math.sign(d); if (Math.abs(d) < 4) return N();
+    for (const c of cones20()) { const land = c.x, eta = (c.floor - 40 - c.y)/26; if (eta < 30 && Math.abs(land - (pc + dir*4.4*eta)) < 34) return dir > 0 ? Lf() : R(); }
+    return dir > 0 ? R() : Lf(); };
   check('20 let go in the open', run(19, () => script([S.R(3), S.W(900)]), {max:900}), 'dead');
-  check('20 dodge to the last roof, wait facing the door', run(19, () => P => cx() > 23.6*T ? {k:{}} : (dodge(P) || R()), {max:1500}), 'dead');
-  check('20 wait under the painted roof', run(19, () => P => cx() > 11.8*T && cx() < 12.6*T ? {k:{}} : (dodge(P) || R()), {max:1500}), 'dead');
-  check('20 dodge to the last roof, turn your back, let go', run(19, () => { let ph = 0, n = 0; return P => { if (ph === 0) { if (cx() > 23.6*T) { ph = 1; return Lf(); } return dodge(P) || R(); } if (ph === 1 && n++ < 2) return Lf(); return {k:{}}; }; }, {max:1500}), 'win');
+  check('20 jump at the ledge', run(19, () => P => P.on && cx() > 19*T ? {jump:30, dir:1} : R(), {max:900}), 'dead');
+  const ledge20 = [S.F(goDodge(15*T), () => g.S.eye.t > 150 && g.S.eye.t < 160), S.F(goDodge(19.4*T), () => g.S.shut), S.L(17.2), S.U(() => g.ents.some(e => e.stk && e.alive)), S.R(18.6), S.J(30, 1), S.U(P => P.on), S.J(30, 1), S.U(P => P.on && P.y < 300)];
+  check('20 be at the ledge foot as it shuts, step away, climb the stake', run(19, () => script([...ledge20, S.W(30)]), {max:1500}), /timeout|dead/);
+  check('20 ... then on the ledge, feint at the lid until it breaks, and drop in', run(19, () => { const a = script(ledge20); let ph = 0, dir = 1; return P => { if (ph === 0) { const r = a(P); if (P.on && P.y < 300 && cx() > 20*T) ph = 1; return r; }
+      const lid = g.ents.find(e => e.t === 'bb'); if (!lid || !lid.alive) return cx() < 25.5*T ? R() : N();
+      // pace between the ledge edge and the lid: heading for the lid makes it aim at the lid; turn back before you get there
+      if (cx() > 24.3*T) dir = -1; else if (cx() < 21.2*T) dir = 1;
+      for (const c of cones20()) { const eta = (c.floor - 40 - c.y)/26; if (eta < 20 && Math.abs(c.x - cx()) < 40) dir = c.x > cx() ? -1 : 1; }
+      return dir > 0 ? R() : Lf(); }; }, {max:3000}), 'clear');
   return out;
 })()
