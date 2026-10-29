@@ -921,11 +921,11 @@ const LV = [
 
 /* 23. the screen is part of the world */
 { id:'fourthwall', was:[23], start:2,
-  build(){ Gd(0,22); S.trap = Gt(23,29); for (const a of [5, 14]) { E({t:'b', x:a*T, y:0, w:7*T, h:400, solid:true}); E({t:'s', x:a*T, y:400, w:7*T, h:14, dir:'down', kill:true}); } Door(28,14); S.flx = 25*T; },
+  build(){ Gd(0,22); S.trap = Gt(23,29); for (const [a, n] of [[5, 7], [14, 7], [22, 3]]) { E({t:'b', x:a*T, y:0, w:n*T, h:400, solid:true}); E({t:'s', x:a*T, y:400, w:n*T, h:14, dir:'down', kill:true}); } Door(28,14); S.flx = 25*T; },
   update(){ const pc = pcx();
     if (!S.fd && pc > 8*T && P.on) { S.fd = true; S.over = {kind:'death', t:0, x:pc, y:P.y + 14}; burst(pc, P.y + 14); shake = 14; flash = 1; P.vx = 0; }
     if (!S.ft && pc > 17.5*T && P.on) { S.ft = true; S.over = {kind:'title', t:0}; P.vx = 0; }
-    // the victory flag is part of the world too: touch it and the celebration is real, and so is the drop after it
+    // the victory flag is part of the world too, in a low tunnel of its own, so there is no getting over it: the celebration is a screen you are still standing behind, and the floor drops after it
     const fx = S.flx + 4;
     if (!S.over && ov(pbox(), {x:fx - 4, y:GY - 70, w:12, h:70})) { S.over = {kind:'win', t:0}; P.vx = 0; for (let i = 0; i < 4; i++) confetti(pcx() + (i-1.5)*120, P.y - 40); } },
   draw(){ drawEyeFlag(S.flx, GY, !!(S.over && S.over.kind === 'win')); } },
@@ -2689,7 +2689,7 @@ const chapterEnd = () => finalWin();
 function finalWin(){ if (state !== 'play') return; state = 'win'; clearT = 0; prof.wins++; markDone(); for (let i = 0; i < 4; i++) confetti(pcx() + (i-1.5)*120, P.y - 40); }
 
 /* ================= player ================= */
-function frozen(){ return !!(S.over); }
+function frozen(){ return !!(S.over && !(S.over.kind === 'win' && S.over.free)); }
 function onJump(){ S.airT = 0; S.jumps = (S.jumps || 0) + 1; lv.onJump && lv.onJump(); }
 function updatePlayer(){
   const fz = frozen();
@@ -2793,10 +2793,12 @@ function step(){
   if (S.over) {
     const o = S.over; o.t++;
     if (o.kind === 'death' || o.kind === 'title') {
+      // it never goes away by itself; jump, as you would to go on, and you jump; let go of the keys and step, and you walk out of it
       const pressed = jumpEdge && o.t > (o.kind === 'death' ? 18 : 10);
-      if (pressed || o.t > (o.kind === 'death' ? 120 : 240)) { S.over = null; if (pressed) { P.vy = -10.6; P.on = false; } }
+      if (pressed) { S.over = null; P.vy = -10.6; P.on = false; }
+      else if (!keys.left && !keys.right) o.free = true; else if (o.free && o.t > 18) S.over = null;
       jumpEdge = false;
-    } else if (o.kind === 'win') { jumpEdge = false; if (o.t === 170) { for (const t of S.trap) t.alive = false; S.over = null; } }
+    } else if (o.kind === 'win') { if (!keys.left && !keys.right && !keys.jump) o.free = true; if (!o.free) jumpEdge = false; if (o.t === 170) { for (const t of S.trap) t.alive = false; S.over = null; } }
   }
   updatePlayer();
   if (state === 'play') updateWorld();

@@ -20,10 +20,17 @@
   check('22 the marks lie everywhere', run(21, () => hop22([5.4, 12.4, 21.4, 26.4], 8), {max:900}), /dead@(18.9|19)/);
   check('22 left: walk through the paint; right: it is painted on the spikes', run(21, () => hop22([5.4, 12.4, 18.4, 23.4], 8), {max:900}), 'clear');
   // ---- 23 fourth wall
-  check('23 press jump when you die', run(22, () => P => g.S.over && g.S.over.kind === 'death' && g.S.over.t > 25 ? {jump:1} : R()), 'dead');
-  check('23 wait out the death, press start on the title', run(22, () => P => g.S.over && g.S.over.kind === 'title' && g.S.over.t > 30 ? {jump:1} : R()), 'dead');
-  check('23 never press anything, walk on (into the flag)', run(22, () => R, {max:1500}), 'dead');
-  check('23 never press on a screen, jump the flag', run(22, () => P => (P.on && !g.S.over && Math.abs(cx() - 22.6*T) < 6) ? {jump:30, dir:1} : R(), {max:1500}), 'clear');
+  const ov23 = k => g.S.over && g.S.over.kind === k, out23 = (P, wait) => g.S.over ? (g.S.over.free && g.S.over.t > (wait || 30) ? R() : {k:{}}) : R();
+  check('23 press jump when you die', run(22, () => P => ov23('death') && g.S.over.t > 25 ? {jump:1} : R()), 'dead');
+  check('23 wait for the death screen to pass', run(22, () => P => g.S.over ? {k:{}} : R(), {max:1500}), 'timeout');
+  check('23 hold right through it all', run(22, () => R, {max:1500}), 'timeout');
+  check('23 step out of the death, press start on the title', run(22, () => P => ov23('title') && g.S.over.t > 30 ? {jump:1} : out23(P)), 'dead');
+  check('23 step out of both, jump the flag', run(22, () => P => (P.on && !g.S.over && Math.abs(cx() - 21.6*T) < 6) ? {jump:30, dir:1} : out23(P), {max:1500}), 'dead');
+  check('23 step out of both, jump the flag as you leave the tunnel', run(22, () => P => (P.on && !g.S.over && cx() > 24.9*T && cx() < 25.3*T) ? {jump:30, dir:1} : ov23('win') ? {k:{}} : out23(P), {max:1500}), 'dead');
+  check('23 step out of both, wait out the celebration', run(22, () => P => ov23('win') ? {k:{}} : out23(P), {max:1500}), 'dead');
+  check('23 step out of both, keep walking into the celebration', run(22, () => P => ov23('win') ? R() : out23(P), {max:1500}), 'dead');
+  check('23 step out of both, press jump to go on', run(22, () => P => ov23('win') && g.S.over.t > 60 ? {jump:1} : ov23('win') ? {k:{}} : out23(P), {max:1500}), 'dead');
+  check('23 step out of every screen, the celebration too', run(22, () => P => out23(P, 50), {max:1500}), 'clear');
   // ---- 24 mirror
   const lagUp = () => g.S.hist.length ? g.S.hist[0][2] : false;
   check('24 walk on the floor', run(23, () => R), 'dead');
