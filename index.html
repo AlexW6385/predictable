@@ -1332,14 +1332,17 @@ const LV = [
       ctx.lineWidth = 1.5; ctx.beginPath(); for (const cy of [120, 250, 380]) { ctx.moveTo(w.x + 4, cy); ctx.lineTo(w.x + 14, cy + 10); ctx.lineTo(w.x + 9, cy + 22); ctx.lineTo(w.x + 22, cy + 34); ctx.lineTo(w.x + 28, cy + 30); } ctx.stroke(); } } },
 /* ===================== V. Elements ===================== */
 
-/* 41. in the dark, only where you fell is lit; a sound shows you the way, and shows you to it */
+/* 41. in the dark, only where you fell is lit; a sound shows you the way, and shows you to where you are going */
 { id:'dark', was:[26, 56], start:1.5, dark:true, seeR:52,
   // nothing here is invisible, only unlit: whatever a ring of sound lights, you see
-  build(){ Gd(0,4); Gd(7,13); Gd(16,22); Gd(25,29); Sp(10,10,13,'up'); Sp(19,19,13,'up'); R('b',7,12,9,9); Sp(7,12,10,'down'); Door(28,14);
+  build(){ Gd(0,4); Gd(7,13); Gd(16,29); Sp(10,10,13,'up'); R('b',7,12,9,9); Sp(7,12,10,'down'); Door(28,14);
     S.rings = []; S.bat = {x:15*T, y:30, st:'roost', t:0}; },
-  ping(x, y){ S.rings.push({x, y, t:0}); const b = S.bat; if (b.st === 'roost' || b.st === 'back') { b.st = 'dive'; b.tx = x; b.ty = y - 14; } },
+  ping(x, y){ S.rings.push({x, y, t:0}); },
   onJump(){ this.ping(pcx(), P.y + PH); },
-  onLand(){ this.ping(pcx(), P.y + PH); },
+  // the thud of a landing calls the bat; it dives at where you will be by the time it gets there
+  onLand(){ this.ping(pcx(), P.y + PH); const b = S.bat; if (b.st !== 'roost' && b.st !== 'back') return;
+    let tx = pcx(); for (let i = 0; i < 3; i++) tx = whereIn(Math.round(Math.hypot(tx - b.x, GY - 14 - b.y)/9));
+    b.st = 'dive'; b.tx = clamp(tx, 10, lvW() - 10); b.ty = GY - 14; },
   update(){ for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 50);
     batStep(S.bat, 15*T, 30); if (batHits(S.bat)) return die('bat'); },
   lights(){ return S.rings.map(r => [r.x, r.y - 10, Math.min(250, 20 + r.t*9), 1 - r.t/50]); },

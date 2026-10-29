@@ -6,7 +6,12 @@
   // ---- 41 dark
   clean('dark'); check('41 walk in the dark', run(40, () => R), 'dead');
   clean('dark'); check('41 jump to look around, then stop', run(40, () => script([S.R(3.0), S.J(30, 0), S.W(90)]), {max:400}), 'dead');
-  clean('dark'); check('41 jump the gaps and the marks, keep moving', run(40, () => script([S.R(4.0), S.JT(7.8, GY), S.R(9.0), S.JT(11.6, GY), S.R(13.2), S.JT(17.0, GY), S.R(18.0), S.JT(20.6, GY), S.R(22.4), S.JT(26.4, GY), S.R(28.6)]), {max:900}), 'clear');
+  { const gone = S.U(() => g.S.bat.st === 'back' || g.S.bat.st === 'roost'), hop1 = [S.R(4.0), S.JT(7.8, GY)], hop2 = [S.R(9.0), S.JT(11.6, GY)], hop3 = [S.R(13.6), S.JT(17.5, GY)];
+    clean('dark'); check('41 jump the gaps and the spike, keep moving', run(40, () => script([...hop1, ...hop2, ...hop3, S.R(28.6)]), {max:900}), 'dead');
+    clean('dark'); check('41 full jumps under the roof', run(40, () => script([...hop1, S.R(9.0), S.J(30, 1), S.R(28.6)]), {max:900}), 'dead');
+    clean('dark'); check('41 let it pass under the roof only', run(40, () => script([...hop1, ...hop2, gone, ...hop3, S.R(28.6)]), {max:1500}), 'dead');
+    clean('dark'); check('41 after each landing, let it come down where you were going', run(40, () => script([...hop1, gone, ...hop2, gone, ...hop3, gone, S.R(28.6)]), {max:1800}), 'clear');
+    clean('dark'); check('41 ... or step back after each landing', run(40, () => script([...hop1, S.K({left:true}, 5), gone, ...hop2, S.K({left:true}, 8), gone, ...hop3, S.K({left:true}, 6), gone, S.R(28.6)]), {max:1800}), 'clear'); }
   // ---- 42 sun
   const board42 = X => [14,15,16,17,18,22,23].includes(Math.floor(X/T));
   const ride = gapMax => () => P => { const x = cx(), y = g.P.y + 14, lit = X => g.lv.lit(X, y);
