@@ -1197,26 +1197,16 @@ const LV = [
     E({t:'g', x:0, y:3*T, w:6*T, h:T, solid:true}); E({t:'g', x:4*T, y:6*T, w:3.5*T, h:T, solid:true});
     // the long step is brittle, tile by tile; under its far end, the last step
     S.c = []; for (let c = 6; c <= 14; c++) S.c.push(R('g', c, c, 9, 9, {crumble:24}));
-    E({t:'g', x:12.5*T, y:12*T, w:4*T, h:T, solid:true}); Door(27,14);
-    S.ball = {x:3.6*T, y:3*T - 6, vx:4.4, vy:0, st:'roll', t:0}; S.splat = []; },
+    E({t:'g', x:12.5*T, y:12*T, w:4*T, h:T, solid:true}); Door(27,14); S.splat = []; },
   onLand(){ if (P.landV >= 11.5) return die('fall'); if (P.landV > 8) { shake = 4; dust(pcx(), P.y + PH); S.splat.push([pcx(), P.y + PH, 0]); } },
-  update(){ const b = S.ball; b.t++;
-    // a ball rolls off the top at a run, sails past the step below, and bursts where it lands
-    if (b.st === 'roll') { b.x += b.vx; if (b.x > 6*T) b.st = 'fly'; }
-    else if (b.st === 'fly') { b.x += b.vx; b.vy = Math.min(b.vy + 0.55, 12); b.y += b.vy;
-      const fl = b.x > 6*T && b.x < 15*T && b.y >= 9*T - 6 ? 9*T : b.y >= GY - 6 ? GY : null;
-      if (fl) { b.st = 'gone'; b.t = 0; shake = 3; S.splat.push([b.x, fl, 1]); for (let i = 0; i < 12; i++) parts.push({x:b.x, y:fl - 4, vx:(Math.random() - .5)*5, vy:-Math.random()*3.5, life:26, r:2.5, col:C.ink2}); } }
-    else if (b.t > 200) Object.assign(b, {x:3.6*T, y:3*T - 6, vy:0, st:'roll'});
-    for (const sp of S.splat) sp[3] = (sp[3] || 0) + 1; S.splat = S.splat.filter(sp => sp[3] < 240); },
+  update(){ for (const sp of S.splat) sp[3] = (sp[3] || 0) + 1; S.splat = S.splat.filter(sp => sp[3] < 240); },
   draw(){ ctx.strokeStyle = C.white; ctx.lineWidth = 1.2;
     // hairline cracks on the brittle tiles
     for (const e of S.c) if (e.alive && !e.fall) { ctx.beginPath(); ctx.moveTo(e.x + 9, e.y + 4); ctx.lineTo(e.x + 14, e.y + 14); ctx.lineTo(e.x + 11, e.y + 22); ctx.moveTo(e.x + 23, e.y + 5); ctx.lineTo(e.x + 20, e.y + 16); ctx.stroke(); }
-    // a hard landing leaves a crack; a burst ball leaves a scatter
+    // a hard landing leaves a crack
     for (const [x, y, k, t] of S.splat) { ctx.globalAlpha = Math.min(1, (240 - t)/60); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath();
-      if (k) for (let i = 0; i < 6; i++) { ctx.moveTo(x - 10 + i*4, y - 1); ctx.lineTo(x - 13 + i*5, y - 4 - (i % 2)*3); }
-      else { ctx.moveTo(x - 8, y + 2); ctx.lineTo(x - 2, y + 7); ctx.lineTo(x + 3, y + 3); ctx.lineTo(x + 9, y + 8); }
-      ctx.stroke(); ctx.globalAlpha = 1; }
-    const b = S.ball; if (b.st !== 'gone') { ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); } } },
+      ctx.moveTo(x - 8, y + 2); ctx.lineTo(x - 2, y + 7); ctx.lineTo(x + 3, y + 3); ctx.lineTo(x + 9, y + 8);
+      ctx.stroke(); ctx.globalAlpha = 1; } } },
 
 /* 38. a pip on the wheel weighs three on the axle */
 { id:'wheel', was:[36], start:2,
