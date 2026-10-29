@@ -337,4 +337,4 @@ A debug mode lets the tests snapshot, rewind and step the game frame by frame. A
 
 ## Build order
 
-The game is rebuilt chapter by chapter, and each finished chapter goes straight into the published game. Each chapter is built, tested, pushed and sent for play-testing before the next one starts. Until all ten are done, the game ends after the last finished chapter. The first version is kept in `legacy/` for reference.
+The game was rebuilt chapter by chapter, and each finished chapter went straight into the published game. Each chapter was built, tested, pushed and sent for play-testing before the next one started, and then every level was revised against the bar. All ten chapters are done. The first version is kept in `legacy/` for reference.

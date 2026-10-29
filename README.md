@@ -22,7 +22,7 @@ The page always fits the window and never scrolls. On phones the game fills the 
 
 ## Design
 
-The game is being rebuilt chapter by chapter from the design document. The finished chapters are what you play; the rest are added as they are done. The first version of the game is kept in `legacy/` for reference and is not published.
+All ten chapters are built: 100 levels, from the first door that runs away to the last level, where you are the door. The first version of the game is kept in `legacy/` for reference and is not published.
 
 The full design (the bar every level has to clear, the ten chapters, the recurring cast and every level's idea) is in [DESIGN.md](DESIGN.md).
 
