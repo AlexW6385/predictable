@@ -989,10 +989,11 @@ const LV = [
   thorns(){ ctx.fillStyle = C.ink; ctx.beginPath(); for (let x = 4.5*T; x < 6.5*T; x += 16) { const j = Math.sin(x*1.7)*1.5; ctx.moveTo(x + j, GY); ctx.lineTo(x + 8, GY - 16 + j); ctx.lineTo(x + 16 - j, GY); } ctx.fill();
     ctx.strokeStyle = 'rgba(231,236,241,.35)'; ctx.lineWidth = 1; for (let x = 4.5*T + 4; x < 6.5*T; x += 23) { ctx.beginPath(); ctx.moveTo(x, GY - 3); ctx.lineTo(x + 6, GY - 9); ctx.stroke(); } } },
 
-/* 28. the one in the glass does what you do, the other way round; if it falls, so do you */
-{ id:'double', start:13,
-  build(){ Gd(0,14); R('b',2,2,9,13); R('b',10,10,13,13); Sp(5,8,11,'down'); R('b',5,8,10,10);
-    Gd(15,20); Gd(23,29); Door(27.5,14);
+/* 28. the one in the glass does what you do, the other way round; only a wall can part you */
+{ id:'double', start:14,
+  // your side: a low spiked ceiling, where you can't jump; its side: two gaps, and a step it can't walk through
+  build(){ Gd(0,14); R('b',3,8,2,11); Sp(3,8,12,'down');
+    Gd(15,16); Gd(18,23); R('b',23,23,13,13); Gd(25,29); S.door = Door(27.5,14);
     S.tw = {x:W - P.x - PW, y:P.y, vx:0, vy:0, on:true}; },
   // your double: mirrored keys, its own floor, its own walls; the glass between you is a wall for both
   update(){ const t = S.tw, ax = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
@@ -1008,7 +1009,7 @@ const LV = [
     if (P.x + PW > 15*T) { P.x = 15*T - PW; P.vx = 0; }
     if (t.y > H) return die('double');
     for (const e of ents) if (e.t === 's' && e.x >= 15*T - 1 && ov({x:t.x + 3, y:t.y + 3, w:PW - 6, h:PH - 6}, {x:e.x + 2, y:e.y, w:e.w - 4, h:e.h})) return die('double');
-    if (t.on && ov({x:t.x + 6, y:t.y + 6, w:PW - 12, h:PH - 12}, {x:27.5*T - 2, y:GY - 56, w:36, h:56})) levelClear(); },
+    if (t.on && ov({x:t.x + 6, y:t.y + 6, w:PW - 12, h:PH - 12}, S.door)) levelClear(); },
   onJump(){ S.jumped = true; },
   drawBack(){ ctx.fillStyle = 'rgba(160,190,220,.18)'; ctx.fillRect(15*T, 0, 15*T, GY); ctx.strokeStyle = '#9FB0C2'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(15*T, 0); ctx.lineTo(15*T, GY); ctx.stroke(); },
   draw(){ const t = S.tw; if (state !== 'dead' || true) drawPlayerAt(t.x, t.y, PW, PH, -P.face, '#F4D6D2', C.red, state === 'dead', false); } },

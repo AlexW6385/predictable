@@ -50,14 +50,11 @@
   check('27 stop and jump in front of the second', run(26, () => script([...look27(10.8), S.R(29)]), {freshMem:true, max:900}), 'timeout');
   check('27 stop and jump in front of the window onto the door', run(26, () => script([...look27(13.6), S.R(29)]), {freshMem:true}), 'clear');
   // ---- 28 double
+  // jump when its box nears an edge: the first gap (col 17) and the step (col 23)
+  const at28 = (x0, x1) => g.S.tw.x + 22 > x0 && g.S.tw.x + 22 < x1;
   check('28 walk it to its door', run(27, () => Lf), 'dead');
-  check('28 jump for it when it reaches its pit (still holding left)', run(27, () => P => (P.on && g.S.tw.x + 22 > 21*T - 10 && g.S.tw.x < 21*T) ? {jump:30, dir:-1} : Lf()), 'clear');
-  check('28 against the block, jump in place for it, then hop on', run(27, () => { let ph = 0; return P => {
-      if (ph === 0) { if (g.S.tw.x + 22 < 21*T - 6) return Lf(); ph = 1; return {jump:30, dir:0, k:{}}; }
-      if (ph === 1) { if (!P.on) return {k:{}}; ph = 2; return {k:{}}; }
-      if (ph === 2) { ph = 3; return {jump:2, dir:-1}; }
-      if (ph === 3) { if (!P.on) return Lf(); ph = 4; }
-      return Lf(); }; }, {max:1200}), 'clear');
+  check('28 jump at the first gap, then at the step', run(27, () => P => (P.on && (at28(17*T - 14, 17*T) || at28(23*T - 4, 23*T + 1))) ? {jump:30, dir:-1} : Lf(), {max:1200}), 'dead');
+  check('28 jump at the first gap, walk out from under the ceiling, then jump', run(27, () => P => (P.on && (at28(17*T - 14, 17*T) || (at28(23*T - 4, 23*T + 1) && cx() < 2.2*T))) ? {jump:30, dir:-1} : Lf(), {max:1200}), 'clear');
   // ---- 29 mime
   check('29 walk on', run(28, () => R, {max:600}), 'timeout');
   check('29 jump the wall you bump into', run(28, () => P => (P.on && Math.abs(P.vx) < 0.5 && cx() > 4*T) ? {jump:30, dir:1} : R(), {max:600}), /timeout|dead/);
