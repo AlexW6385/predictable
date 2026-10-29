@@ -57,11 +57,14 @@
   check('56 step back and forth on the way, walk on, then come back', run(55, () => script([S.R(20), S.L(18.6), S.R(28.4), S.W(30), S.L(1.5)]), {max:1500}), 'clear');
   // ---- 57 seed
   const cones = () => (g.S.cones || []).filter(c => c.st === 'fall');
-  const seedX = () => { const b = g.S.vg.beds.find(b => b.seed); return b ? (b.x + b.w/2)/T : null; };
-  check('57 jump at the ledge', run(56, () => script([S.R(19.3), S.W(5), S.J(30, 0), S.W(100)]), {max:600}), /timeout|dead/);
-  check('57 run on', run(56, () => R), 'dead');
-  check('57 run across the line, then grow a vine where you stand', run(56, () => script([S.R(15.0), S.L(13.0), S.W(300), S.R(25.5)]), {max:1500}), /timeout|dead/);
-  check('57 run across the line, turn back, grow what lands', run(56, () => script([S.R(15.0), S.L(13.0), S.U(() => !cones().length && seedX() !== null), S.F(P => ({k:{right: cx() < seedX()*T - 2, left: cx() > seedX()*T + 2}}), () => Math.abs(cx() - seedX()*T) < 3 && Math.abs(g.P.vx) < 0.2), S.U(P => P.y + 28 <= 226), S.R(25.5), S.W(20)]), {max:1500}), 'clear');
+  const seedAt = lo => () => g.S.vg.beds.find(b => b.seed && (b.x + b.w/2) < lo*T);
+  const growOn = x => [S.F(P => ({k:{right: cx() < x*T - 3, left: cx() > x*T + 3}}), () => Math.abs(cx() - x*T) <= 3 && Math.abs(g.P.vx) < 0.3), S.W(260)];
+  check('57 run right', run(56, () => R), 'dead');
+  check('57 cross the line, dodge, grow what lands over there', run(56, () => script([S.R(15.0), S.L(13.0), S.U(() => !cones().length), S.W(5), ...growOn(16.2), S.L(1)]), {max:1500}), /timeout|dead/);
+  check('57 grow a vine under the ledge', run(56, () => script([...growOn(4), S.L(2.5), S.W(30)]), {max:1500}), 'timeout');
+  check('57 walk back across the line slowly, turn, grow it', run(56, () => script([S.R(14.5), S.W(20), S.F(() => ({k:{left: Math.abs(g.P.vx) < 1.5}}), () => cx() < 11.5*T), S.R(13), S.U(() => !cones().length), S.W(10),
+    S.F(P => { const b = g.S.vg.beds.find(b => b.seed); return b ? {k:{right: cx() < b.x + b.w/2 - 3, left: cx() > b.x + b.w/2 + 3}} : {k:{}}; }, () => { const b = g.S.vg.beds.find(b => b.seed); return b && Math.abs(cx() - b.x - b.w/2) <= 3 && Math.abs(g.P.vx) < 0.3; }), S.W(260), S.L(1)]), {max:2000}), /timeout|dead/);
+  check('57 run back across the line toward the ledge, turn, grow it', run(56, () => script([S.R(16.5), S.W(40), S.L(9.5), S.R(11.0), S.U(() => !cones().length), S.W(10), ...growOn(6.5), S.U(P => P.y + 28 <= 226), S.L(2.5), S.W(30)]), {max:2000}), 'clear');
   // ---- 58 flock
   const tap = () => ({k:{right: Math.abs(g.P.vx) < 2.4}});
   const soft58 = x => S.F(tap, () => cx() > x*T);

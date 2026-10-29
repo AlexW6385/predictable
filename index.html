@@ -1647,14 +1647,16 @@ const LV = [
       if (last) { ctx.fillStyle = C.gold; ctx.fillRect(x + PW/2 - 5, y + PH - 13, 3, 3); ctx.fillRect(x + PW/2 + 2, y + PH - 13, 3, 3); } }
     ctx.globalAlpha = 1; } },
 
-/* 57. the sky sows where it aims, and stillness makes it grow */
-{ id:'seed', start:2,
-  build(){ Gd(0,29); R('b',20,29,7,7); Door(25,7); S.vg = vineGarden([], 224); S.armed = true; },
-  update(){ const pc = pcx();
-    if (S.armed && pc > 13.8*T && P.vx > 0.5) { S.armed = false; drop(whereIn(40), 40, {onLand: c => plantSeed(S.vg, c.x)}); }
-    if (!S.armed && pc < 11*T) S.armed = true;
+/* 57. the sky sows where it aims, and stillness makes it grow; it aims where you are going, so sow behind you */
+{ id:'seed', start:8,
+  build(){ Gd(0,29); R('b',1,5,7,7); Door(3,7); S.vg = vineGarden([], 224); S.side = -1; S.armed = true; },
+  LINE: 12*T,
+  update(){ const pc = pcx(), side = Math.sign(pc - this.LINE) || 1;
+    // each time you cross the line, the sky drops one cone where you are going, and the cone sows a seed where it lands
+    if (S.armed && side !== S.side) { S.armed = false; drop(whereIn(40), 40, {onLand: c => plantSeed(S.vg, c.x)}); }
+    S.side = side; if (!S.armed && Math.abs(pc - this.LINE) > 2*T) S.armed = true;
     vineStep(S.vg); updCones(); },
-  drawBack(){ ctx.strokeStyle = C.red; ctx.lineWidth = 2; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(13.8*T, GY); ctx.lineTo(13.8*T, GY - 30); ctx.stroke(); ctx.setLineDash([]); },
+  drawBack(){ ctx.strokeStyle = C.red; ctx.lineWidth = 2; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(this.LINE, GY); ctx.lineTo(this.LINE, GY - 30); ctx.stroke(); ctx.setLineDash([]); },
   draw(){ drawVines(S.vg); drawCones(); } },
 
 /* 58. they are the bridge, as long as you are no threat; and frightened, they settle as far from the fright as they can */
