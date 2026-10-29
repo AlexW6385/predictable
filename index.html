@@ -2246,7 +2246,7 @@ const LV = [
     if (!ch.go && pc > s.x0) ch.go = true;
     if (ch.alive && ch.go) {
       if (ch.sink) { ch.sink++; if (ch.sink > 60) ch.alive = false; }
-      else { ch.x += 6; ch.rot += 0.3;
+      else { ch.x += 6.6; ch.rot += 0.3;
         if (ch.x + 40 > s.x0 + 4 && ch.x < s.x1 && this.wet(ch.x + 6, 30)) ch.sink = 1;
         if (ov(pbox(3), {x:ch.x + 2, y:GY - 70, w:38, h:70})) return die('chariot'); } } },
   drawBack(){ const s = S.sea;
