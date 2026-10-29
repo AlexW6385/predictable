@@ -2168,14 +2168,18 @@ const LV = [
     S.target.forEach((v, i) => { ctx.fillStyle = v ? C.red : C.white; ctx.fillRect(fx + i*18, fy, 16, 20); ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.strokeRect(fx + i*18, fy, 16, 20); });
     ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(fx + 20, fy - 8); ctx.lineTo(fx + 56, fy - 40); ctx.lineTo(fx + 92, fy - 8); ctx.stroke(); } },
 
-/* 82. a round: your voice comes back a little after you, and stands where you stood */
+/* 82. a round: your voice comes back a little after you, and stands where you stood, even where nothing is left to stand on */
 { id:'round', was:[75], start:2,
-  build(){ Gd(0,29); E({t:'g', x:18*T, y:336, w:4*T, h:GY - 336, solid:true}); E({t:'g', x:22*T, y:224, w:8*T, h:GY - 224, solid:true}); Door(27, 224/T); S.rec = [];
+  build(){ Gd(0,19); Gd(20,23); Sp(20,23,13,'up'); Gd(24,29); E({t:'g', x:15*T, y:336, w:5*T, h:GY - 336, solid:true}); E({t:'g', x:24*T, y:176, w:6*T, h:GY - 176, solid:true}); Door(27, 176/T); S.rec = [];
+    // a held note over the pit: it starts to fade the moment you land on it, and is gone before your echo could stand on it there
+    S.note = E({t:'b', x:21*T, y:288, w:2*T, h:12, solid:true, cond:() => S.nt == null || S.nt < 110}); S.nt = null;
     S.echo = E({t:'echo', x:-99, y:-99, w:PW, h:PH, solid:true, oneway:true, cond:() => S.held}); S.held = false; },
   update(){ S.rec.push([P.x, P.y]); if (S.rec.length > 200) S.rec.shift();
     const n = S.rec.length, p = S.rec[n - 91], e = S.echo; if (p) { e.x = p[0]; e.y = p[1]; } else { e.x = -99; e.y = -99; }
     // it is solid only while it holds a note: where you stood still, it stands still
-    S.held = !!p && [92, 98, 104, 110, 116, 122].every(k => { const q = S.rec[n - k]; return q && Math.abs(q[0] - p[0]) < 0.5 && Math.abs(q[1] - p[1]) < 0.5; }); },
+    S.held = !!p && [92, 96, 100, 104, 108, 112].every(k => { const q = S.rec[n - k]; return q && Math.abs(q[0] - p[0]) < 0.5 && Math.abs(q[1] - p[1]) < 0.5; });
+    if (S.nt == null && P.on && P.stand === S.note) S.nt = 0; else if (S.nt != null && ++S.nt > 260) S.nt = null; },
+  alpha(e){ return e === S.note ? (S.nt == null ? 1 : S.nt < 110 ? 1 - S.nt/130 : S.nt > 230 ? (S.nt - 230)/30 : 0) : 1; },
   draw(){ const e = S.echo; if (e.x < 0) return; ctx.globalAlpha = S.held ? 0.7 : 0.3; drawPlayerAt(e.x, e.y, PW, PH, 1, S.held ? C.grid2 : C.paper, C.ink2, false); ctx.globalAlpha = 1;
     ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(e.x + 7, e.y - 6, 3, 0, 7); ctx.fill(); ctx.fillRect(e.x + 9, e.y - 16, 1.5, 10); } },
 
@@ -2236,21 +2240,25 @@ const LV = [
 
 /* 86. it holds whoever walks off the edge and keeps walking */
 { id:'leap', start:1.5,
-  build(){ Gd(0,6); Gd(23,29); Door(27,14); S.br = E({t:'b', x:7*T, y:GY, w:16*T, h:12, solid:true, cond:() => S.faith}); S.faith = false; S.st = 0; S.prints = []; S.fe = {x:15*T, y:-20, t:0}; },
+  build(){ Gd(0,6); Gd(23,29); Door(27,14); S.br = E({t:'b', x:7*T, y:GY, w:16*T, h:12, solid:true, cond:() => S.faith}); S.faith = false; S.st = 0; S.prints = []; S.fe = null; S.gap = null; },
   onJump(){ S.faith = false; },
   update(){ const pc = pcx(), over = pc > 7*T && pc < 23*T;
     // you are held while you walked on from the edge, and only while you keep going; a jump, or a stop, and it is not there for you
     // faith is a decision: stand at the edge a moment first; whoever runs off blind finds nothing
-    if (!over && P.on) { S.st = 0; S.edgeT = pc > 6*T && Math.abs(P.vx) < 0.3 ? (S.edgeT || 0) + 1 : (pc > 6*T ? S.edgeT || 0 : 0); S.faith = S.edgeT > 30; }
+    if (!over && P.on) { S.st = 0; S.edgeT = pc > 5.2*T && Math.abs(P.vx) < 0.3 ? (S.edgeT || 0) + 1 : (pc > 5.2*T ? S.edgeT || 0 : 0); S.faith = S.edgeT > 30; }
     else if (S.faith) { S.st = Math.abs(P.vx) < 1 ? S.st + 1 : 0; if (S.st > 8) S.faith = false; }
     if (S.faith && P.on && over && frame % 6 === 0) S.prints.push({x:pc, t:120});
     for (const p of S.prints) p.t--; S.prints = S.prints.filter(p => p.t > 0);
-    // a feather comes down every so often, and rests on what you cannot see
-    const f = S.fe; if (f.y < GY - 6) { f.y += 0.9; f.x += Math.sin(frame*0.05)*0.6; } else if (++f.t > 150) { f.y = -20; f.t = 0; f.x = (9 + (frame % 11))*T; } },
+    // whoever stood at the edge is sent a feather, and it comes to rest on what is there for them; when it is not there any more, the feather falls
+    if (S.faith && !S.fe) S.fe = {x:10*T, y:GY - 180, m:'fall'};
+    const f = S.fe; if (f) { if (f.m === 'fall') { f.y += 1.6; f.x += Math.sin(frame*0.05)*0.6; if (f.y >= GY - 3) { f.y = GY - 3; f.m = S.faith ? 'rest' : 'drop'; } }
+      else if (f.m === 'rest') { if (!S.faith) f.m = 'drop'; } else if ((f.y += 4) > H + 20) S.fe = null; }
+    // falling through, you glimpse for a moment what would have held you
+    if (!S.gap && over && P.y > GY - PH + 6 && !S.faith) S.gap = {x:pc, t:50}; if (S.gap && S.gap.t > 0) S.gap.t--; },
   alpha(e){ return e === S.br ? 0 : 1; },
   draw(){ for (const p of S.prints) { ctx.fillStyle = `rgba(226,166,42,${p.t/120})`; ctx.fillRect(p.x - 6, GY - 2, 12, 3); }
-    if (S.faith && pcx() < 7*T) { ctx.fillStyle = `rgba(226,166,42,${0.3 + 0.2*Math.sin(frame*0.1)})`; ctx.fillRect(7*T, GY, T, 4); }
-    const f = S.fe; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(f.x, f.y, 7, 2.5, -0.3, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(f.x - 8, f.y + 3); ctx.lineTo(f.x + 7, f.y - 2); ctx.stroke(); } },
+    if (S.gap && S.gap.t > 0) { ctx.strokeStyle = `rgba(226,166,42,${S.gap.t/90})`; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(Math.max(7*T, S.gap.x - 50), GY + 1); ctx.lineTo(Math.min(23*T, S.gap.x + 50), GY + 1); ctx.stroke(); ctx.setLineDash([]); }
+    const f = S.fe; if (!f) return; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(f.x, f.y, 7, 2.5, -0.3, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(f.x - 8, f.y + 3); ctx.lineTo(f.x + 7, f.y - 2); ctx.stroke(); } },
 
 /* 87. to pass through walls, leave your body; to come back, find room for it */
 { id:'spirit', was:[82], start:2,
@@ -2491,30 +2499,39 @@ const LV = [
 
 /* 95. in a falling room, nothing weighs anything */
 { id:'elevator', start:2,
-  build(){ S.land = Gd(0,9); R('b',10,19,1,1); R('b',10,10,2,11); R('b',19,19,2,13); R('b',10,19,14,14); R('b',11,13,4,4);
-    S.gate = R('b',10,10,12,13,{cond:() => S.cut > 0}); S.dr = {x:12*T - 2, y:4*T - 56};
-    S.in = 0; S.cut = 0; S.fall = 0; },
-  inside(){ return P.x > 11*T && P.x + PW < 19*T && P.y > T; },
-  extraG(){ return S.cut > 0 && S.fall > 0 ? -0.53 : 0; },
+  build(){ S.land = Gd(0,9); R('b',10,28,1,1); R('b',10,10,2,11); R('b',28,28,2,13); R('b',10,28,14,14); R('b',11,13,8,8);
+    S.gate = R('b',10,10,12,13,{cond:() => S.cut > 0});
+    // a tall lift door on the shelf by the far wall
+    S.dr = {x:11*T + 2, y:8*T - 168, w:36, h:168};
+    S.in = 0; S.cut = 0; S.fall = 0; S.fvx = 0; S.wasOn = true; },
+  inside(){ return P.x > 11*T && P.x + PW < 28*T && P.y > T; },
+  float(){ return S.cut > 0 && S.fall > 0; },
+  extraG(){ return this.float() ? (P.on ? -0.53 : -0.55) : 0; },
+  // a push off a floor that is falling away is a gentle one
+  jumpV(){ return this.float() ? 3.5 : 10.6; },
+  // with nothing under you there is nothing to push against: you go on the way you pushed off, and you cannot turn
+  input(ax){ return this.float() && !P.on ? {ax:0, acc:0, max:4.4} : {ax, acc:P.on ? 0.9 : 0.6, max:4.4}; },
   update(){
     // the Eye cuts the rope once you are in
-    if (!S.cut) { S.in = this.inside() ? S.in + 1 : 0; if (S.in > 70) { S.cut = 1; shake = 6; S.entr = null; } return; }
+    if (!S.cut) { S.in = this.inside() ? S.in + 1 : 0; if (S.in > 70) { S.cut = 1; shake = 6; S.entr = null; S.fvx = P.vx; } S.wasOn = P.on; return; }
     S.fall++; S.land.y = 14*T - 0.275*S.fall*S.fall;
-    // in the falling room you fall as fast as it does: push off and you go on, at the same speed, until something stops you
-    if (ov(pbox(4), {x:S.dr.x + 4, y:S.dr.y + 4, w:28, h:52})) return levelClear();
-    if (S.fall > 150) { shake = 20; return die('crash'); } },
+    // in the falling room you fall as fast as it does: push off and you go on in a straight line, until something stops you; whatever you bump into holds you there
+    if (!P.on) { if (S.wasOn) S.fvx = P.vx; else if (P.vx === 0 || P.vy === 0) { S.fvx = 0; P.vx = 0; } else P.vx = S.fvx; }
+    S.wasOn = P.on;
+    const d = S.dr; if (ov(pbox(4), {x:d.x + 4, y:d.y + 4, w:d.w - 8, h:d.h - 4})) return levelClear();
+    if (S.fall > 230) { shake = 20; return die('crash'); } },
   drawBack(){ const off = S.cut ? 0.275*S.fall*S.fall : 0;
     // the shaft
-    ctx.fillStyle = 'rgba(30,43,71,.08)'; ctx.fillRect(9*T, -10, 12*T, H + 20);
-    ctx.strokeStyle = 'rgba(30,43,71,.25)'; ctx.lineWidth = 2; for (let i = -2; i < 20; i++) { const y = ((i*48 - off) % (20*48) + 20*48) % (20*48) - 48; ctx.beginPath(); ctx.moveTo(20*T, y); ctx.lineTo(29*T, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(T, y + 24); ctx.lineTo(9*T, y + 24); ctx.stroke(); }
-    if (S.fall > 110) { const y = GY + 80 + (150 - S.fall)*10; ctx.fillStyle = C.ink; for (let x = 9*T; x < 21*T; x += 16) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 8, y - 16); ctx.lineTo(x + 16, y); ctx.fill(); } } },
+    ctx.fillStyle = 'rgba(30,43,71,.08)'; ctx.fillRect(9*T, -10, 21*T, H + 20);
+    ctx.strokeStyle = 'rgba(30,43,71,.25)'; ctx.lineWidth = 2; for (let i = -2; i < 20; i++) { const y = ((i*48 - off) % (20*48) + 20*48) % (20*48) - 48; ctx.beginPath(); ctx.moveTo(29*T, y); ctx.lineTo(30*T, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(T, y + 24); ctx.lineTo(9*T, y + 24); ctx.stroke(); }
+    if (S.fall > 190) { const y = GY + 80 + (230 - S.fall)*10; ctx.fillStyle = C.ink; for (let x = 9*T; x < 30*T; x += 16) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 8, y - 16); ctx.lineTo(x + 16, y); ctx.fill(); } } },
   draw(){ // the rope, and the Eye with its scissors
-    const rx = 14.5*T, cut = S.cut ? 1 : Math.min(1, S.in/70);
+    const rx = 19.5*T, cut = S.cut ? 1 : Math.min(1, S.in/70);
     ctx.strokeStyle = '#8A5A2B'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(rx, S.cut ? T - 60 : 0); ctx.lineTo(rx, T); ctx.stroke();
     if (!S.cut) { drawEye(rx + 46, 22, 12, rx, 30, 0); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; const a = 0.6*(1 - cut); ctx.beginPath(); ctx.moveTo(rx + 26, 22); ctx.lineTo(rx - 4, 22 - 14*a); ctx.moveTo(rx + 26, 22); ctx.lineTo(rx - 4, 22 + 14*a); ctx.stroke();
       if (S.in > 0) for (let i = 0; i < 3; i++) { ctx.strokeStyle = '#8A5A2B'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(rx, 22); ctx.lineTo(rx + (i - 1)*5*cut, 22 + 6*cut); ctx.stroke(); } }
-    drawDoor(S.dr.x, S.dr.y);
-    if (S.cut && S.fall < 150) { ctx.fillStyle = 'rgba(30,43,71,.35)'; for (let i = 0; i < 6; i++) { const x = 9*T + ((i*97) % (12*T)), y = (frame*14 + i*90) % H; ctx.fillRect(x, H - y, 2, 22); ctx.fillRect(20.5*T + ((i*61) % (8*T)), H - (y + 40) % H, 2, 22); } } },
+    const d = S.dr; ctx.save(); ctx.translate(d.x, d.y); ctx.scale(1, d.h/56); drawDoor(0, 0); ctx.restore();
+    if (S.cut && S.fall < 230) { ctx.fillStyle = 'rgba(30,43,71,.35)'; for (let i = 0; i < 6; i++) { const x = 9*T + ((i*97) % (12*T)), y = (frame*14 + i*90) % H; ctx.fillRect(x, H - y, 2, 22); ctx.fillRect(9*T + ((i*61 + 300) % (19*T)), H - (y + 40) % H, 2, 22); } } },
   drawPlayer(dx, dy, dw, dh){ drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false); } },
 
 /* 96. the one who goes away and comes back is the younger twin */

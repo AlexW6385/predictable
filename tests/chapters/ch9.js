@@ -13,10 +13,16 @@
   // ---- 82 round: your echo, a moment behind you, is solid; leave it standing where you will need a step
   const onEcho = (x, y) => ({until: (P, k, st) => { if (!P.on) st.air = true; return st.air && P.on; }, rule: (P, k, st) => st.air ? {k:{right: cx() < x*T - 2, left: cx() > x*T + 2, jump:true}} : {jumpTo: x*T, landY: y, tol:10, dir: cx() < x*T ? 1 : -1}});
   const upRight = (y) => ({until: (P, k, st) => { if (!P.on) st.air = true; return st.air && P.on; }, rule: (P, k, st) => st.air ? {k:{jump:true, right: P.vy > -2}} : {jump:30, dir:0}});
-  const climb82 = (w, back) => () => script([to(17.4), S.W(w), to(17.4 - back), S.W(4), onEcho(17.4, 420), S.W(4), upRight(336), to(21.4), S.W(w), to(21.4 - back), S.W(4), onEcho(21.4, 308), S.W(4), upRight(224), S.R(27.5), S.W(30)]);
-  check('82 run and jump at the ledge', run(81, () => P => P.on && cx() > 16.5*T ? {jump:30, dir:1} : R(), {freshMem:true, max:800}), 'timeout');
-  check('82 wait at the foot of the ledge', run(81, () => script([to(17.0), S.W(800)]), {freshMem:true, max:800}), 'timeout');
-  for (const [w, b] of [[100, 1.6], [80, 1.2], [140, 2.2]]) check(`82 stand where you need a step, step back, climb your echo; twice (${w}, ${b})`, run(81, climb82(w, b), {freshMem:true, max:1500}), 'clear');
+  const step1 = (w, back) => [to(14.4), S.W(w), to(14.4 - back), S.W(4), onEcho(14.4, 420), S.W(4), upRight(336)];
+  const toNote = [to(19.4), S.JT(22.2, 288, {tol:10}), S.W(2)];
+  const climb82 = (w, back, stay) => () => script([...step1(w, back), ...toNote, S.W(stay), S.JT(18.6, 336, {dir:-1, tol:16}), S.W(2), to(19.4), S.U(() => g.S.held, {}), onEcho(22.2, 260), S.W(4), upRight(176), S.R(27.5), S.W(30)]);
+  check('82 run and jump at the ledge', run(81, () => P => P.on && cx() > 13.5*T ? {jump:30, dir:1} : R(), {freshMem:true, max:800}), 'timeout');
+  check('82 wait at the foot of the ledge', run(81, () => script([to(14.0), S.W(800)]), {freshMem:true, max:800}), 'timeout');
+  check('82 climb the echo; then leap from the note for the high ledge', run(81, () => script([...step1(100, 1.6), ...toNote, S.W(10), S.J(30, 1), S.R(28), S.W(60)]), {freshMem:true, max:1500}), /dead|timeout/);
+  check('82 climb the echo; then stand on the note and wait for your echo there', run(81, () => script([...step1(100, 1.6), ...toNote, S.W(40), S.R(22.7), S.W(300)]), {freshMem:true, max:1500}), 'dead');
+  check('82 climb the echo; then use it again on the ledge\'s edge', run(81, () => script([...step1(100, 1.6), to(19.3), S.W(100), to(18.4), S.W(4), onEcho(19.3, 308), S.W(4), upRight(176), S.W(200)]), {freshMem:true, max:1500}), /dead|timeout/);
+  check('82 climb the echo; hop on the note and straight back, then jump at the air', run(81, () => script([...step1(100, 1.6), ...toNote, S.JT(18.6, 336, {dir:-1, tol:16}), S.W(150), to(19.4), {jumpTo:22.2*T, landY:260, tol:10}, S.W(200)].map(x => x.until ? x : S.J(30, 1))), {freshMem:true, max:1500}), /dead|timeout/);
+  for (const [w, b, st] of [[100, 1.6, 90], [80, 1.2, 60], [140, 2.2, 100]]) check(`82 climb the echo; stand on the note while it fades, step back, climb the echo left in the air (${w}, ${b}, ${st})`, run(81, climb82(w, b, st), {freshMem:true, max:1800}), 'clear');
   // ---- 83 dancer: facing you, it is a mirror; with its back to you, copy it as it is
   const dance = (mirror1, mirror2) => () => { let done = 0, ph = -1, sc = null; return P => { const st = g.S;
       if (st.ph >= 2) return R();
@@ -53,6 +59,9 @@
   check('86 walk off, and stop to look', run(85, () => script([S.R(10), S.W(30), S.R(28)]), {freshMem:true, max:800}), 'dead');
   check('86 walk off, and hop halfway', run(85, () => script([S.R(13), S.J(10, 1), S.R(28)]), {freshMem:true, max:800}), 'dead');
   check('86 run off the edge', run(85, () => R, {freshMem:true, max:800}), 'dead');
+  check('86 stop at the edge, then jump the gap', run(85, () => script([S.R(6.4), S.W(60), S.J(30, 1), S.R(28)]), {freshMem:true, max:800}), 'dead');
+  check('86 stop at the edge, walk off, and hop halfway', run(85, () => script([S.R(6.4), S.W(60), S.R(13), S.J(10, 1), S.R(28)]), {freshMem:true, max:800}), 'dead');
+  check('86 stop at the edge until the feather rests, then walk off and keep walking', run(85, () => script([S.R(6.4), S.U(() => g.S.fe && g.S.fe.m === 'rest', {}), S.R(28)]), {freshMem:true, max:800}), 'clear');
   check('86 stop at the edge, then walk off and keep walking', run(85, () => script([S.R(6.4), S.W(40), S.R(28)]), {freshMem:true, max:800}), 'clear');
   check('86 stop at the edge, then walk off, stop halfway', run(85, () => script([S.R(6.4), S.W(40), S.R(14), S.W(30), S.R(28)]), {freshMem:true, max:800}), 'dead');
   // ---- 87 spirit: stand still and you leave your body; pass the walls; be somewhere with room when it ends
