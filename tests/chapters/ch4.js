@@ -38,9 +38,13 @@
   check('36 walk down and step into the gold hole', run(35, () => script([S.R(5.5), S.U(() => g.P.y > 430, {right:true}), S.F(P => ({k:{right: cx() < 7.6*T, left: cx() > 8*T}}), () => g.P.vy < -1), S.W(80)]), {max:600}), /timeout|dead/);
   check('36 drop straight in from the top, then drift', run(35, () => script([S.F(P => ({k:{right: Math.abs(g.P.vx) < 0.9}}), () => !g.P.on), S.F(P => ({k:{}}), () => g.P.vy < -1), S.F(R, () => g.P.on), S.R(26.5)]), {max:900}), 'clear');
   // ---- 37 hard landing
-  check('37 jump every gap', run(36, () => P => (P.on && [4.4, 10.5, 15.5, 19.5, 23.5].some(x => Math.abs(cx() - x*T) < 6)) ? {jump:30, dir:1} : R()), 'dead');
-  check('37 jump the first gap, then step off slowly', run(36, () => script([S.R(4.3), S.J(30, 1), S.F(P => ({k:{right: Math.abs(g.P.vx) < 1}}), () => g.P.y > 430), S.W(30)])), 'dead');
-  check('37 jump the first gap, then run off each ledge', run(36, () => script([S.R(4.3), S.J(30, 1), S.R(28)])), 'clear');
+  const creep37 = S.F(P => ({k:{right: Math.abs(P.vx) < 0.4}}), P => !P.on);
+  const down37 = [creep37, S.U(P => P.on), S.W(10), creep37, S.U(P => P.on), S.W(4)];
+  check('37 run off every ledge', run(36, () => R), 'dead');
+  check('37 jump every gap', run(36, () => P => (P.on && [5.5, 7.2, 14.6, 16.2].some(x => Math.abs(cx() - x*T) < 6)) ? {jump:30, dir:1} : R()), 'dead');
+  check('37 step down slowly, creep along the brittle step', run(36, () => script([...down37, S.F(P => ({k:{right: Math.abs(P.vx) < 0.4}}), P => cx() > 15*T), S.R(28)])), 'dead');
+  check('37 step down slowly, run the brittle step and off its end', run(36, () => script([...down37, S.R(28)])), 'dead');
+  check('37 step down slowly, run the brittle step, stop at its end', run(36, () => script([...down37, S.R(14.2), S.U(P => !P.on), S.U(P => P.on), S.R(28)])), 'clear');
   // ---- 38 wheel
   const p38 = (a0, a1) => () => { let jumped = false; return P => { const w = g.S.wh, onW = P.stand && P.stand.wheel;
     if (!jumped) { if (cx() < 5.3*T) return R(); if (Math.abs(P.vx) > 0.1) return N();
@@ -49,11 +53,14 @@
     return R(); }; };
   check('38 jump at the platform when it is in front of you', run(37, p38(3.65, 3.8), {max:900}), 'dead');
   check('38 jump where it will be after it hurries', run(37, p38(2.95, 3.1), {max:1500}), 'clear');
-  // ---- 39 shy raft
-  check('39 walk across on it', run(38, () => R), 'dead');
-  check('39 stand on it, facing the far bank', run(38, () => script([S.R(7.0), S.W(400)]), {max:600}), 'timeout');
-  check('39 face back, ride, then walk to the door', run(38, () => script([S.R(7.0), S.K({left:true}, 2), S.U(() => g.S.raft.x >= 21*T), S.R(29)]), {max:1500}), /dead|timeout/);
-  check('39 face back, ride, and keep your back to the door', run(38, () => script([S.R(7.0), S.K({left:true}, 2), S.W(900)]), {max:1500}), 'clear');
+  // ---- 39 ferry
+  const key39 = x => [x > 2 ? S.R(x) : S.L(x), S.K({}, 8), S.J(30, 0), S.U(P => P.on)];
+  const ride39 = [S.R(7.6), S.W(20), S.U(() => g.S.g.x >= 20*T), S.R(28)];
+  check('39 walk across', run(38, () => R), 'dead');
+  check('39 stand on it with no keys', run(38, () => script([S.R(8.4), S.W(500)]), {max:700}), 'timeout');
+  check('39 take one key, stand on it', run(38, () => script([...key39(3.875), S.R(8.4), S.W(500)]), {max:900}), 'timeout');
+  check('39 take all three keys', run(38, () => script([...key39(3.875), ...key39(5.19), ...key39(6.5), S.R(8.4), S.W(300)]), {max:1200}), 'dead');
+  check('39 take two keys and ride', run(38, () => script([...key39(3.875), ...key39(6.5), ...ride39]), {max:1800}), 'clear');
   // ---- 40 balance
   const hopOn = [S.L(13.0), S.W(10), S.R(13.25), S.J(30, 1), S.U(P => P.on, {right:true})];
   const stopShort = [S.F(R, () => g.S.blk.st === 'fall'), S.W(80)], home40 = [S.L(1.6), S.W(30)];

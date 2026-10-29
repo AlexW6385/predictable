@@ -1133,8 +1133,31 @@ const LV = [
 
 /* 37. the ground hits back as hard as you fall */
 { id:'hardlanding', was:[35], start:2, sy:68,
-  build(){ Gd(0,29); R('g',0,4,3,3); R('g',7,10,3,3); R('g',12,15,6,6); R('g',17,19,9,9,{crumble:24}); R('g',21,23,12,12); Door(27,14); },
-  onLand(){ if (P.landV >= 11.5) die('fall'); } },
+  build(){ Gd(0,29);
+    // each step is tucked under the lip of the one above: step off and you land on it, run off and you sail past
+    E({t:'g', x:0, y:3*T, w:6*T, h:T, solid:true}); E({t:'g', x:4*T, y:6*T, w:3.5*T, h:T, solid:true});
+    // the long step is brittle, tile by tile; under its far end, the last step
+    S.c = []; for (let c = 6; c <= 14; c++) S.c.push(R('g', c, c, 9, 9, {crumble:24}));
+    E({t:'g', x:12.5*T, y:12*T, w:4*T, h:T, solid:true}); Door(27,14);
+    S.ball = {x:3.6*T, y:3*T - 6, vx:4.4, vy:0, st:'roll', t:0}; S.splat = []; },
+  onLand(){ if (P.landV >= 11.5) return die('fall'); if (P.landV > 8) { shake = 4; dust(pcx(), P.y + PH); S.splat.push([pcx(), P.y + PH, 0]); } },
+  update(){ const b = S.ball; b.t++;
+    // a ball rolls off the top at a run, sails past the step below, and bursts where it lands
+    if (b.st === 'roll') { b.x += b.vx; if (b.x > 6*T) b.st = 'fly'; }
+    else if (b.st === 'fly') { b.x += b.vx; b.vy = Math.min(b.vy + 0.55, 12); b.y += b.vy;
+      const fl = b.x > 6*T && b.x < 15*T && b.y >= 9*T - 6 ? 9*T : b.y >= GY - 6 ? GY : null;
+      if (fl) { b.st = 'gone'; b.t = 0; shake = 3; S.splat.push([b.x, fl, 1]); for (let i = 0; i < 12; i++) parts.push({x:b.x, y:fl - 4, vx:(Math.random() - .5)*5, vy:-Math.random()*3.5, life:26, r:2.5, col:C.ink2}); } }
+    else if (b.t > 200) Object.assign(b, {x:3.6*T, y:3*T - 6, vy:0, st:'roll'});
+    for (const sp of S.splat) sp[3] = (sp[3] || 0) + 1; S.splat = S.splat.filter(sp => sp[3] < 240); },
+  draw(){ ctx.strokeStyle = C.white; ctx.lineWidth = 1.2;
+    // hairline cracks on the brittle tiles
+    for (const e of S.c) if (e.alive && !e.fall) { ctx.beginPath(); ctx.moveTo(e.x + 9, e.y + 4); ctx.lineTo(e.x + 14, e.y + 14); ctx.lineTo(e.x + 11, e.y + 22); ctx.moveTo(e.x + 23, e.y + 5); ctx.lineTo(e.x + 20, e.y + 16); ctx.stroke(); }
+    // a hard landing leaves a crack; a burst ball leaves a scatter
+    for (const [x, y, k, t] of S.splat) { ctx.globalAlpha = Math.min(1, (240 - t)/60); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath();
+      if (k) for (let i = 0; i < 6; i++) { ctx.moveTo(x - 10 + i*4, y - 1); ctx.lineTo(x - 13 + i*5, y - 4 - (i % 2)*3); }
+      else { ctx.moveTo(x - 8, y + 2); ctx.lineTo(x - 2, y + 7); ctx.lineTo(x + 3, y + 3); ctx.lineTo(x + 9, y + 8); }
+      ctx.stroke(); ctx.globalAlpha = 1; }
+    const b = S.ball; if (b.st !== 'gone') { ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); } } },
 
 /* 38. the wheel hurries away from whoever jumps at it */
 { id:'wheel', was:[36], start:2,
@@ -1146,18 +1169,42 @@ const LV = [
   update(){ S.wh.a += 0.012*(S.wh.boost > 0 ? 3.2 : 1); if (S.wh.boost > 0) S.wh.boost--; this.place(true); },
   drawBack(){ const w = S.wh; ctx.strokeStyle = S.wh.boost ? C.red : C.grid2; ctx.lineWidth = 3; for (const p of S.pl) { ctx.beginPath(); ctx.moveTo(w.cx, w.cy); ctx.lineTo(p.x + 32, p.y + 6); ctx.stroke(); } ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(w.cx, w.cy, 8, 0, 7); ctx.fill(); } },
 
-/* 39. it runs from wherever you are heading */
-{ id:'shyraft', start:3,
-  build(){ Gd(0,5); Sp(6,23,14,'up'); R('g',6,23,15,16); Gd(24,29);
-    S.raft = E({t:'raft', x:6*T, y:GY, w:3*T, h:12, solid:true}); S.door = {x:27*T, y:0}; S.look = 90; },
-  update(){ const r = S.raft, on = P.on && P.stand === r;
-    const nx = on ? clamp(r.x - P.face*1.8, 6*T, 21*T) : r.x, vx = nx - r.x; r.x = nx; if (on) P.x += vx; r.mv = vx;
-    // the door on the far bank: it comes to whoever lets go, and bites whoever faces it
-    const d = S.door, dir = Math.sign(d.x + 18 - pcx()) || 1, docked = r.x >= 21*T;
-    S.look = (P.face === dir) ? 0 : S.look + 1; d.teeth = clamp(1 - S.look/60, 0, 1);
-    if (fleeDoor(d, 1.6, {min: docked ? r.x : 25*T, wait:50})) { if (S.look >= 60) return levelClear(); d.bite = true; return die('door'); }
-    d.y = docked && d.x < 24*T - 18 ? -8 : 0; },
-  draw(){ drawShy(S.door); const r = S.raft; if (r.mv) { ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { const wx = r.mv > 0 ? r.x - 8 - i*10 : r.x + r.w + 8 + i*10; ctx.beginPath(); ctx.moveTo(wx, GY + 8); ctx.lineTo(wx - Math.sign(r.mv)*6, GY + 14); ctx.stroke(); } } } },
+/* 39. what you take from the other side counts twice */
+{ id:'ferry', was:[39], start:2, sy:324,
+  build(){ R('g',0,6,11,16); Gd(7,22); Sp(7,22,13,'up'); E({t:'g', x:23*T, y:412, w:7*T, h:H - 412, solid:true}); Door(27.5, 412/T);
+    // a ferry hangs from a cable; a rope runs from it over a pulley to a box, and the keys hang from the box
+    S.g = E({t:'b', x:7*T, y:352, w:3*T, h:10, solid:true}); S.box = {on:[-42, 0, 42], len:[14, 28, 14]}; },
+  boxW(){ return 1 + S.box.on.filter(k => k != null).length; },
+  load(){ return P.on && P.stand === S.g ? 1 + S.keys : 0; },
+  update(){ const g = S.g, L = this.load(), B = this.boxW();
+    // heavier than the box, it runs to the far bank; lighter, the box pulls it home
+    const vx = L > B ? 1.4 : L < B ? -1.4 : 0, nx = clamp(g.x + vx, 7*T, 23*T - 3*T), dx = nx - g.x; g.x = nx;
+    // it hangs lower the more it carries
+    const ty = 352 + 20*L, dy = clamp(ty - g.y, -2, 2); g.y += dy; if (L) { P.x += dx; P.y += dy; }
+    if (g.y + g.h > 432) { shake = 6; return die('spike'); }
+    const rise = (g.x - 7*T)*0.25, by = 220 - rise;
+    for (let i = 0; i < 3; i++) { const k = S.box.on[i]; if (k == null) continue; const kx = 166 + k - 7, ky = by + 40 + S.box.len[i];
+      if (ov(pbox(), {x:kx, y:ky, w:14, h:20})) { S.box.on[i] = null; S.keys++; sparkle(kx + 7, ky + 10); } } },
+  drawBack(){ const g = S.g, rise = (g.x - 7*T)*0.25, by = 220 - rise;
+    // the post, the pulley, the cable to the far bank, and the rope down to the box
+    ctx.fillStyle = C.ink; ctx.fillRect(173, 100, 6, 252); ctx.fillRect(23*T + 20, 100, 6, 312);
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(176, 92); ctx.lineTo(23*T + 23, 92); ctx.stroke();
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(166, by); ctx.lineTo(166, 100); ctx.arc(176, 100, 10, Math.PI, Math.PI*1.5); ctx.lineTo(g.x + 48, 90); ctx.stroke();
+    ctx.fillStyle = C.white; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(176, 100, 10, 0, 7); ctx.fill(); ctx.stroke();
+    // the ferry's hanger
+    ctx.beginPath(); ctx.moveTo(g.x + 48, 92); ctx.lineTo(g.x + 48, g.y - 18); ctx.moveTo(g.x + 4, g.y); ctx.lineTo(g.x + 48, g.y - 18); ctx.lineTo(g.x + 92, g.y); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(g.x + 48, 92, 5, 0, 7); ctx.fill(); },
+  draw(){ const g = S.g, rise = (g.x - 7*T)*0.25, by = 220 - rise, B = this.boxW(), L = this.load();
+    // a ruler on the bank: how low it hangs for each weight; the fourth is the thorns
+    for (let n = 1; n <= 4; n++) { const y = 352 + 20*n; ctx.strokeStyle = n === 4 ? C.red : C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(206, y); ctx.lineTo(224, y); ctx.stroke();
+      ctx.fillStyle = n === 4 ? C.red : C.white; for (let i = 0; i < n; i++) { ctx.beginPath(); ctx.arc(200 - i*6, y, 2, 0, 7); ctx.fill(); } }
+    // the box and its weight
+    ctx.fillStyle = C.ink2; ctx.fillRect(112, by, 108, 40); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(112, by, 108, 40);
+    ctx.fillStyle = C.white; for (let i = 0; i < B; i++) { ctx.beginPath(); ctx.arc(166 - (B - 1)*9 + i*18, by + 20, 5, 0, 7); ctx.fill(); }
+    for (let i = 0; i < 3; i++) { const k = S.box.on[i]; if (k == null) continue; const kx = 166 + k; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(kx, by + 40); ctx.lineTo(kx, by + 40 + S.box.len[i]); ctx.stroke(); drawKey(kx - 7, by + 40 + S.box.len[i]); }
+    // the ferry's weight: lit while you stand on it
+    for (let i = 0; i < 4; i++) { const x = g.x + 48 - 27 + i*18, y = g.y + 5; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 7);
+      if (i < L) { ctx.fillStyle = i === 3 ? C.red : C.white; ctx.fill(); } else { ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1; ctx.stroke(); } } } },
 
 /* 40. whatever is lighter flies */
 { id:'balance', start:8.5,
