@@ -97,7 +97,9 @@
   { const rs = []; for (const dx of [-0.3, -0.15, 0.15, 0.3]) for (const h of [24, 30]) { rs.push(life68((P, d) => jumpAt(sp68.map(x => x + (d ? dx : 0)), d ? h : 30)(P), 3000).split(' ')[0]); }
     check('68 understood, a little sloppy (8 tries)', [rs.filter(r => r === 'clear').length + '/8'], '8/8'); }
   // ---- 69 remembered
-  const lidBroken = () => g.ents.filter(e => e.t === 'bb' && e.alive).length < 3;
+  const lidBroken = () => g.ents.filter(e => e.t === 'bb' && e.alive).length < 4;
+  clean('remembered'); check('69 walk into the lid, then wait for the sky', run(68, life => life === 0 ? script([S.R(7.9), S.J(30, 1), S.R(17)]) : script([S.R(7.9), S.J(30, 1), S.R(14.6), S.W(400), S.R(17)]), {lives:2, max:1200}), 'dead');
+  clean('remembered'); check('69 run and jump the well, then wait for the sky', run(68, life => life === 0 ? script([S.R(7.9), S.J(30, 1), S.R(15.0), S.J(30, 1), S.W(60)]) : script([S.R(7.9), S.J(30, 1), S.R(14.6), S.W(400), S.R(17)]), {lives:2, max:1200}), 'dead');
   clean('remembered'); check('69 jump the thorns, keep off the lid', run(68, () => script([S.R(7.9), S.J(30, 1), S.R(14.6), S.W(600)]), {max:900}), 'timeout');
   clean('remembered'); check('69 die on the lid, not above the door; then wait for the sky', run(68, life => life === 0 ? script([S.R(7.9), S.J(30, 1), S.R(14.4), S.JT(16.8, 432, {tol:10}), S.W(60)]) : script([S.R(7.9), S.J(30, 1), S.R(14.6), S.U(lidBroken), S.U(() => !(g.S.cones || []).some(c => c.st === 'fall')), S.F(P => { const h = g.ents.find(e => e.t === 'bb' && !e.alive); return {k:{right: cx() < h.x + 14, left: cx() > h.x + 18}}; }, P => P.y > 470), S.W(60)]), {lives:2, max:1500}), 'dead');
   clean('remembered'); check('69 die on the lid above the door; then wait for the sky, and jump into the hole', run(68, life => life === 0 ? script([S.R(7.9), S.J(30, 1), S.R(14.4), S.JT(18.6, 432, {tol:10}), S.W(60)]) : script([S.R(7.9), S.J(30, 1), S.R(14.0), S.U(lidBroken), S.U(() => !(g.S.cones || []).some(c => c.st === 'fall')), S.JT(18.8, 432, {tol:6}), S.W(60)]), {lives:2, max:1500}), 'clear');

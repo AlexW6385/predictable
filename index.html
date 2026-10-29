@@ -1932,10 +1932,10 @@ const LV = [
 
 /* 69. it remembers where you fell, and the sky falls there */
 { id:'remembered', was:[], start:2,
-  build(){ Gd(0,15); Gd(22,29); R('g',16,21,14,16,{y:GY + 64}); for (const c of [16,18,20]) R('bb',c,c + 1,14,14,{hp:1}); S.lidSp = [16,18,20].map(c => Sp(c,c + 1,13,'up'));
+  build(){ Gd(0,15); Gd(24,29); R('g',16,23,14,16,{y:GY + 64}); for (const c of [16,18,20,22]) R('bb',c,c + 1,14,14,{hp:1}); S.lidSp = [16,18,20,22].map(c => Sp(c,c + 1,13,'up'));
     Door(18.5,16); Sp(9,10,13,'up');
     // the well is thorny everywhere but under the door
-    E({t:'s', x:16*T, y:GY + 48, w:2*T, h:16, dir:'up', kill:true}); E({t:'s', x:20*T, y:GY + 48, w:2*T, h:16, dir:'up', kill:true}); S.marks = marksOf().slice(); S.k = 0; S.rt = 90; },
+    E({t:'s', x:16*T, y:GY + 48, w:2*T, h:16, dir:'up', kill:true}); E({t:'s', x:20*T, y:GY + 48, w:4*T, h:16, dir:'up', kill:true}); S.marks = marksOf().slice(); S.k = 0; S.rt = 90; },
   update(){ // the lid's thorns go with the brick they stand on
     for (const s of S.lidSp) if (s.alive && !ents.some(e => e.t === 'bb' && e.alive && Math.abs(e.x - s.x) < 2)) s.alive = false;
     if (S.marks.length && --S.rt <= 0) { S.rt = 70; const m = S.marks[S.k++ % S.marks.length]; drop(m[0], 40); }
