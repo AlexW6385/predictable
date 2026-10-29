@@ -27,6 +27,7 @@
   // ---- 25 imitation
   const nearC = (c, a, b) => c.alive && c.x - g.P.x > a && c.x - g.P.x < b;
   check('25 just walk', run(24, () => R), 'dead');
+  check('25 jump the first from a few tiles off', run(24, () => P => (P.on && nearC(g.S.c1, 120, 150)) ? {jump:30, dir:1} : R()), 'dead');
   check('25 jump over anything that comes', run(24, () => P => (P.on && (nearC(g.S.c1, 20, 70) || nearC(g.S.c2, 20, 90))) ? {jump:30, dir:1} : R()), 'dead');
   check('25 jump the first, walk away from the second', run(24, () => P => { const c1 = g.S.c1, c2 = g.S.c2;
       if (P.on && nearC(c1, 20, 70) && c1.on) return {jump:30, dir:1};

@@ -925,20 +925,21 @@ const LV = [
     ctx.fillStyle = 'rgba(255,255,255,.25)'; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(i*170 + 20, top); ctx.lineTo(i*170 + 60, top); ctx.lineTo(i*170 + 10, top + h); ctx.lineTo(i*170 - 30, top + h); ctx.fill(); } },
   draw(){ for (const e of ents) if (e.falsef && e.alive) { ctx.fillStyle = hatch; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.fillStyle = C.ink; ctx.fillRect(e.x, e.y, e.w, 3); } } },
 
-/* 25. imitation, late and low; imitation, perfect and backwards */
+/* 25. imitation, late; imitation, perfect and backwards */
 { id:'imitators', was:[21], start:2,
   build(){ Gd(0,25); Gd(28,29); Door(28.6,14);
     S.c1 = {x:9*T, y:GY - 24, vy:0, on:true, act:false, q:-1, alive:true}; S.c2 = {x:22*T, y:GY - 24, vy:0, on:true, act:false, alive:true}; },
-  onJump(){ if (S.c1.act) S.c1.q = 7; if (S.c2.act && S.c2.on) { S.c2.vy = -10.6; S.c2.on = false; } },
+  onJump(){ if (S.c1.act && S.c1.q <= 0) S.c1.q = 10; if (S.c2.act && S.c2.on) { S.c2.vy = -10.6; S.c2.on = false; } },
   update(){ const pc = pcx();
     for (const c of [S.c1, S.c2]) { if (!c.alive) continue;
-      if (c === S.c1) { if (!c.act && pc > 3*T) c.act = true; if (!c.act) continue; if (c.q > 0 && --c.q === 0 && c.on) { c.vy = -8; c.on = false; } c.x -= 1.3; }
+      if (c === S.c1) { if (!c.act && pc > 3*T) c.act = true; if (!c.act) continue; if (c.q > 0 && --c.q === 0 && c.on) { c.vy = -10.6; c.on = false; } c.x -= 1.3; }
       else { if (!c.act && pc > 14*T) c.act = true; if (!c.act) continue; c.x -= P.vx; }
       c.vy = Math.min(c.vy + 0.55, 12); c.y += c.vy;
       if (c.vy >= 0 && c.y >= GY - 24 && c.y <= GY - 10 && groundAt(c.x + 12, GY)) { c.y = GY - 24; c.vy = 0; c.on = true; } else if (c.y < GY - 24.5) c.on = false;
       if (c.y > H + 40) c.alive = false;
       if (ov(pbox(3), {x:c.x+3, y:c.y+3, w:18, h:18})) return die('creature'); } },
-  draw(){ for (const c of [S.c1, S.c2]) if (c.alive) drawCreature(c.x, c.y, c === S.c2); } },
+  // the late one crouches while it waits to copy you
+  draw(){ for (const c of [S.c1, S.c2]) if (c.alive) { const sq = c === S.c1 && c.q > 0 && c.on; if (sq) { ctx.save(); ctx.translate(c.x + 12, c.y + 24); ctx.scale(1.18, 0.75); ctx.translate(-c.x - 12, -c.y - 24); } drawCreature(c.x, c.y, c === S.c2); if (sq) ctx.restore(); } } },
 
 /* 26. on the other side, everything means its opposite */
 { id:'opposites', was:[69], start:2,
