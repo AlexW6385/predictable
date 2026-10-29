@@ -2642,33 +2642,58 @@ const LV = [
     ctx.strokeStyle = '#4C78B5'; ctx.fillStyle = '#4C78B5'; ctx.beginPath(); ctx.moveTo(dx + 30, dy - 22); ctx.lineTo(dx - 20, dy - 22); ctx.stroke(); ctx.beginPath(); ctx.moveTo(dx - 26, dy - 22); ctx.lineTo(dx - 18, dy - 27); ctx.lineTo(dx - 18, dy - 17); ctx.fill();
     if (S.burn > 2) for (let i = 0; i < 2; i++) parts.push({x:P.x + Math.random()*PW, y:P.y + PH, vx:0, vy:-1 - Math.random(), life:16, r:2, col:'rgba(120,120,120,.6)'}); } },
 
-/* 98. the box was filled before you chose, by the one who knew how you would choose */
-{ id:'newcomb', was:[98], start:1.5,
+/* 98. the door runs from whoever chooses it; the host knows where it went, and shows you one place it is not */
+{ id:'newcomb', was:[98], start:2,
   build(){ Gd(0,29);
-    S.bait = [4, 8, 12, 16].map(c => ({x:c*T + 8, y:GY - 20, alive:true}));
-    S.seen = 0; S.filled = null; S.ft = 0; S.open = {x:20*T, coin:true}; S.shut = {x:23*T, opened:false};
-    Door(27,14,{slots:2, fill:() => (S.keys > 0 ? 1 : 0) + (S.coins > 0 ? 1 : 0), onEnter(d){ if (S.keys > 0 && S.coins > 0) levelClear(); else { d.bite = true; die('door'); } }}); },
+    // three doors on feet, one real; where it starts is new every life
+    const n = (prof.deaths*7 + (M.lives = (M.lives || 0) + 1)*5) % 9;
+    S.dx = [9, 15, 21].map(c => c*T - 2); S.real = [2, 0, 1, 1, 2, 0, 0, 1, 2][n];
+    S.pick = -1; S.ct = [0, 0, 0]; S.t = 0; S.open = -1; S.live = [false, false, false]; S.ign = [false, false, false]; S.bit = -1; S.lit = false; S.wob = [0, 0, 0]; },
+  rect(i){ return {x:S.dx[i], y:GY - 62, w:36, h:62}; },
   update(){ const pc = pcx();
-    // the bait: the Eye counts what you take
-    for (const c of S.bait) if (c.alive && ov(pbox(), {x:c.x, y:c.y, w:16, h:18})) { c.alive = false; S.coins++; if (S.filled == null) S.seen++; sparkle(c.x + 8, c.y + 9); }
-    // past this line it has made up its mind about you, and filled the closed box accordingly; nothing you do now changes what is in it
-    if (S.filled == null && pc > 17.5*T) { S.filled = S.seen === 0; S.ft = 1; shake = 3; }
-    if (S.ft) S.ft++;
-    const o = S.open; if (o.coin && ov(pbox(), {x:o.x, y:GY - 34, w:T, h:34})) { o.coin = false; S.coins++; sparkle(o.x + 16, GY - 20); }
-    const s = S.shut; if (!s.opened && ov(pbox(), {x:s.x, y:GY - 34, w:T, h:34})) { s.opened = true; if (S.filled) { S.keys++; sparkle(s.x + 16, GY - 40); } else dust(s.x + 16, GY - 30); } },
-  draw(){ for (const c of S.bait) if (c.alive) drawCoin(c.x, c.y);
-    // the line
-    ctx.strokeStyle = 'rgba(30,43,71,.4)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(17.5*T, GY); ctx.lineTo(17.5*T, GY - 120); ctx.stroke(); ctx.setLineDash([]);
-    // the open box (glass) and the closed one
-    const o = S.open; ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.fillStyle = 'rgba(200,220,240,.5)'; ctx.fillRect(o.x + 2, GY - 34, T - 4, 34); ctx.strokeRect(o.x + 2, GY - 34, T - 4, 34); if (o.coin) drawCoin(o.x + 8, GY - 26);
-    const s = S.shut; ctx.fillStyle = '#9C6A45'; ctx.fillRect(s.x + 2, GY - 34, T - 4, 34); ctx.strokeRect(s.x + 2, GY - 34, T - 4, 34);
-    if (s.opened) { ctx.fillStyle = C.ink; ctx.fillRect(s.x + 5, GY - 31, T - 10, 26); ctx.save(); ctx.translate(s.x + 2, GY - 34); ctx.rotate(-1.1); ctx.fillStyle = '#9C6A45'; ctx.fillRect(0, -6, T - 4, 6); ctx.strokeRect(0, -6, T - 4, 6); ctx.restore(); }
-    else { ctx.fillStyle = C.gold; ctx.fillRect(s.x + 13, GY - 22, 6, 6); }
-    // the one who knew: it watched what you took, and it decided at the line
-    const ex = 21.5*T, ey = 190, lk = S.ft && S.ft < 60 ? {x:s.x + 16, y:GY - 30} : {x:pcx(), y:P.y + 14};
-    drawEye(ex, ey, 18, lk.x, lk.y, S.filled === false && S.ft > 30 ? 0.4 : 0);
-    for (let i = 0; i < S.seen; i++) drawCoin(ex - 50 + i*20, ey - 52);
-    if (S.ft && S.ft < 60) { const k = S.ft/60; ctx.globalAlpha = 1 - k; if (S.filled) drawKey(s.x + 10, GY - 120 + 80*k); else { ctx.strokeStyle = C.red; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(ex - 10, ey + 30); ctx.lineTo(ex + 10, ey + 50); ctx.moveTo(ex + 10, ey + 30); ctx.lineTo(ex - 10, ey + 50); ctx.stroke(); } ctx.globalAlpha = 1; } } },
+    // a locked door rattles its padlock at whoever tries to walk in
+    for (let i = 0; i < 3; i++) { if (S.wob[i] > 0) S.wob[i]--; if (!S.live[i] && P.on && Math.abs(P.vx) > 0.3 && ov(pbox(6), this.rect(i))) S.wob[i] = 6; }
+    if (S.pick < 0) {
+      // the doors are locked; stand at one a while and it is yours
+      for (let i = 0; i < 3; i++) { const at = Math.abs(pc - (S.dx[i] + 18)) < 14 && P.y > GY - 90;
+        S.ct[i] = at ? S.ct[i] + 1 : 0;
+        if (S.ct[i] >= 40) { S.pick = i; S.t = 0;
+          // and the door runs from whoever chooses it: if it was this one, it slips into one of the others
+          if (S.real === i) S.real = (i + 1 + (prof.deaths + M.lives) % 2) % 3;
+          // the host knows where it is, and will open one of the others that it is not
+          S.open = [0, 1, 2].find(j => j !== i && j !== S.real); } }
+      return; }
+    S.t++;
+    const inside = i => P.x < S.dx[i] + 36 && P.x + PW > S.dx[i];
+    // the one you chose, and the one it opens, ignore you if they come alive around you, until you have stepped out of them
+    const wake = i => { S.live[i] = true; S.ign[i] = inside(i); };
+    if (S.t === 70) { wake(S.open); shake = 4; }
+    if (S.t === 110) { wake(S.pick); S.live[3 - S.pick - S.open] = true; for (const i of [S.pick, 3 - S.pick - S.open]) sparkle(S.dx[i] + 27, GY - 30); }
+    for (let i = 0; i < 3; i++) { if (S.ign[i] && !inside(i)) S.ign[i] = false;
+      if (S.live[i] && !S.ign[i] && P.on && ov(pbox(6), this.rect(i))) {
+        if (i === S.real) return levelClear();
+        // a fake bites, and the real one shows itself
+        S.bit = i; S.lit = true; return die('door'); } } },
+  draw(){ const t = S.t, picked = S.pick >= 0, pat = picked && t < 26;
+    for (let i = 0; i < 3; i++) { const x = S.dx[i] + (pat ? Math.sin(t*0.9 + i*2)*2 : 0) + (S.wob[i] ? Math.sin(S.wob[i]*2)*1.5 : 0), mouth = i === S.open && t >= 70, sw = mouth ? Math.min(1, (t - 70)/12) : 0, lit = S.lit && i === S.real;
+      if (lit) { ctx.strokeStyle = 'rgba(226,166,42,.7)'; ctx.lineWidth = 3; for (let k = 0; k < 9; k++) { const a = Math.PI*(0.1 + 0.8*k/8); ctx.beginPath(); ctx.moveTo(x + 18 - Math.cos(a)*30, GY - 34 - Math.sin(a)*30); ctx.lineTo(x + 18 - Math.cos(a)*62, GY - 34 - Math.sin(a)*62); ctx.stroke(); } }
+      // its feet: these doors can walk, and when you choose, they all scuffle at once
+      drawShy({x, y:0, walk:pat, open:lit, bite:S.bit === i || mouth});
+      if (mouth && S.bit !== i) { // its leaf swings open on the teeth behind it
+        ctx.save(); ctx.translate(x + 1.5, 0); ctx.scale(1 - 0.8*sw, 1); ctx.translate(-x - 1.5, 0); drawDoor(x, GY - 62); ctx.restore(); }
+      // locked: a padlock on the latch, which jiggles if you try it
+      if (!S.live[i]) { const lx = x + 23 + (S.wob[i] ? Math.sin(S.wob[i]*3)*2 : 0), ly = GY - 33; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(lx + 4, ly, 3.5, Math.PI, 0); ctx.stroke(); ctx.fillStyle = C.ink; ctx.fillRect(lx - 0.5, ly, 9, 8); }
+      // the one you chose wears a ring; while you choose, it fills
+      if (S.pick === i) { ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x + 18, GY - 82, 11, 4, 0, 0, 7); ctx.stroke(); }
+      else if (!picked && S.ct[i] > 0) { ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x + 18, GY - 82, 7, -Math.PI/2, -Math.PI/2 + Math.PI*2*S.ct[i]/40); ctx.stroke(); } }
+    // the host: it watches you choose, then looks over the others, and opens one that is not it
+    const ex = 15*T + 16, ey = 190, dc = i => ({x:S.dx[i] + 18, y:GY - 34});
+    let lk = {x:pcx(), y:P.y + 14};
+    if (S.lit) lk = dc(S.real);
+    else if (picked && t < 26) lk = dc(S.pick);
+    else if (picked && t < 60) { const o = [0, 1, 2].filter(j => j !== S.pick); lk = dc(o[Math.floor((t - 26)/9) % 2]); }
+    else if (picked && t < 110) lk = dc(S.open);
+    drawEye(ex, ey, 18, lk.x, lk.y, 0); } },
 
 /* 99. the eye that sees everything has never seen itself */
 { id:'reflection', was:[99], start:3.5,

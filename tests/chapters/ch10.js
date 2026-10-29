@@ -61,11 +61,26 @@
   check('97 ... and come back slowly over the hot floor', run(96, () => script([S.R(26.5), S.L(18), {until: () => cx() < 13*T, rule: (P, k, st) => ({k:{left: (st.n = (st.n || 0) + 1) % 5 === 0}})}, S.L(2.5), S.W(20)]), {freshMem:true, max:1500}), 'dead');
   check('97 run in, get the key, run back, let go just before the gate and tap across', run(96, () => script([S.R(26.5), S.L(15.0), S.U(() => Math.abs(g.P.vx) < 0.3, {}), tapL(() => cx() < 14.2*T), S.L(2.5), S.W(20)]), {freshMem:true, max:1500}), /clear|win/);
   check('97 ... or brake in a low hop across it', run(96, () => script([S.R(26.5), S.L(15.3), {until: (P, k, st) => { if (!P.on) st.air = true; return st.air && P.on; }, rule: (P, k, st) => st.air ? {k:{right: Math.abs(P.vx) > 1.2 && P.vx < 0}} : {jump:3, dir:-1}}, S.L(2.5), S.W(20)]), {freshMem:true, max:1500}), /clear|win/);
-  // ---- 98 newcomb: the closed box holds the key only if it saw you take nothing on the way
-  const clean98 = [4, 8, 12, 16].flatMap(c => [to(c - 2.2), S.J(30, 1), S.U(P => P.on, {})]).concat([S.R(17.8)]);
-  check('98 take the coins on the way, then both boxes', run(97, () => script([S.R(27.5), S.W(20)]), {freshMem:true, max:1500}), 'dead');
-  check('98 leave the coins; take only the closed box', run(97, () => script([...clean98, {until: () => cx() > 21.6*T, rule: () => R()}, S.J(30, 1), S.U(P => P.on && cx() > 22.5*T, {}), S.R(27.5), S.W(20)]), {freshMem:true, max:1500}), 'dead');
-  check('98 leave the coins until it has decided; then take both', run(97, () => script([...clean98, S.R(27.5), S.W(20)]), {freshMem:true, max:1500}), /clear|win/);
+  // ---- 98 monty hall: choose a door and the real one runs from it; the host opens one of the others that is not it
+  const dc98 = i => g.S.dx[i] + 18, rem98 = () => 3 - g.S.pick - g.S.open;
+  const pick98 = i => [to(i*6 + 9.5), S.U(() => g.S.pick >= 0, {})];
+  const live98 = S.U(() => g.S.t >= 110, {});
+  // walk to door j, hopping over any other door on the way
+  const go98 = j => ({until: () => false, rule: P => { const tx = dc98(j), d = Math.sign(tx - cx()) || 1;
+    for (let i = 0; i < 3; i++) if (i !== j && (dc98(i) - cx())*d > 0 && Math.abs(dc98(i) - cx()) < 70 && P.on) return {jump:30, dir:d};
+    return {k: d > 0 ? {right:true} : {left:true}}; }});
+  check('98 hold right', run(97, () => R, {freshMem:true, max:1200}), 'timeout');
+  check('98 stand where you start', run(97, () => N, {freshMem:true, max:1200}), 'timeout');
+  check('98 walk straight to a door and wait there', run(97, () => script([to(9.5), S.W(1200)]), {freshMem:true, max:1200}), 'timeout');
+  check('98 walk into each door on the way, before choosing', run(97, () => script([S.R(10), S.L(8), S.R(16), S.L(14), S.R(22), S.W(20)]), {freshMem:true, max:1200}), 'timeout');
+  for (const i of [0, 1, 2]) check(`98 choose door ${i + 1} and stay with it (three lives)`, run(97, () => script([...pick98(i), live98, S.L(i*6 + 7.5), to(i*6 + 9.5), S.W(60)]), {freshMem:true, max:1200, lives:3}), 'dead');
+  for (const i of [0, 1, 2]) check(`98 choose door ${i + 1}, then go into the one the Eye opened`, run(97, () => script([...pick98(i), live98, {until: () => false, rule: P => go98(g.S.open).rule(P)}]), {freshMem:true, max:1200}), 'dead');
+  // switch: the door you did not choose and it did not open
+  for (const i of [0, 1, 2]) check(`98 choose door ${i + 1}, then switch to the other closed one (three lives)`, run(97, () => script([...pick98(i), live98, {until: () => false, rule: P => go98(rem98()).rule(P)}]), {freshMem:true, max:1200, lives:3}), /clear|win/);
+  for (let n = 0; n < 4; n++) check(`98 ... again, wherever the real one starts (${n + 1})`, run(97, () => script([...pick98(n % 3), live98, {until: () => false, rule: P => go98(rem98()).rule(P)}]), {freshMem:true, max:1200}), /clear|win/);
+  check('98 ... choose by hopping in front of a door', run(97, () => script([to(15.5), {until: () => g.S.pick >= 0, rule: P => P.on ? {jump:6, dir:0} : N()}, S.U(P => P.on, {}), live98, {until: () => false, rule: P => go98(rem98()).rule(P)}]), {freshMem:true, max:1200}), /clear|win/);
+  check('98 ... think it over for a few seconds first', run(97, () => script([...pick98(0), live98, S.W(240), {until: () => false, rule: P => go98(rem98()).rule(P)}]), {freshMem:true, max:1200}), /clear|win/);
+  check('98 ... walk over to it before it unlocks, and wait there', run(97, () => script([...pick98(2), S.U(() => g.S.t >= 75, {}), {until: () => Math.abs(cx() - dc98(rem98())) < 6, rule: P => go98(rem98()).rule(P)}, S.W(200)]), {freshMem:true, max:1200}), /clear|win/);
   // ---- 99 reflection: the Eye looks at you; behind the mirror, at its own height, it looks at itself
   const up99 = [S.R(17.4), to(19.0), S.J(30, 1), S.U(P => P.on, {}), to(20.4), S.JT(22.6, 320, {tol:10}), to(22.25)];
   check('99 run to the door', run(98, () => R, {freshMem:true, max:1200}), /dead|timeout/);
