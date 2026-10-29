@@ -1341,21 +1341,41 @@ const LV = [
       ctx.lineWidth = 1.5; ctx.beginPath(); for (const cy of [120, 250, 380]) { ctx.moveTo(w.x + 4, cy); ctx.lineTo(w.x + 14, cy + 10); ctx.lineTo(w.x + 9, cy + 22); ctx.lineTo(w.x + 22, cy + 34); ctx.lineTo(w.x + 28, cy + 30); } ctx.stroke(); } } },
 /* ===================== V. Elements ===================== */
 
-/* 41. in the dark, only where you fell is lit; a sound shows you the way, and shows you to where you are going */
-{ id:'dark', was:[26, 56], start:1.5, dark:true, seeR:52,
-  // nothing here is invisible, only unlit: whatever a ring of sound lights, you see
-  build(){ Gd(0,4); Gd(7,13); Gd(16,29); Sp(10,10,13,'up'); R('b',7,12,9,9); Sp(7,12,10,'down'); Door(28,14);
-    S.rings = []; S.bat = {x:15*T, y:30, st:'roost', t:0}; },
-  ping(x, y){ S.rings.push({x, y, t:0}); },
-  onJump(){ this.ping(pcx(), P.y + PH); },
-  // the thud of a landing calls the bat; it dives at where you will be by the time it gets there
-  onLand(){ this.ping(pcx(), P.y + PH); const b = S.bat; if (b.st !== 'roost' && b.st !== 'back') return;
-    let tx = pcx(); for (let i = 0; i < 3; i++) tx = whereIn(Math.round(Math.hypot(tx - b.x, GY - 14 - b.y)/9));
-    b.st = 'dive'; b.tx = clamp(tx, 10, lvW() - 10); b.ty = GY - 14; },
-  update(){ for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 50);
-    batStep(S.bat, 15*T, 30); if (batHits(S.bat)) return die('bat'); },
-  lights(){ return S.rings.map(r => [r.x, r.y - 10, Math.min(250, 20 + r.t*9), 1 - r.t/50]); },
-  drawOver(){ drawRings(S.rings); ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(28*T + 25, GY - 22, 3, 0, 7); ctx.fill(); drawBat(S.bat); } },
+/* 41. it cannot see you, it can only hear you land; it goes where the sound was, and it lights its own way */
+{ id:'dark', was:[26, 56], start:3,
+  // the pits (in tiles); the floor is everything between them, and none of it is lit
+  pits: [[5.5,7.5],[10.5,12.5],[15.5,18.5],[22,25.5]],
+  build(){ let a = 0; for (const [l, r] of this.pits.concat([[30, 30]])) { E({t:'g', x:a*T, y:GY, w:(l - a)*T, h:3*T, solid:true}); a = r; }
+    Door(28.2,14); S.bat = {x:15*T, y:30, hx:15*T, hy:30, st:'roost', t:0, n:0, v:0}; S.rings = []; },
+  // a thud: it flies straight to where the sound was (a newer sound, and it turns for that one), and bites there
+  onLand(){ const b = S.bat; b.tx = pcx(); b.ty = GY - 16; b.v = Math.max(7, Math.hypot(b.tx - b.x, b.ty - b.y)/55); b.st = 'fly'; },
+  update(){ const b = S.bat;
+    if (b.st === 'fly') { const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy); if (d <= b.v) { b.x = b.tx; b.y = b.ty; b.st = 'bite'; b.t = 0; } else { b.x += dx/d*b.v; b.y += dy/d*b.v; } }
+    else if (b.st === 'bite') { if (++b.t >= 24) b.st = 'back'; }
+    else if (b.st === 'back') { const dx = b.hx - b.x, dy = b.hy - b.y, d = Math.hypot(dx, dy); if (d < 9) { b.x = b.hx; b.y = b.hy; b.st = 'roost'; } else { b.x += dx/d*9; b.y += dy/d*9; } }
+    // it screeches as it flies, and each screech lights the cave around it for a moment
+    if (b.st === 'roost') b.n = 0; else if (b.n++ % 10 === 0) S.rings.push({x:b.x, y:b.y, t:0});
+    for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 32);
+    if (b.st === 'bite' && Math.hypot(pcx() - b.x, P.y + 14 - b.y) < 28) return die('bat'); },
+  ringR(t){ return 176*Math.min(1, 0.2 + t/10); },
+  ringA(t){ return t < 10 ? 1 : Math.max(0, 1 - (t - 10)/22); },
+  draw(){ const b = S.bat;
+    // the rock it hangs from
+    ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.moveTo(b.hx - 34, 0); ctx.lineTo(b.hx + 30, 0); ctx.lineTo(b.hx + 14, 14); ctx.lineTo(b.hx + 4, 12); ctx.lineTo(b.hx - 8, 20); ctx.lineTo(b.hx - 20, 10); ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.translate(b.x, b.y); ctx.scale(1.5, 1.5); drawBat({x:0, y:0});
+    // biting: its jaws snap open and shut
+    if (b.st === 'bite') { const o = (b.t >> 2) % 2 ? 5 : 0; ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.moveTo(-5, 5); ctx.lineTo(5, 5); ctx.lineTo(0, 9 + o); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = C.white; ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(s*4, 5); ctx.lineTo(s*1.5, 5); ctx.lineTo(s*2.5, 8 + o*0.6); } ctx.fill(); }
+    ctx.restore(); },
+  // the dark: you see a little round yourself; everything else is lit only by its screeches
+  drawOver(){ const d = dark.getContext('2d'); d.globalCompositeOperation = 'source-over'; d.clearRect(0, 0, W, H); d.fillStyle = '#101628'; d.fillRect(0, 0, W, H);
+    d.globalCompositeOperation = 'destination-out';
+    const hole = (x, y, r, a, c) => { const g = d.createRadialGradient(x, y, r*c, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = g; d.beginPath(); d.arc(x, y, r, 0, 7); d.fill(); };
+    if (state !== 'dead') hole(pcx() - camX, P.y + 14, 40, 1, 0.55); else hole(pcx() - camX, clamp(P.y + PH/2, 20, GY - 6), 46, clamp(1 - deathT/90, 0, 1), 0.5);
+    for (const r of S.rings) { const a = this.ringA(r.t); if (a > 0.01) hole(r.x - camX, r.y, this.ringR(r.t), a, 0.75); }
+    d.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.setTransform(k, 0, 0, k, 0, 0); ctx.drawImage(dark, 0, 0, W, H); ctx.restore();
+    for (const r of S.rings) { ctx.strokeStyle = `rgba(226,166,42,${0.5*this.ringA(r.t)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(r.x, r.y, this.ringR(r.t), 0, 7); ctx.stroke(); } } },
 
 /* 42. the sun is moving, and so is every shade; on the boards, your own shadow is the hole you fall through */
 { id:'sun', was:[37, 64], start:2,

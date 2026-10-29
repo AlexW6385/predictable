@@ -3,15 +3,37 @@
   const check = (name, res, expect) => { const last = res[res.length-1]; const ok = expect instanceof RegExp ? expect.test(last) : last.startsWith(expect); out.push(`${ok ? 'ok ' : 'XX '} ${name.padEnd(60)} ${res.join(' ')}   (want ${expect})`); };
   const R = () => ({k:{right:true}}), Lk = () => ({k:{left:true}}), N = () => ({k:{}});
   const clean = id => { g.prof.marks[id] = []; };
-  // ---- 41 dark
-  clean('dark'); check('41 walk in the dark', run(40, () => R), 'dead');
-  clean('dark'); check('41 jump to look around, then stop', run(40, () => script([S.R(3.0), S.J(30, 0), S.W(90)]), {max:400}), 'dead');
-  { const gone = S.U(() => g.S.bat.st === 'back' || g.S.bat.st === 'roost'), hop1 = [S.R(4.0), S.JT(7.8, GY)], hop2 = [S.R(9.0), S.JT(11.6, GY)], hop3 = [S.R(13.6), S.JT(17.5, GY)];
-    clean('dark'); check('41 jump the gaps and the spike, keep moving', run(40, () => script([...hop1, ...hop2, ...hop3, S.R(28.6)]), {max:900}), 'dead');
-    clean('dark'); check('41 full jumps under the roof', run(40, () => script([...hop1, S.R(9.0), S.J(30, 1), S.R(28.6)]), {max:900}), 'dead');
-    clean('dark'); check('41 let it pass under the roof only', run(40, () => script([...hop1, ...hop2, gone, ...hop3, S.R(28.6)]), {max:1500}), 'dead');
-    clean('dark'); check('41 after each landing, let it come down where you were going', run(40, () => script([...hop1, gone, ...hop2, gone, ...hop3, gone, S.R(28.6)]), {max:1800}), 'clear');
-    clean('dark'); check('41 ... or step back after each landing', run(40, () => script([...hop1, S.K({left:true}, 5), gone, ...hop2, S.K({left:true}, 8), gone, ...hop3, S.K({left:true}, 6), gone, S.R(28.6)]), {max:1800}), 'clear'); }
+  // ---- 41 dark: pits you cannot see; a blind bat flies to where you last landed, bites there, and lights the cave as it flies
+  { const bat = () => g.S.bat, done = S.U(() => bat().st === 'back' || bat().st === 'roost');
+    // hop where you stand, step back the way you came, and look while it comes
+    const hop = (x, b) => [S.R(x), S.W(12), S.J(4, 0), S.L(x - b), done];
+    // jump a pit you have seen, and step on (s tiles) from where you land
+    const leap = (from, to, s, late) => [S.R(from), S.JT(to, GY), S.W(late || 0), s > 0 ? S.R(to + s) : S.L(to + s), done];
+    const route = (b, s, o) => { o = o || {}; const t = o.to || [8.5, 13.6, 19.4, 26.2]; return [...hop(3, b), ...hop(5.1, b), ...leap(5.2, t[0], s, o.late), ...(o.pause ? [S.W(o.pause)] : []), ...hop(10.1, b), ...leap(10.2, t[1], s, o.late), ...hop(15.1, b), ...leap(15.2, t[2], s, o.late), ...hop(21.6, b), S.R(21.7), S.JT(t[3], GY), S.R(28.6), S.W(30)]; };
+    const beat = from => { let n = 0, tot = 0; for (const h of [4, 8, 12, 16, 20, 25, 30]) for (let react = 0; react <= 20; react++) { tot++; clean('dark');
+        const r = run(40, () => { let onT = 0, go = false; return P => { if (cx() >= from*T) go = true; if (g.P.on) onT++; else onT = 0; return (go && g.P.on && onT > react) ? {jump:h, dir:1} : R(); }; }, {max:900});
+        if (r[0] === 'clear') n++; } return [n, tot]; };
+    clean('dark'); check('41 walk in the dark', run(40, () => R), 'dead');
+    clean('dark'); check('41 tap along in the dark', run(40, () => P => (g.frame % 9) < 3 ? R() : N(), {max:2500}), 'dead');
+    clean('dark'); check('41 jump to look around, then stay', run(40, () => script([S.J(30, 0), S.W(200)]), {max:400}), 'dead');
+    clean('dark'); check('41 hop along, to keep it busy', run(40, () => P => P.on ? {jump:3, dir:1} : R(), {max:2500}), 'dead');
+    for (const from of [3, 4.7]) { const [n, tot] = beat(from); check(`41 run and jump at a steady beat, from ${from} (all beats)`, [n + '/' + tot, n/tot <= 0.03 ? 'dead' : 'clear'], 'dead'); }
+    { let seed = 4242, w = 0; const n = 300, rnd = () => (seed = (seed*1103515245 + 12345) % 2147483648) / 2147483648;
+      // someone who runs and jumps again soon after each landing, unevenly, from the start or from the lip of the first pit
+      for (let t = 0; t < n; t++) { const x0 = t % 3 === 0 ? 3 : 5.1 - rnd()*1.6, r0 = Math.floor(rnd()*14), h0 = rnd() < 0.7 ? 30 : 8 + Math.floor(rnd()*16), j = 1 + Math.floor(rnd()*4); clean('dark');
+        const r = run(40, () => { let onT = 0, re = r0, go = false; return P => { if (cx() >= x0*T) go = true; if (g.P.on) onT++; else onT = 0; if (go && g.P.on && onT > re) { re = Math.max(0, r0 + Math.floor(rnd()*(2*j + 1)) - j); return {jump:Math.max(2, h0 + Math.floor(rnd()*9) - 4), dir:1}; } return R(); }; }, {max:900});
+        if (r[0] === 'clear') w++; }
+      check('41 run and jump unevenly (300 runners)', [w + '/' + n, w/n <= 0.03 ? 'dead' : 'clear'], 'dead'); }
+    clean('dark'); check('41 look once, then jump the pit you saw and run on', run(40, () => script([...hop(3, 1.6), ...hop(5.1, 1.6), S.R(5.2), S.JT(8.5, GY), S.R(28.6)]), {max:1500}), 'dead');
+    clean('dark'); check('41 look before each pit, but stay where you land', run(40, () => script([...hop(3, 1.6), ...hop(5.1, 1.6), S.R(5.2), S.JT(8.5, GY), S.W(150)]), {max:1500}), 'dead');
+    clean('dark'); check('41 look, then walk past the edge of what you saw', run(40, () => script([...hop(3, 1.6), ...hop(5.1, 1.6), ...leap(5.2, 8.5, 1.1), S.R(28.6)]), {max:1500}), 'dead');
+    clean('dark'); check('41 walk on while it is still biting', run(40, () => script([S.R(3), S.W(12), S.J(4, 0), S.L(1.4), S.U(() => bat().st === 'bite'), S.R(28.6)]), {max:1500}), 'dead');
+    clean('dark'); check('41 hop, step back, look; jump, step on; again', run(40, () => script(route(1.6, 1.1)), {max:3000}), 'clear');
+    clean('dark'); check('41 ... with short steps', run(40, () => script(route(1.25, 0.95)), {max:3000}), 'clear');
+    clean('dark'); check('41 ... with long steps', run(40, () => script(route(2.2, 1.5)), {max:3000}), 'clear');
+    clean('dark'); check('41 ... stepping on late, and pausing', run(40, () => script(route(1.6, 1.1, {late:22, pause:90})), {max:3500}), 'clear');
+    clean('dark'); check('41 ... landing short', run(40, () => script(route(1.6, 1.1, {to:[8.2, 13.2, 19.0, 25.8]})), {max:3000}), 'clear');
+    clean('dark'); check('41 ... landing long', run(40, () => script(route(1.6, 0.9, {to:[9.1, 14.2, 20.2, 26.8]})), {max:3000}), 'clear'); }
   // ---- 42 sun
   const board42 = X => [14,15,16,17,18,22,23].includes(Math.floor(X/T));
   const ride = gapMax => () => P => { const x = cx(), y = g.P.y + 14, lit = X => g.lv.lit(X, y);
