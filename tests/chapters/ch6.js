@@ -69,12 +69,14 @@
   // ---- 58 flock
   const tap = () => ({k:{right: Math.abs(g.P.vx) < 2.4}});
   const soft58 = x => S.F(tap, () => cx() > x*T);
+  const tapL = () => ({k:{left: Math.abs(g.P.vx) < 2.4}}), softL58 = x => S.F(tapL, () => cx() < x*T), stamp58 = [S.W(10), S.J(30, 0), S.U(P => P.on), S.U(() => !g.S.fl.away)];
   check('58 run across', run(57, () => R), 'dead');
   check('58 jump onto them', run(57, () => script([S.R(5.2), S.J(30, 1), S.R(29)]), {max:900}), 'dead');
   check('58 stamp at the start: they fly to the far gap', run(57, () => script([S.R(4), S.J(30, 0), S.W(300), soft58(29)]), {max:1200}), 'dead');
   check('58 walk softly across, and on over the second gap', run(57, () => script([soft58(29)]), {max:1500}), 'dead');
-  check('58 walk softly across, stamp at the far end of the island', run(57, () => script([soft58(16.3), S.W(10), S.J(30, 0), S.W(250), soft58(29)]), {max:1500}), 'dead');
-  check('58 walk softly across, stamp at the near end, walk softly on', run(57, () => script([soft58(12.6), S.W(10), S.J(30, 0), S.W(250), soft58(27.4)]), {max:1500}), 'clear');
+  check('58 walk softly across, stamp at the far end of the island', run(57, () => script([soft58(16.3), ...stamp58, soft58(29)]), {max:1500}), 'dead');
+  check('58 out, take the key, stamp on the far bank, come back', run(57, () => script([soft58(12.6), ...stamp58, soft58(27.4), S.W(10), S.J(30, 0), S.U(P => P.on), S.U(() => !g.S.fl.away), softL58(1.4)]), {max:2400}), /dead|timeout/);
+  check('58 out, take the key, back to the island, stamp at its far end, come back', run(57, () => script([soft58(12.6), ...stamp58, soft58(27.4), softL58(16.3), ...stamp58, softL58(1.4), S.W(30)]), {max:3000}), 'clear');
   // ---- 59 mimic
   const hop = (x, y) => [S.U(P => P.on), S.JT(x, y, {tol:10})];
   const to2 = [...hop(5.5, 416), ...hop(8.5, 384)];

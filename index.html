@@ -1675,7 +1675,7 @@ const LV = [
 
 /* 58. they are the bridge, as long as you are no threat; and frightened, they settle as far from the fright as they can */
 { id:'flock', start:2,
-  build(){ Gd(0,5); Sp(6,11,15,'up'); R('g',6,11,16,16); Gd(12,16); Sp(17,22,15,'up'); R('g',17,22,16,16); Gd(23,29); Door(27,14);
+  build(){ Gd(0,5); Sp(6,11,15,'up'); R('g',6,11,16,16); Gd(12,16); Sp(17,22,15,'up'); R('g',17,22,16,16); Gd(23,29); Door(1,14,{slots:1, onEnter(){ if (S.keys > 0) levelClear(); }}); E({t:'key', x:27*T + 9, y:13*T + 6, w:14, h:20});
     // two gaps they can perch over; they start over the first
     S.perch = [[6, 11], [17, 22]]; S.at = 0; S.rings = [];
     S.fl = {away:0, birds:[0,1,2,3,4,5].map(k => E({t:'b', x:(6 + k)*T + 3, y:GY, w:26, h:10, solid:true, hidden:true, bird:true, hx:(6 + k)*T + 3, k}))}; },
