@@ -16,15 +16,16 @@
   check('32 run at it, turn back to the far end, ride up', run(31, () => script([S.R(14.6), S.L(9.6), S.U(P => !P.on), S.U(P => P.on && P.y < 300, {left:true}), S.L(2.6), S.W(30)]), {max:1200}), 'clear');
   check('32 turn back too late', run(31, () => script([S.R(17.0), S.L(9.6), S.W(200)]), {max:900}), /timeout|dead/);
   // ---- 33 price
-  const toSpikes23 = [S.R(8.6), S.J(30, 1), S.R(29)];
-  const take23 = [S.R(8.6), S.J(30, 1), S.R(22.3), S.W(12)];
-  const homeFloor = [S.L(12.7), S.J(30, -1), S.U(P => P.on, {left:true}), S.L(2.6), S.W(60)];
-  const climb = [S.J(30, 1), S.U(P => P.on, {right:true}), S.W(10), S.R(27.0), S.W(10), S.JT(24.0, 288, {dir:-1}), S.W(8), S.L(23.5), S.W(10), S.JT(20.8, 208, {dir:-1}), S.L(0.5), S.U(P => P.on && P.y > 400), S.R(2.6), S.W(30)];
-  clean('price'); check('33 walk to the door', run(32, () => script([S.L(2.6), S.W(200)]), {max:400}), 'timeout');
-  clean('price'); check('33 die in the open, take that coin home', run(32, life => life === 0 ? R : script([S.R(9.55), S.J(30, 1), S.U(P => P.on, {right:true}), ...homeFloor]), {lives:2, max:1200}), 'timeout');
-  clean('price'); check('33 die in its blind spot, carry the coin back past it', run(32, life => life === 0 ? script(toSpikes23) : script([...take23, S.L(13.5), ...homeFloor]), {lives:2, max:1800}), 'timeout');
-  clean('price'); check('33 die in its blind spot, come home over the roof', run(32, life => life === 0 ? script(toSpikes23) : script([...take23, ...climb]), {lives:2, max:2400}), 'clear');
-  clean('price'); check('33 come home over the roof with nothing', run(32, () => script([S.R(8.6), S.J(30, 1), S.R(22.3), S.W(12), ...climb]), {max:2400}), 'timeout');
+  const hall33 = [S.JT(7.3, GY, {tol:6}), S.U(P => P.on), S.JT(11.3, GY, {tol:6}), S.U(P => P.on), S.R(12.2), S.J(30, 1), S.U(P => P.on)];
+  const steps33 = [S.R(19.6), S.JT(23.6, GY, {tol:10}), S.U(P => P.on), S.R(24.9), S.W(6), S.J(30, 1), S.U(P => P.on), S.W(6), S.R(26.4), S.W(6), S.J(30, 1), S.U(P => P.on), S.W(6),
+    S.R(28.0), S.W(6), S.J(30, 1), S.U(P => P.on), S.W(6), S.L(29.0), S.W(6), S.J(30, -1), S.U(P => P.on), S.L(1.0), S.U(P => P.on && P.y > 400), S.R(1.4), S.W(30)];
+  check('33 walk to the door', run(32, () => script([S.L(1.6), S.W(200)]), {max:400}), 'timeout');
+  check('33 walk on, taking the coins', run(32, () => R, {max:900}), 'timeout');
+  check('33 take a coin in the open, then one behind the pillar, home over the roof', run(32, () => script([S.JT(7.3, GY, {tol:6}), S.U(P => P.on), S.R(9.6), S.R(12.2), S.J(30, 1), S.U(P => P.on), ...steps33]), {max:2400}), 'timeout');
+  check('33 take a coin behind the pillar, come back over it', run(32, () => script([...hall33, S.R(16.6), S.L(15.0), S.J(30, -1), S.U(P => P.on), S.L(1.6), S.W(30)]), {max:1800}), 'timeout');
+  check('33 take both coins behind the pillar', run(32, () => script([...hall33, S.R(21.6), ...steps33.slice(2)]), {max:2400}), 'timeout');
+  check('33 come home over the roof with nothing', run(32, () => script([S.F(() => { for (const c of g.S.cs) c.alive = false; return {k:{}}; }, (P, k) => k >= 1), ...hall33, ...steps33]), {max:2400}), 'timeout');
+  check('33 take one coin behind the pillar, come home over the roof', run(32, () => script([...hall33, S.R(16.6), ...steps33]), {max:2400}), 'clear');
   // ---- 34 measure
   check('34 full jumps', run(33, () => P => (P.on && g.S.pits.some(p => p.x > P.x && p.x - (P.x + 22) < 6)) ? {jump:30, dir:1} : R(), {freshMem:true}), 'dead');
   check('34 always just enough', run(33, () => P => { const pit = g.S.pits.find(p => p.x > P.x && p.x - (P.x + 22) < 6 && p.x - (P.x + 22) > -2); if (P.on && pit) { for (let h = 1; h <= 30; h++) { const r = window.LIB.sim(h, 1, GY); if (r.c > pit.x + pit.w + 12) return {jump:h, dir:1}; } return {jump:30, dir:1}; } return R(); }, {freshMem:true}), 'clear');

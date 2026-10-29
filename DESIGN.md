@@ -94,10 +94,10 @@ These come back through the whole game, each time doing something new.
 
 | Piece | First seen | Later forms |
 | --- | --- | --- |
-| **The door** | Runs from whoever chases it, comes to whoever lets go (1). | Bites whoever looks at it (5), brings things with it (8), sleeps (9), gets painted (27). Turns out to be alive (VI), halved (91) and frozen in time (92). In 100 you are the door. |
+| **The door** | Runs from whoever chases it, comes to whoever lets go (1). | Bites whoever looks at it (5), brings things with it (8), sleeps (9), is painted where it used to stand (27). Turns out to be alive (VI), halved (91) and frozen in time (92). In 100 you are the door. |
 | **The sky** | Cones fall where you are going (2). | Break bricks (12), plant stakes (13), aim at your reflection (18). Fall on your old ✕ (69) and plant seeds (57). |
-| **The Eye** | Bites the door you look at (5). | Blinks (6), aims the sky (20), sweeps as a searchlight (73). Takes you for your double (94), fills Newcomb's boxes (98), and at last sees itself (99). |
-| **The ✕** | Your deaths stay where they happened. | Get forged (22), light the dark (41), become your bodies (61) and your coins (33), and draw the sky (69). |
+| **The Eye** | Bites the door you look at (5). | Blinks (6), aims the sky (20), prices what it has seen you hold (33), sweeps as a searchlight (73). Takes you for your double (94), fills Newcomb's boxes (98), and at last sees itself (99). |
+| **The ✕** | Your deaths stay where they happened. | Get forged (22), light the dark (41), become your bodies (61), and draw the sky (69). |
 | **The ghost** | Your last attempt walks again (15). | Holds a plate for you (62), chases you (64), and in 70 every earlier life stands under you as a step. Carries a key further (77). In 100 it is you who walks toward the one you were. |
 | **The entrance** | Every level starts in front of the open door you came in by. | Usually scenery. In 7 it is the way out; in 100 the one you were goes home to it. |
 
@@ -175,7 +175,7 @@ Numbers start to matter. Keys and coins weigh something, a seesaw throws whateve
 | --- | --- | --- | --- | --- |
 | 31 | **Enough** | Four keys hang at rising heights, and each key you hold lowers your jump. The door takes exactly three, and bites if you bring more. | Take the highest one you can reach first, work down, and leave the lowest. | Taking them in the order you meet them; taking all four. |
 | 32 | **Seesaw** | A seesaw under a high ledge. The heavy block from 16 falls where you will be when it lands. | Run at it to call the block, then turn back to the near end: it lands on the far end and throws you up. | Jumping at the ledge; running on (it lands on you). |
-| 33 | **Price** | The door asks one more coin than the Eye has seen you hold. Coins appear only where you died. Behind a pillar the Eye is blind. | Die in its blind spot, take that coin there, and come home over the roof, out of its sight. | Collecting in view; walking home past it. |
+| 33 | **Price** | The door asks one more coin than the Eye has seen you hold, and coins weigh like keys. Its gaze is drawn, stopped by a low pillar and by a screen hanging from the roof. Coins lie in its sight and behind the pillar. The steps up to the roof are two tiles each. | Take one coin behind the pillar, out of its sight, and come home over the roof: with one coin you can still climb, and it has only seen you hold none. | Taking a coin in its sight; jumping back over the pillar with the coin; taking both coins behind the pillar (too heavy to climb). |
 | 34 | **Measure of a leap** | Each gap is as wide as your last leap, plus a little. | Make small leaps, so the gaps stay small. | Big jumps "to be safe". |
 | 35 | **Up is a choice** | Every jump flips gravity. Falling off the bottom brings you in at the top, onto the roof where the door is; most of that roof is spikes. | Flip to cross, flip back before the hanging spikes, and fall through the second hole. | Fighting the flip; the first hole. |
 | 36 | **Portal** | What falls in comes out going up, as fast as it went in. One portal is red and eats you. | Fall from higher to fly higher; avoid the red one. | Stepping in from the floor. |

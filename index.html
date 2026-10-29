@@ -1091,25 +1091,32 @@ const LV = [
     plankTip(k, [plankMe(k, 1), {w:5, x:b.x + 20, on:b.st === 'down', thrown(){}}]); },
   drawBack(){ drawPlank(S.pk); drawBlkShadow(S.blk, S.pk); } },
 
-/* 33. it asks one more than it has seen you hold, and it pays you in what you lost */
-{ id:'price', was:[53], start:6,
-  build(){ Gd(0,29); E({t:'b', x:T, y:208, w:21*T, h:32, solid:true}); E({t:'b', x:21*T, y:240, w:T, h:48, solid:true}); E({t:'b', x:16*T, y:288, w:T, h:128, solid:true});
-    E({t:'b', x:23*T, y:288, w:2*T, h:16, solid:true}); E({t:'b', x:26*T, y:368, w:3*T, h:16, solid:true});
-    Sp(10,11,13,'up'); Sp(23,23,13,'up');
-    S.door = Door(2,14,{onEnter(){ if (S.coins >= S.price) levelClear(); }});
-    S.cs = marksOf().map(([x, y]) => ({x:x - 8, y:y - 10, alive:true})); S.price = 1; S.seen = false; },
-  eye(){ return {x:2*T + 16, y:GY - 74}; },
-  sees(){ const e = this.eye(), dx = pcx() - e.x, dy = P.y + 14 - e.y; const an = Math.atan2(dy, dx); if (dx < 8 || an < -0.24 || an > 0.48) return false;
-    const d = Math.hypot(dx, dy); for (let s = 10; s < d; s += 6) { const x = e.x + dx*s/d, y = e.y + dy*s/d; if (ents.some(o => o.t === 'b' && x > o.x && x < o.x + o.w && y > o.y && y < o.y + o.h)) return false; } return true; },
+/* 33. it asks one more than it has seen you hold, and what you hold weighs on you */
+{ id:'price', was:[53], start:3,
+  jumpV(){ return 10.6 - 1.6*S.coins; },
+  drawPlayer(dx, dy, dw, dh){ drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false); if (S.coins) { const h = Math.min(dh - 6, S.coins*5); ctx.fillStyle = 'rgba(226,166,42,.55)'; ctx.fillRect(dx + 2, dy + dh - 2 - h, dw - 4, h); } },
+  build(){ Gd(0,29);
+    // the roof over the hall, a low pillar in it, a screen hanging from the roof's end, and steps up to the roof
+    E({t:'b', x:2.5*T, y:192, w:25*T, h:32, solid:true}); E({t:'b', x:13*T, y:384, w:T, h:64, solid:true}); E({t:'b', x:24*T, y:224, w:16, h:152, solid:true});
+    E({t:'b', x:25.5*T, y:384, w:4.5*T, h:64, solid:true}); E({t:'b', x:27*T, y:320, w:3*T, h:64, solid:true}); E({t:'b', x:28.5*T, y:256, w:1.5*T, h:64, solid:true});
+    S.door = Door(1,14,{onEnter(){ if (S.coins >= S.price) levelClear(); }});
+    S.cs = [5, 9, 16, 21].map(c => ({x:c*T + 8, y:GY - 24, alive:true})); S.price = 1; S.seen = false; },
+  eye(){ return {x:84, y:404}; },
+  // what it can see: a fan to the right, stopped by anything solid
+  ray(an){ const e = this.eye(), dx = Math.cos(an), dy = Math.sin(an); let d = 0;
+    for (; d < 1000; d += 4) { const x = e.x + dx*d, y = e.y + dy*d; if (y >= GY || ents.some(o => o.t === 'b' && x > o.x && x < o.x + o.w && y > o.y && y < o.y + o.h)) break; } return d; },
+  sees(){ const e = this.eye(), dx = pcx() - e.x, dy = P.y + 14 - e.y, an = Math.atan2(dy, dx); if (dx < 8 || an < -0.30 || an > 0.40) return false; return this.ray(an) >= Math.hypot(dx, dy); },
   update(){ for (const c of S.cs) if (c.alive && ov(pbox(), {x:c.x, y:c.y, w:16, h:20})) { c.alive = false; S.coins++; sparkle(c.x + 8, c.y + 10); }
-    S.seen = state === 'play' && this.sees(); if (S.seen && S.price < S.coins + 1) { S.price = S.coins + 1; S.blinkT = 16; }
+    S.seen = state === 'play' && this.sees(); if (S.seen && S.price < S.coins + 1) { S.price = S.coins + 1; S.blinkT = 24; }
     if (S.blinkT) S.blinkT--; },
+  drawBack(){ const e = this.eye(); ctx.fillStyle = S.seen ? 'rgba(207,62,50,.10)' : 'rgba(30,43,71,.06)'; ctx.beginPath(); ctx.moveTo(e.x, e.y);
+    for (let an = -0.30; an <= 0.4001; an += 0.0125) { const d = this.ray(an); ctx.lineTo(e.x + Math.cos(an)*d, e.y + Math.sin(an)*d); } ctx.closePath(); ctx.fill(); },
   draw(){ for (const c of S.cs) if (c.alive) drawCoin(c.x, c.y);
-    const e = this.eye(), d = S.door; ctx.fillStyle = S.seen ? 'rgba(207,62,50,.08)' : 'rgba(30,43,71,.045)'; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + 900, e.y - 900*Math.tan(0.24)); ctx.lineTo(e.x + 900, e.y + 900*Math.tan(0.48)); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = S.blinkT ? C.red : C.white; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(e.x, e.y, 9, 6, 0, 0, 7); ctx.fill(); ctx.stroke();
+    const e = this.eye(), d = S.door; ctx.fillStyle = C.ink; ctx.fillRect(e.x - 2, e.y + 6, 4, GY - e.y - 6);
+    ctx.fillStyle = S.blinkT && (S.blinkT >> 2) % 2 ? C.red : C.white; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(e.x, e.y, 9, 6, 0, 0, 7); ctx.fill(); ctx.stroke();
     ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(e.x + 4, e.y + clamp((P.y + 14 - e.y)*0.02, -2, 2), 3, 0, 7); ctx.fill();
-    ctx.fillStyle = C.door; ctx.fillRect(d.x + 22, d.y + 28, 10, 12);
-    for (let i = 0; i < S.price; i++) { const sx = d.x + 18 + (i - (S.price - 1)/2)*9; ctx.fillStyle = i < S.coins ? C.gold : C.ink; ctx.beginPath(); ctx.arc(sx, d.y + 34, 3, 0, 7); ctx.fill(); } } },
+    // the price, on the door: one pip for each coin it asks
+    for (let i = 0; i < S.price; i++) { const sx = d.x + 18 + (i - (S.price - 1)/2)*9; ctx.fillStyle = S.blinkT ? C.red : i < S.coins ? C.gold : C.ink; ctx.beginPath(); ctx.arc(sx, d.y + 16, 3, 0, 7); ctx.fill(); } } },
 
 /* 34. each gap is as wide as your last leap, and a little more */
 { id:'measure', was:[65], start:1,
