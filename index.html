@@ -2163,18 +2163,21 @@ const LV = [
 
 /* 85. the only way through the veil is to die in it; then take out the stone that holds it all, and fall with it */
 { id:'keystone', was:[83, 76], start:1.5,
-  build(){ Gd(0,9); Gd(24,29); R('g',10,23,16,16); Sp(10,14,15,'up'); Sp(19,23,15,'up'); Door(16.5,16);
+  build(){ Gd(0,9); R('g',25,29,10,16); R('g',10,24,16,16); Sp(10,16,15,'up'); Sp(19,24,15,'up'); Door(17.5,16);
     S.veil = {x:6*T, w:20};
-    S.deck = []; for (let c = 10; c <= 23; c++) S.deck.push(E({t:'b', x:c*T, y:GY, w:T, h:12, solid:true, deck:true, key:c === 16 || c === 17, c})); S.fallT = null;
+    S.deck = []; for (let c = 10; c <= 24; c++) S.deck.push(E({t:'b', x:c*T, y:GY, w:T, h:12, solid:true, deck:true, key:c === 17 || c === 18, c})); S.fallT = null;
     if (M.rise) { P.x = M.rise.x; P.y = M.rise.y; P.vy = 0; M.rise = null; } },
   update(){ const v = S.veil;
     // the veil kills whoever enters it, and they rise on the far side
     if (ov(pbox(2), {x:v.x, y:0, w:v.w, h:GY})) { M.rise = {x: P.face > 0 ? v.x + v.w + 8 : v.x - PW - 8, y: P.on ? P.y : P.y - 4}; return die('veil'); }
     if (S.fallT == null && P.on && P.stand && P.stand.key) S.fallT = 0;
-    if (S.fallT != null) { S.fallT++; for (const d of S.deck) { const delay = 30 + Math.abs(d.c - 16.5)*6; d.shk = S.fallT > delay - 18 && S.fallT < delay; if (S.fallT === Math.round(delay)) d.fall = 1; } } },
+    // it falls from the middle outward, faster than anyone can run: whoever flees it goes down over the thorns
+    if (S.fallT != null) { S.fallT++; for (const d of S.deck) { const delay = 24 + Math.abs(d.c - 17.5)*3; d.shk = S.fallT > delay - 18 && S.fallT < delay; if (S.fallT === Math.round(delay)) d.fall = 1; } } },
   drawBack(){ const v = S.veil; for (let i = 0; i < 6; i++) { ctx.fillStyle = `rgba(207,62,50,${0.08 + 0.05*Math.sin(frame*0.1 + i)})`; ctx.fillRect(v.x - 6 + i*5, 0, 6, GY); } ctx.fillStyle = C.red; ctx.fillRect(v.x + v.w/2 - 1, 0, 2, GY);
-    ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(17*T, GY + 150, 7.6*T, Math.PI*1.12, Math.PI*1.88); ctx.stroke(); },
-  draw(){ for (const d of S.deck) if (d.key && d.alive && !d.fall) { ctx.fillStyle = C.gold; ctx.fillRect(d.x + 2, d.y + 2, d.w - 4, d.h - 4); } } },
+    ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(17.5*T, GY + 150, 7.75*T, Math.PI*1.12, Math.PI*1.88); ctx.stroke(); },
+  // the keystone is only a wedge cut a little differently from its neighbours
+  draw(){ const k = S.deck.find(d => d.key); if (!k.alive || k.fall) return; const x0 = 17*T, x1 = 19*T, y = k.y + (k.shk ? ((frame>>1)%2 ? 1.5 : -1.5) : 0);
+    ctx.strokeStyle = 'rgba(231,236,241,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0 - 3, y + 1); ctx.lineTo(x0 + 4, y + 11); ctx.lineTo(x1 - 4, y + 11); ctx.lineTo(x1 + 3, y + 1); ctx.stroke(); } },
 
 /* 86. it holds whoever walks off the edge and keeps walking */
 { id:'leap', start:1.5,

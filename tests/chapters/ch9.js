@@ -42,9 +42,11 @@
   check('84 go while the set is up, wait out each change on a fixed platform', run(83, route84, {freshMem:true, max:1500}), 'clear');
   // ---- 85 keystone: die in the veil to rise beyond it; then stand on the keystone and fall with it
   check('85 keep away from the veil', run(84, () => script([S.R(5.0), S.W(600)]), {freshMem:true, max:600}), 'timeout');
-  check('85 walk into the veil; then run across the arch', run(84, life => life === 0 ? R : script([S.R(25), S.W(300)]), {freshMem:true, lives:2, max:800}), /dead|timeout/);
-  check('85 walk into the veil; then stand on the keystone', run(84, life => life === 0 ? R : script([S.R(16.6), S.W(300)]), {freshMem:true, lives:2, max:800}), 'clear');
-  check('85 ... and step off it when it shakes', run(84, life => life === 0 ? R : script([S.R(16.6), S.U(() => g.S.fallT > 10, {}), S.R(25), S.W(200)]), {freshMem:true, lives:2, max:800}), /dead|timeout/);
+  check('85 walk into the veil; then run across the arch', run(84, life => life === 0 ? R : script([S.R(29), S.W(300)]), {freshMem:true, lives:2, max:800}), 'dead');
+  check('85 walk into the veil; then jump over the keystone', run(84, life => life === 0 ? R : script([S.R(15.6), S.J(30, 1), S.R(29), S.W(300)]), {freshMem:true, lives:2, max:800}), 'timeout');
+  check('85 walk into the veil; then stand on the keystone', run(84, life => life === 0 ? R : script([S.R(17.6), S.W(300)]), {freshMem:true, lives:2, max:800}), 'clear');
+  check('85 ... and step off it when it shakes', run(84, life => life === 0 ? R : script([S.R(17.6), S.U(() => g.S.fallT > 4, {}), S.R(25), S.W(200)]), {freshMem:true, lives:2, max:800}), 'dead');
+  check('85 ... and run back the way you came when it shakes', run(84, life => life === 0 ? R : script([S.R(17.6), S.U(() => g.S.fallT > 4, {}), S.L(12), S.J(30, -1), S.L(7), S.W(200)]), {freshMem:true, lives:2, max:800}), 'dead');
   // ---- 86 leap: it holds whoever walks off the edge and keeps walking
   check('86 jump the gap', run(85, () => P => P.on && cx() > 6.4*T && cx() < 7*T ? {jump:30, dir:1} : R(), {freshMem:true, max:800}), 'dead');
   check('86 wait at the edge', run(85, () => script([S.R(6.4), S.W(600)]), {freshMem:true, max:600}), 'timeout');
