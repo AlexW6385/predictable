@@ -49,20 +49,27 @@
   check('63 run in rhythm, hands off over its gap, then stop', run(62, () => script([S.F(rhythm63, () => cx() > 30*T), S.U(P => P.on), S.W(20), S.R(45.5), S.W(30)]), {freshMem:true, max:1500}), 'clear');
   check('63 run in rhythm, hands off over its gap, then a tap back', run(62, () => script([S.F(rhythm63, () => cx() > 27.5*T), S.K({left:true}, 2), S.R(45.5), S.W(30)]), {freshMem:true, max:1500}), 'clear');
   // ---- 64 habit and shadow
-  const gaps64 = [5.6, 11.6, 17.6, 29.6, 35.6, 41.6];
-  check('64 run and jump each gap', run(63, () => P => (P.on && gaps64.some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R(), {freshMem:true, max:1500}), 'dead');
-  check('64 break the rhythm, take it, walk under at the end', run(63, () => script([S.R(5.4), S.W(20), S.J(30, 1), S.R(11.4), S.W(8), S.J(30, 1), S.R(17.4), S.W(30), S.J(30, 1), S.R(29.5), S.J(30, 1), S.R(35.4), S.W(14), S.J(30, 1), S.R(41.5), S.W(5), S.J(30, 1), S.R(50.4)]), {freshMem:true, max:2000}), 'clear');
-  check('64 break the rhythm after the gem by stopping for a moment', run(63, () => script([S.R(5.4), S.W(20), S.J(30, 1), S.R(11.4), S.W(8), S.J(30, 1), S.R(17.4), S.W(30), S.J(30, 1), S.R(29.5), S.J(30, 1), S.R(35.4), S.W(45), S.J(30, 1), S.R(50.4)]), {freshMem:true, max:2000}), 'dead');
-  check('64 take it, then wait to think', run(63, () => script([S.R(5.4), S.W(20), S.J(30, 1), S.R(11.4), S.W(8), S.J(30, 1), S.R(17.4), S.W(30), S.J(30, 1), S.R(29.5), S.W(120), S.J(30, 1), S.R(50.4)]), {freshMem:true, max:2000}), 'dead');
+  const rhythm64 = P => (P.on && [5.6, 11.6, 17.6].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R();
+  const broke64 = [S.F(rhythm64, () => cx() > 20*T), S.U(P => P.on), S.W(20)], careful64 = [S.R(5.4), S.W(20), S.J(30, 1), S.R(11.4), S.W(8), S.J(30, 1), S.R(17.4), S.W(30), S.J(30, 1)];
+  const hops64 = n => Array(n).fill(0).map(() => S.J(8, 1));
+  check('64 run and jump each gap', run(63, () => script([S.F(rhythm64, () => cx() > 62*T)]), {freshMem:true, max:1500}), /dead@3/);
+  check('64 (63) break the rhythm before the roof, take it, wait for the door', run(63, () => script([...broke64, S.R(46), S.W(400)]), {freshMem:true, max:2000}), 'dead');
+  check('64 careful stop and jump, take it, wait for the door', run(63, () => script([...careful64, S.R(46), S.W(400)]), {freshMem:true, max:2000}), 'dead');
+  check('64 take it, jump about by hand (no rhythm), then wait', run(63, () => script([...broke64, S.R(42), S.J(30, 1), S.R(48), S.J(30, 1), S.R(55), S.J(30, 1), S.W(400)]), {freshMem:true, max:2000}), 'dead');
+  check('64 take it, two hops in rhythm, then wait', run(63, () => script([...broke64, S.R(41.5), ...hops64(2), S.W(400)]), {freshMem:true, max:2000}), 'dead');
+  check('64 take it, teach your body a rhythm, let it jump once for you, then let go', run(63, () => script([...broke64, S.R(41.5), ...hops64(3), S.U(() => g.S.sh.lost, {right:true}), S.W(500)]), {freshMem:true, max:2500}), 'clear');
+  check('64 ... the same, with long hops', run(63, () => script([...broke64, S.R(41.5), ...Array(3).fill(0).map(() => S.J(30, 1)), S.U(() => g.S.sh.lost, {right:true}), S.W(500)]), {freshMem:true, max:2500}), 'clear');
   // ---- 65 changed mind
-  const hi1 = [S.R(4.0), S.JT(7.0, 384, {tol:14, minPeak:70}), S.R(13.5), S.U(P => P.on)], lo1 = [S.R(13.5)];
-  const hi2 = [S.R(13.6), S.JT(17.5, 384, {tol:10}), S.U(P => P.on), S.JT(19.9, 352, {tol:12}), S.R(28.5), S.W(30)];
-  const lo2 = [S.R(21.25), S.J(1, 1), S.R(28.5), S.W(30)];
+  const up65 = [S.R(17.3), S.JT(20.5, 352, {tol:14}), S.R(28.5), S.W(30)], onP1 = [S.R(2.6), S.JT(5.5, 384, {tol:14})];
   check('65 hold right', run(64, () => R, {freshMem:true}), 'dead');
-  check('65 low, then high (where you must go)', run(64, () => script([...lo1, ...hi2]), {freshMem:true, max:1200}), 'dead');
-  check('65 high, then low', run(64, () => script([...hi1, ...lo2]), {freshMem:true, max:1200}), 'dead');
-  check('65 low, then low (the pit)', run(64, () => script([...lo1, ...lo2]), {freshMem:true, max:1200}), 'dead');
-  check('65 high (take the fist), then high again', run(64, () => script([...hi1, ...hi2]), {freshMem:true, max:1200}), 'clear');
+  check('65 up on the first lane, over the hole, up at the second', run(64, () => script([...onP1, S.R(8.5), S.J(30, 1), ...up65]), {freshMem:true, max:1200}), 'dead');
+  check('65 jump at everything', run(64, () => P => P.on ? {jump:30, dir:1} : R(), {freshMem:true, max:1200}), 'dead');
+  check('65 up on the first lane, drop through the hole, climb at the second', run(64, () => script([...onP1, S.R(17.9), S.J(30, 1), S.R(28.5), S.W(30)]), {freshMem:true, max:1200}), 'dead');
+  check('65 walk under, stay low, climb at the second', run(64, () => script([S.R(18.0), S.W(10), S.J(30, 1), S.R(28.5), S.W(30)]), {freshMem:true, max:1200}), 'dead');
+  check('65 walk under, stay low, try the pit', run(64, () => script([S.R(20.9), S.J(30, 1), S.R(28.5)]), {freshMem:true, max:1200}), 'dead');
+  check('65 hop under the lane, then up through the hole, up at the second', run(64, () => script([S.R(6), S.J(30, 1), S.R(9.3), S.W(12), S.JT(12.9, 384, {tol:14}), ...up65]), {freshMem:true, max:1200}), 'dead');
+  check('65 walk under, up through the hole (into its fist), up at the second', run(64, () => script([S.R(9.3), S.W(12), S.JT(12.9, 384, {tol:14}), ...up65]), {freshMem:true, max:1200}), 'clear');
+  check('65 ... the same at a run', run(64, () => script([S.R(10), S.J(30, 1), ...up65]), {freshMem:true, max:1200}), 'clear');
   // ---- 66 mast
   const dock66 = [S.U(() => g.S.docked), S.W(45), S.R(28.5), S.W(60)];
   const dodge66 = () => P => { if (g.S.docked) return R(); const n = (g.S.notes || []).find(n => Math.abs(n.x - cx()) < 36 && Math.sign(cx() - n.x) === Math.sign(n.vx) && Math.abs(n.vx) > 0);
