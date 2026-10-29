@@ -1773,17 +1773,21 @@ const LV = [
   onDeath(cause){ const pc = pcx(); if (cause === 'spike' && pc > 4*T && pc < 25*T) { M.crates = M.crates || []; const c = Math.floor(pc/T), k = M.crates.filter(z => z.c === c).length; if (k < 3) M.crates.push({c, k, s:S.tog}); } },
   drawBack(){ ctx.fillStyle = S.tog === 'A' ? 'rgba(226,166,42,.06)' : 'rgba(79,111,166,.08)'; ctx.fillRect(0, 0, W, GY); } },
 
-/* 62. last time, you could have held it for yourself */
-{ id:'lasttime', was:[49], start:2,
-  build(){ Gd(0,9); Gd(13,29); R('b',22,22,9,13,{cond:() => !S.open, gate:true}); Door(27,14);
-    S.plate = {x:4*T + 2, y:GY - 6, w:T - 4, h:6}; S.rec = []; S.ghost = M.last || null; S.gi = 0; S.open = false; S.hold = 0; },
+/* 62. last time, you could have held it for yourself; and this time, for the one who comes after */
+{ id:'lasttime', was:[49], start:1.5,
+  build(){ Gd(0,29); for (const c of [5, 15]) { R('b',c,c,10,10); Sp(c,c,11,'down'); }
+    // two plates, each holding open a gate further on, and your last life walking again beside you
+    S.gates = [8, 20].map(c => R('b',c,c,8,13,{cond:() => true, gate:true}));
+    S.gates.forEach((gt, i) => { gt.cond = () => !S.open[i]; });
+    S.plates = [{x:3*T + 2, y:GY - 6, w:T - 4, h:6}, {x:12*T + 2, y:GY - 6, w:T - 4, h:6}]; Door(27,14);
+    S.rec = []; S.ghost = M.last || null; S.gi = 0; S.open = [false, false]; S.hold = [0, 0]; S.pressed = [false, false]; },
   update(){ if (S.rec.length < 3600) S.rec.push([Math.round(P.x), Math.round(P.y)]);
     const g = S.ghost && S.gi < S.ghost.length ? S.ghost[S.gi++] : null; S.gp = g;
-    const pr = (P.on && ov(pbox(), S.plate)) || (g && ov({x:g[0], y:g[1], w:PW, h:PH}, S.plate));
-    S.pressed = !!pr; if (pr) S.hold = 10; else if (S.hold > 0) S.hold--;
-    const inGate = ov(pbox(), {x:22*T, y:9*T, w:T, h:5*T}); S.open = S.hold > 0 || (S.open && inGate); },
+    S.plates.forEach((pl, i) => { const pr = (P.on && ov(pbox(), pl)) || (g && ov({x:g[0], y:g[1], w:PW, h:PH}, pl));
+      S.pressed[i] = !!pr; if (pr) S.hold[i] = 10; else if (S.hold[i] > 0) S.hold[i]--;
+      const gt = S.gates[i], inGate = ov(pbox(), {x:gt.x, y:gt.y, w:gt.w, h:gt.h}); S.open[i] = S.hold[i] > 0 || (S.open[i] && inGate); }); },
   onDeath(){ M.last = S.rec; },
-  draw(){ const p = S.plate; ctx.fillStyle = S.pressed ? C.gold : C.red; ctx.fillRect(p.x, p.y + (S.pressed ? 3 : 0), p.w, p.h - (S.pressed ? 3 : 0)); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(p.x, p.y + (S.pressed ? 3 : 0), p.w, p.h - (S.pressed ? 3 : 0));
+  draw(){ S.plates.forEach((p, i) => { const pr = S.pressed[i]; ctx.fillStyle = pr ? C.gold : C.red; ctx.fillRect(p.x, p.y + (pr ? 3 : 0), p.w, p.h - (pr ? 3 : 0)); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(p.x, p.y + (pr ? 3 : 0), p.w, p.h - (pr ? 3 : 0)); });
     if (S.gp) { ctx.globalAlpha = 0.45; drawPlayerAt(S.gp[0], S.gp[1], PW, PH, 1, C.white, C.soft, false); ctx.globalAlpha = 1; } } },
 
 /* 63. what you do three times, your body does the fourth; and the Eye only punishes what you meant to do */

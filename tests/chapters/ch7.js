@@ -33,9 +33,13 @@
   g.setLvl(60);
   check(`61 (same remains, ${crates61}) but hop first`, run(60, build61(true), {lives:1}), 'dead');
   // ---- 62 last time
-  check('62 alone', run(61, () => script([S.R(4.5), S.W(40), S.R(9.5), S.J(30, 1), S.R(21.4), S.W(600)]), {freshMem:true, max:1200}), 'timeout');
-  check('62 just pass over it, die; then run', run(61, life => life === 0 ? script([S.R(10.5), S.W(100)]) : script([S.R(9.4), S.J(30, 1), S.R(27.5), S.W(600)]), {freshMem:true, lives:2, max:900}), /timeout|dead/);
-  check('62 hold it, die; then run', run(61, life => life === 0 ? script([S.R(4.5), S.W(240), S.R(10.5), S.W(100)]) : script([S.R(9.4), S.J(30, 1), S.R(27.5)]), {freshMem:true, lives:3, max:1500}), 'clear');
+  const die62a = [S.R(5.4), S.W(10), S.J(30, 0), S.W(60)], die62b = [S.R(15.4), S.W(10), S.J(30, 0), S.W(60)];
+  check('62 alone', run(61, () => script([S.R(3.5), S.W(40), S.R(7.4), S.W(600)]), {freshMem:true, max:1200}), 'timeout');
+  check('62 hold the first, die; then go', run(61, life => life === 0 ? script([S.R(3.5), S.W(240), ...die62a]) : script([S.R(19.4), S.W(600)]), {freshMem:true, lives:2, max:1500}), 'timeout');
+  check('62 hold the first, die; then go through and hold the second, die; then go', run(61, life => life === 0 ? script([S.R(3.5), S.W(240), ...die62a])
+    : life === 1 ? script([S.R(12.5), S.W(240), ...die62b]) : script([S.R(19.4), S.W(600)]), {freshMem:true, lives:3, max:1500}), 'timeout');
+  check('62 hold the first, die; then hold the first, go through, hold the second, die; then follow', run(61, life => life === 0 ? script([S.R(3.5), S.W(240), ...die62a])
+    : life === 1 ? script([S.R(3.5), S.W(200), S.R(12.5), S.W(200), ...die62b]) : script([S.R(7.0), S.U(() => g.S.open[0]), S.R(11.4), S.U(() => g.S.open[1]), S.R(27.5), S.W(30)]), {freshMem:true, lives:3, max:2000}), 'clear');
   // ---- 63 habit
   const rhythm63 = P => (P.on && [5.6, 11.6, 17.6].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R();
   check('63 hold right', run(62, () => R, {freshMem:true}), 'dead');
