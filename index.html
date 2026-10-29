@@ -1061,15 +1061,22 @@ const LV = [
 /* 30. what you see is cast by what is behind you */
 { id:'cave', was:[89], start:2,
   build(){ const sh = (e, z) => { e.z = z; return e; };
-    sh(Gd(0,6), 1); sh(Gd(9,13), 1.12); sh(Gd(16,19), 1.16); sh(Gd(23,29), 1); sh(Sp(11,11,13,'up'), 1.3); sh(R('b',23,23,11,11), 1.05);
+    sh(Gd(0,6), 1); sh(Gd(9,14), 1.12); sh(Gd(17,21), 1.16); sh(Gd(24,29), 1); sh(Sp(11,11,13,'up'), 1.3); sh(R('b',24,24,11,11), 1.05);
     sh(Door(27,14), 1);
     S.pup = {x:20*T, y:GY - 56}; },
   F:{x:-220, y:GY},
   proj(x, y, z){ return [this.F.x + (x - this.F.x)*z, this.F.y + (y - this.F.y)*z]; },
   look(){ return P.face < 0 || state === 'dead'; },
+  // your marks are real things too: facing the wall you see only shadows
+  hideMarks(){ return !this.look(); },
   alpha(e){ return this.look() ? 1 : 0; },
   drawBack(){ if (this.look()) { const g = ctx.createRadialGradient(-40, 300, 20, -40, 300, 420); g.addColorStop(0, 'rgba(226,166,42,.35)'); g.addColorStop(1, 'rgba(226,166,42,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      const s = S.pup, b = Math.sin(frame*0.05)*3; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(s.x + 18, s.y + 56 + b); ctx.lineTo(s.x + 18, -10); ctx.stroke();
+      const s = S.pup, b = Math.sin(frame*0.05)*3; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(s.x + 18, s.y + 56 + b); ctx.lineTo(s.x + 18, 92 + b); ctx.stroke();
+      // up on a ledge, the mime from before works the puppet
+      const mx = s.x + 6, my = 52; ctx.fillStyle = C.ink; ctx.fillRect(s.x - 20, my + 30, 80, 6);
+      ctx.fillStyle = C.white; ctx.strokeStyle = C.ink; ctx.fillRect(mx + 4, my + 10, 16, 20); ctx.strokeRect(mx + 4, my + 10, 16, 20); ctx.fillStyle = C.ink; for (let i = 0; i < 3; i++) ctx.fillRect(mx + 4, my + 13 + i*6, 16, 2);
+      ctx.fillStyle = C.white; ctx.beginPath(); ctx.arc(mx + 12, my + 5, 7, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = C.ink; ctx.fillRect(mx + 6, my - 6, 12, 4); ctx.fillRect(mx + 8, my - 10, 8, 4);
+      ctx.beginPath(); ctx.moveTo(mx + 20, my + 16); ctx.lineTo(s.x + 18, 92 + b); ctx.stroke();
       ctx.globalAlpha = 0.85; ctx.fillStyle = '#D9C6A5'; ctx.beginPath(); ctx.moveTo(s.x + 1.5, s.y + 56 + b); ctx.lineTo(s.x + 1.5, s.y + 18 + b); ctx.arc(s.x + 18, s.y + 18 + b, 16.5, Math.PI, 0); ctx.lineTo(s.x + 34.5, s.y + 56 + b); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(30,43,71,.6)'; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; return; }
     ctx.fillStyle = '#CBBFA9'; ctx.fillRect(-10, -10, W + 20, H + 20);
     ctx.fillStyle = 'rgba(30,43,71,.12)'; for (let i = 0; i < 40; i++) ctx.fillRect((i*137) % W, (i*71) % H, 3, 3);
@@ -2875,7 +2882,7 @@ function drawWorld(){
   lv.drawBack && lv.drawBack();
   for (const e of ents) if (!e.shadow) { const a = lv.alpha ? lv.alpha(e) : 1; if (a <= 0) continue; ctx.globalAlpha = a; drawEnt(e); ctx.globalAlpha = 1; }
   for (const e of ents) if (e.shadow) drawEnt(e);
-  if (!lv.dark) { ctx.globalAlpha = 0.5; for (const [x,y] of marksOf()) if (x > camX - 20 && x < camX + W + 20) cross(x, y, 6, C.red, 2); ctx.globalAlpha = 1; }
+  if (!lv.dark && !(lv.hideMarks && lv.hideMarks())) { ctx.globalAlpha = 0.5; for (const [x,y] of marksOf()) if (x > camX - 20 && x < camX + W + 20) cross(x, y, 6, C.red, 2); ctx.globalAlpha = 1; }
   if (S.over && S.over.kind === 'death') { ctx.globalAlpha = 0.5; cross(S.over.x, S.over.y, 6, C.red, 2); ctx.globalAlpha = 1; }
   lv.draw && lv.draw();
   if (state !== 'dead' && state !== 'title' && !(S.over && S.over.kind === 'death')) {
