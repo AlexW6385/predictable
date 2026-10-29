@@ -2075,11 +2075,41 @@ const LV = [
   update(){ lampStep(S.L); },
   draw(){ drawLamp(S.L); } },
 
-/* 74. two guns that agree about nothing, except you; and what it aims at is your tool */
-{ id:'twoguns', was:[60, 40], start:2,
-  build(){ Gd(0,29); R('bb',24,24,9,13,{hp:1}); Door(27,14); S.gs = gunsMake(); },
-  update(){ gunsStep(S.gs); },
-  draw(){ drawGuns(S.gs); } },
+/* 74. whoever alone sees a thing must act; where everyone sees it, each leaves it to the others */
+{ id:'twoguns', was:[60, 40], start:3.5,
+  build(){ Gd(0,29); R('b',0,0,0,13); R('b',29,29,0,13); Door(27.5,14);
+    // a gun high on each wall, each looking along its own fixed beam; the beams cross over the middle of the yard
+    const tu = Math.tan(26.5*Math.PI/180), tl = Math.tan(36.5*Math.PI/180), gy = 76, xl = 56, xr = W - 56;
+    S.tu = tu; S.tl = tl; S.gn = [{x:xl, y:gy, d:1, c:0}, {x:xr, y:gy, d:-1, c:0}]; S.shot = null;
+    // a grated catwalk (light goes through it) runs through the crossing, at the one height where a body
+    // steps into both beams at the same moment; only a ledge at the back of the yard leads up to it
+    const xv = (tu*xr + tl*xl)/(tl + tu), yv = gy + tl*(xv - xl), dd = 22/(tu + tl);
+    S.walk = E({t:'b', x:4*T, y:yv + tu*dd + 2, w:22.25*T, h:8, solid:true, hidden:true});
+    E({t:'b', x:T, y:394, w:2*T, h:12, solid:true}); },
+  // a gun sees you if any of you is inside its beam
+  sees(g){ const dx = (pcx() - g.x)*g.d; return dx > 0 && P.y + 4 <= g.y + S.tl*dx && P.y + 26 >= g.y + S.tu*dx; },
+  update(){ const [a, b] = S.gn; a.sees = this.sees(a); b.sees = this.sees(b); const both = a.sees && b.sees; if (both && !S.both) S.bothF = frame; S.both = both;
+    for (const g of S.gn) {
+      // the one that sees you alone fires after a moment; when both see you, each leaves it to the other
+      if (g.sees && !S.both) { if (++g.c >= 22) { S.shot = {g, x:pcx(), y:P.y + 14, f:frame}; shake = 10; return die('shot'); } }
+      else g.c = S.both ? 0 : Math.max(0, g.c - 1); } },
+  drawBack(){ for (const g of S.gn) { const k = Math.min(1, g.c/22);
+      ctx.fillStyle = k > 0 ? `rgba(207,62,50,${0.12 + 0.22*k})` : 'rgba(226,166,42,.2)';
+      ctx.beginPath(); ctx.moveTo(g.x, g.y); ctx.lineTo(g.x + g.d*(GY - g.y)/S.tu, GY); ctx.lineTo(g.x + g.d*(GY - g.y)/S.tl, GY); ctx.closePath(); ctx.fill(); } },
+  draw(){ const w = S.walk; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(w.x, w.y + 1); ctx.lineTo(w.x + w.w, w.y + 1); ctx.moveTo(w.x, w.y + w.h - 1); ctx.lineTo(w.x + w.w, w.y + w.h - 1); ctx.stroke();
+    ctx.lineWidth = 1.5; ctx.beginPath(); for (let x = w.x + 4; x < w.x + w.w; x += 12) { ctx.moveTo(x, w.y + 1); ctx.lineTo(x + 4, w.y + w.h - 1); } ctx.stroke();
+    const mid = (Math.atan(S.tu) + Math.atan(S.tl))/2, sh = S.shot && frame - S.shot.f < 45 ? S.shot : null, live = state === 'play';
+    // in both beams, the two keep glancing at each other and back at you: each is waiting for the other
+    const glance = live && S.both && Math.floor((frame - S.bothF)/18) % 2 === 1;
+    for (const g of S.gn) { const o = S.gn.find(q => q !== g), fired = sh && sh.g === g;
+      const tg = fired ? [sh.x, sh.y] : glance ? [o.x, o.y] : live && g.sees ? [pcx(), P.y + 14] : null;
+      const aim = tg ? Math.atan2(tg[1] - g.y, tg[0] - g.x) : g.d > 0 ? mid : Math.PI - mid, kick = fired ? Math.max(0, 8 - (frame - sh.f)) : 0;
+      ctx.fillStyle = C.ink2; ctx.fillRect(Math.min(g.x, g.d > 0 ? T : W - T), g.y - 6, Math.abs(g.x - (g.d > 0 ? T : W - T)), 12);
+      ctx.save(); ctx.translate(g.x, g.y); ctx.rotate(aim); ctx.fillStyle = C.ink; ctx.fillRect(8 - kick, -6, 34, 12); ctx.restore();
+      ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(g.x, g.y, 20, 0, 7); ctx.fill();
+      drawEye(g.x, g.y, 11, tg ? tg[0] : g.x + Math.cos(aim)*300, tg ? tg[1] : g.y + Math.sin(aim)*300, 0);
+      if (g.c > 0 && live) { const k = g.c/22; ctx.fillStyle = `rgba(207,62,50,${0.4 + 0.6*k})`; ctx.beginPath(); ctx.arc(g.x + Math.cos(aim)*44, g.y + Math.sin(aim)*44, 2 + k*6, 0, 7); ctx.fill(); } }
+    if (sh) { const a = Math.min(1, 1.5 - (frame - sh.f)/30), g = sh.g, ang = Math.atan2(sh.y - g.y, sh.x - g.x); ctx.strokeStyle = `rgba(207,62,50,${a})`; ctx.lineWidth = 2 + 3*a; ctx.beginPath(); ctx.moveTo(g.x + Math.cos(ang)*44, g.y + Math.sin(ang)*44); ctx.lineTo(sh.x, sh.y); ctx.stroke(); } } },
 
 /* 75. one at a time, and everyone in their turn */
 { id:'queue', start:1.5,

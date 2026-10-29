@@ -32,20 +32,29 @@
     check('73 fall back so it looks behind you; then run on', run(72, () => script([...feint1, post, S.R(23.5), S.W(60)]), {freshMem:true, max:2500}), 'dead');
     check('73 ... and fool it the same way again', run(72, () => script([...feint1, post, seen(1), to(12.3), search, S.R(23.5), S.W(60)]), {freshMem:true, max:2500}), 'dead');
     for (const d of [0, 30]) for (const p of [0, 8]) check(`73 ... then the other way round (go ${d} after it turns, peek +${p})`, run(72, () => script([to(2.0), seen(1), S.K({right:true}, p), to(2.0), search, S.W(d), to(12.3), post, seen(-1), S.K({left:true}, p), to(12.3), search, S.W(d), S.R(23.5), S.W(60)]), {freshMem:true, max:2500}), 'clear'); }
-  // ---- 74 two guns: the gold one fires at where you will be, the white one at where you are; turn the gold one on the wall
-  { const wallUp = () => g.ents.some(e => e.t === 'bb' && e.alive);
-    const feint = (x0, lead, d) => () => { let st = 0, n = 0; return P => { const t = g.S.gs.t, x = cx(), fired = g.S.gs.sh.length > 0;
-        if (st === 0) { if (x < x0*T - 4) return R(); if (x > x0*T + 4) return Lk(); if (t > lead || fired) return N(); st = 1; n = 0; }
-        if (st === 1) { if (fired && ++n > d) { st = 2; n = 0; } return R(); }
-        if (st === 2) { if (++n < 20 || fired) return Lk(); if (wallUp()) { st = 0; return N(); } st = 3; }
-        if (t < 45 || fired) return N(); return R(); }; };
-    check('74 run', run(73, () => R, {freshMem:true, max:1500}), /dead|timeout/);
-    check('74 stand: they cancel, and nothing changes', run(73, () => N, {freshMem:true, max:1500}), 'timeout');
-    check('74 wait by the wall', run(73, () => script([S.W(250), S.R(23), S.W(1500)]), {freshMem:true, max:1500}), /dead|timeout/);
-    check('74 stop when they fire', run(73, () => P => g.S.gs.sh.length ? N() : R(), {freshMem:true, max:2000}), 'dead');
-    check('74 keep going when they fire, stop between', run(73, () => P => g.S.gs.sh.length || g.S.gs.t < 40 ? R() : N(), {freshMem:true, max:2000}), 'dead');
-    check('74 turn back whenever they fire, far from the wall', run(73, () => script([S.W(250), S.R(8), S.F(P => g.S.gs.sh.length ? Lk() : (cx() < 8*T ? R() : N()), () => false)]), {freshMem:true, max:2000}), /timeout|dead/);
-    for (const [x0, lead, d] of [[10, 30, 0], [13, 50, 20], [13, 30, 10]]) check(`74 head for the wall as they fire, turn back (from ${x0}, ${lead} early, ${d} late)`, run(73, feint(x0, lead, d), {freshMem:true, max:3000}), 'clear'); }
+  // ---- 74 two guns: whoever alone sees you fires; where both see you (the crossing of the beams), each leaves it to the other
+  { const gn = () => g.S.gn, to = (x) => ({until: () => Math.abs(cx() - x*T) < 4 && Math.abs(g.P.vx) < 0.5, rule: () => Math.abs(cx() - x*T) < 4 ? N() : cx() < x*T ? R() : Lk()});
+    const tap = (x) => ({until: () => cx() >= x*T, rule: (P, k) => ({k:{right: k % 12 < 3}})});
+    const up = [S.J(30, -1), S.U(P => P.on, {}), S.J(30, 1), S.U(P => P.on, R().k)], down = [S.R(26.4), S.U(P => P.on && cx() > 26.3*T, R().k), to(28.0), S.W(30)];
+    const noLedge = () => { g.setLvl(73); for (const e of g.ents) if (e.t === 'b' && e.y === 394) e.alive = false; };
+    check('74 run along the floor', run(73, () => R, {freshMem:true}), 'dead');
+    check('74 stand', run(73, () => N, {freshMem:true, max:1200}), 'timeout');
+    check('74 jump at everything', run(73, () => P => P.on ? {jump:30, dir:1} : R(), {freshMem:true}), 'dead');
+    check('74 hop along the floor', run(73, () => P => P.on ? {jump:4, dir:1} : R(), {freshMem:true}), 'dead');
+    check('74 tap along the floor', run(73, () => script([tap(20), S.W(100)]), {freshMem:true, max:1500}), 'dead');
+    check('74 run, stop when a gun takes aim', run(73, () => P => gn().some(q => q.c > 0) ? N() : R(), {freshMem:true}), 'dead');
+    check('74 run, back off when it takes aim, go again', run(73, () => { let back = 0; return P => { if (gn()[1].c > 6) back = 30; if (back > 0) { back--; return Lk(); } return R(); }; }, {freshMem:true, max:1500}), /dead|timeout/);
+    { const r = SOLVE.solve(73, {beam:150, depth:120, len:6, setup:noLedge}); check('74 search every way along the floor (no ledge to the catwalk)', [r.ok ? 'found: ' + r.seq.join(' ') : 'none'], 'none'); }
+    check('74 climb, wait in the dark by the crossing', run(73, () => script([...up, to(11.3), S.W(900)]), {freshMem:true, max:1200}), 'timeout');
+    check('74 climb, hop across the catwalk', run(73, () => script([...up, {until: () => cx() > 26*T, rule: P => P.on ? {jump:10, dir:1} : R()}, ...down]), {freshMem:true, max:1500}), 'dead');
+    check('74 climb, run and jump into the crossing', run(73, () => script([...up, to(5), S.R(9), S.J(30, 1), ...down]), {freshMem:true, max:1500}), 'dead');
+    check('74 climb, walk through the crossing, drop, door', run(73, () => script([...up, ...down]), {freshMem:true, max:1500}), 'clear');
+    check('74 ... tapping', run(73, () => script([...up, tap(26.4), ...down]), {freshMem:true, max:2500}), 'clear');
+    check('74 ... stop at the edge, then in the middle', run(73, () => script([...up, to(11.6), S.W(90), to(15), S.W(120), ...down]), {freshMem:true, max:2500}), 'clear');
+    check('74 ... step in and out of the crossing', run(73, () => script([...up, to(12.6), S.W(30), to(11.5), S.W(30), to(13), S.W(20), ...down]), {freshMem:true, max:2500}), 'clear');
+    check('74 ... a small hop in the middle of the crossing', run(73, () => script([...up, to(15), S.J(4, 0), S.W(30), ...down]), {freshMem:true, max:2500}), 'clear');
+    check('74 ... step off the end slowly, walk back to the door', run(73, () => script([...up, S.R(25.5), tap(27), S.U(P => P.on, {}), to(27.9), S.W(30)]), {freshMem:true, max:2500}), 'clear');
+    { const r = SOLVE.solve(73, {beam:150, depth:120, len:6}); check('74 search with the ledge: it goes up', [r.ok ? (r.seq[0][0] === 'J' && r.seq[0][1] === 'L' ? 'up-first' : 'other: ' + r.seq.join(' ')) : 'none'], 'up-first'); } }
   // ---- 75 queue: the others count you only once you have taken your place at the back
   { const q = () => g.S.q;
     const joiner = (dx) => () => { let st = 0; return P => { const Q = q(), line = Q.cr.filter(c => c.st === 'come' || c.st === 'wait');
