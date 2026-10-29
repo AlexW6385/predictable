@@ -51,12 +51,13 @@
   check('9 let go and wait (it does not come)', run(8, () => script([S.R(5), S.W(1200)]), {max:900}), 'timeout');
   check('9 run near, then creep the rest', run(8, () => { let t = 0; return P => cx() < 13*T ? R() : {k:{right:(t++ % 8) === 0}}; }, {max:1500}), 'clear');
   // ---- 10 the beginning
-  const wake10 = [S.R(10.2), S.J(30, 1), S.R(19.6)];
+  const wake10 = [S.R(16), S.W(1)];
   check('10 chase the door', run(9, () => P => ({k: g.S.door.x + 18 > cx() ? {right:true} : {left:true}}), {max:900}), /timeout|dead/);
-  check('10 let go in the open like in 1', run(9, () => script([S.R(5), S.W(2000)]), {max:900}), 'dead');
-  check('10 let go under the roof while it sleeps', run(9, () => script([S.R(10.2), S.J(30, 1), S.R(14.5), S.W(2000)]), {max:900}), 'timeout');
+  check('10 let go in the open like in 1', run(9, () => script([S.W(2000)]), {max:900}), 'dead');
+  check('10 creep under the roof and let go while it sleeps', run(9, () => script([S.L(3), S.W(2000)]), {max:900}), 'timeout');
+  check('10 creep to it like in 9', run(9, () => { let t = 0; return P => ({k:{right: (t++ % 8) === 0}}); }, {max:1500}), /timeout|dead/);
   check('10 wake it, then let go out in the open', run(9, () => script([...wake10, S.W(900)]), {max:1200}), 'dead');
-  check('10 wake it, under the roof, let go facing it', run(9, () => script([...wake10, S.L(14.6), S.K({right:true}, 2), S.W(900)]), {max:1500}), 'dead');
-  check('10 wake it, under the roof, back to it, let go', run(9, () => script([...wake10, S.L(14.6), S.W(900)]), {max:1500}), 'win');
+  check('10 wake it, under the roof, back to where it sleeps, let go', run(9, () => script([...wake10, S.L(3), S.W(900)]), {max:1500}), 'dead');
+  check('10 wake it, under the roof, face where it sleeps, let go', run(9, () => script([...wake10, S.L(3), S.K({right:true}, 1), S.W(900)]), {max:1500}), 'win');
   return out;
 })()
