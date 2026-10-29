@@ -43,15 +43,19 @@ Every level should meet one rule: **you only get through if you understand it, a
   - tapping counts as walking;
   - jump windows of at least one tile.
 - **Complexity lives in the logic, never in the hands.** Later levels may take more thought, never more skill. If knowing the rule does not make a level easy, the level is wrong: no acting a fixed fraction of a second ahead, no narrow timing, no reading things mid-air.
-- **Every death is explainable** from what was on screen. Every prediction is shown before it lands, with a shadow, the Eye's pupil, a twitching lid or cracks.
-- **Every rule has a reason and a tell.** A rule follows from what the thing is (a gun leads its target; a sleeper wakes at noise), and it belongs to the chapter's theme. The screen shows the rule before it kills, so a careful, observant player can read the pattern with few deaths, or none. No hidden trap without a tell, and no trial and error for its own sake.
+- **Every death teaches.** Dying and trying again is part of the game, so a level does not have to be cleared without dying. What is not allowed is a meaningless death: each death must show the player something they can use to beat the trap (where it was, what set it off, what it was aiming at). A death that teaches nothing, or teaches only "try somewhere else", is a bug.
+- **Every rule has a reason.** A rule follows from what the thing is (a gun leads its target; a sleeper wakes at noise), and it belongs to the chapter's theme. A careful player can read it after a death or two, without trial and error for its own sake.
+- **Tells are subtle, or absent.** A hint should only make the player feel that something here is off: a crack, a twitch, a stain, something slightly out of place. It must not announce the trap or hand over the answer. Some traps need no hint at all: the first death is the hint, as long as that death makes the rule readable.
+- **Every trap is sprung.** If a level has a trap, every route through the level meets it. A player who knows nothing must not be able to walk past it by luck or by not noticing; the only way past is to understand it. A trap that can be skipped is decoration.
+- **Nothing is there for nothing.** Every object on screen either is part of a trap, part of the way through, or a hint. If removing something would not change how the level is played, remove it.
 - **Standing still never clears a level**, except level 1, which teaches it.
 - **The answer is never what you would do anyway.** Each level asks for a real insight, and in the later chapters a plan of more than one step. If the obvious move works, the level is not finished.
 - **No two levels share an answer.** When a piece comes back, it asks something new. "Let go and it comes to you" is level 1's answer; later levels may build on it, but never end on it again unchanged.
 - **A duel, not a puzzle box.** The best levels are a game against something that models you: it predicts you, and you predict its prediction. Prefer feints, baits, teaching it a habit and then breaking it, and using its aim as a tool, over hidden properties that only have to be noticed.
-- **Make the tell plain and the reasoning hard.** A tell that is easy to miss turns the level into trial and error; a tell that gives the answer away ("that one is odd, don't touch it") makes it too simple. Show plainly what is happening; the puzzle is what to do about it.
+- **Make the reasoning hard, not the tell loud.** A tell that gives the answer away ("that one is odd, don't touch it") makes the level too simple. Dodging is not an answer: a level whose solution is just avoiding the dangerous thing is too simple. The puzzle is what to do about what you have seen.
 - **A finale is a new idea, not a stack.** The last level of a chapter makes its pieces act on each other: the answer to one is what another punishes, or one piece's prediction is turned against another. Running the earlier answers in a row is not enough.
 - **Pieces interact.** Most levels combine two or three pieces. Ideally, the habit one piece teaches is exactly what another piece punishes.
+- **Depth comes next.** The first hundred levels are mostly single-layer: one trap, one idea. Levels beyond them should go much further in difficulty and thought: chained traps, where escaping one sets up the next; several layers of second-guessing, where the game predicts your answer to its prediction; and logic that a player has to plan out over several lives.
 
 ## The curve
 
@@ -317,7 +321,7 @@ Every level ships only after five kinds of check pass.
 2. **Half an idea fails.** The "I've figured it out" approach dies to the next layer.
 3. **The intended route clears with human timing.** It still works with reaction delay, acting early or late, and uneven jump holds.
 4. **Random play almost never clears it.** Mash, jump spam, hold-right and a wandering bot with pauses each clear it about 2% of the time or less.
-5. **A careful first-timer can read it.** From what the screen shows, write down what an observant player would conclude after no deaths, one and two. The rule must be within reach by then, and every trap must have shown itself before it springs.
+5. **Every death teaches, and every trap is sprung.** Write down what an observant player knows after no deaths, one and two: each death must add something they can use, and the rule must be within reach after a few. Check that no route gets past a trap without meeting it, and that every object on screen matters.
 
 A debug mode lets the tests snapshot, rewind and step the game frame by frame. A search-based solver confirms that every level can be solved.
 
