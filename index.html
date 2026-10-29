@@ -1121,23 +1121,35 @@ const LV = [
 
 /* 34. each gap is as wide as your last leap, and a little more */
 { id:'measure', was:[65], start:1,
-  build(){ S.pits = [{x:3*T, w:40}, {x:10*T}, {x:18*T}]; S.last = null; S.take = null; this.layout(); Door(27.5,14); },
-  layout(){ for (const e of ents) if (e.pitg) e.alive = false; let x0 = 0;
-    for (const p of S.pits) { E({t:'g', x:x0, y:GY, w:p.x - x0, h:96, solid:true, pitg:true}); E({t:'s', x:p.x, y:GY + 40, w:p.w || 48, h:16, dir:'up', kill:true, pitg:true}); x0 = p.x + (p.w || 48); }
-    E({t:'g', x:x0, y:GY, w:W - x0, h:96, solid:true, pitg:true}); },
+  build(){ S.pits = [0, 1, 2, 3].map(() => ({w:40})); S.last = null; S.take = null; this.layout(); Door(27.5,14); },
+  // the pits keep their places in line, each two and a half tiles after the last one ends
+  layout(){ for (const e of ents) if (e.pitg) e.alive = false; let x = 3*T, x0 = 0;
+    for (const p of S.pits) { p.x = x; E({t:'g', x:x0, y:GY, w:x - x0, h:96, solid:true, pitg:true}); E({t:'s', x, y:GY + 40, w:p.w, h:16, dir:'up', kill:true, pitg:true}); x0 = x + p.w; x = x0 + 80; }
+    E({t:'g', x:x0, y:GY, w:Math.max(W - x0, 2*T), h:96, solid:true, pitg:true}); },
   onJump(){ S.take = pcx(); },
-  onLand(){ if (S.take != null) { const cr = S.pits.find(p => p.w != null && S.take < p.x && P.x + PW > p.x + p.w); S.take = null;
-      if (cr) { const ex = Math.max(0, pcx() - (cr.x + cr.w)); S.last = {from:cr.x + cr.w, to:pcx(), y:GY + 8};
-        const nxt = S.pits.find(p => p.x > pcx() && p.w == null); if (nxt) { nxt.w = clamp(Math.round(cr.w + ex + 6), 40, 190); this.layout(); } } } },
-  update(){ if (P.on && S.take != null) S.take = null; },
-  draw(){ const L = S.last; if (L) { ctx.strokeStyle = C.red; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(L.from, L.y); ctx.lineTo(L.to, L.y); ctx.moveTo(L.from, L.y - 5); ctx.lineTo(L.from, L.y + 5); ctx.moveTo(L.to, L.y - 5); ctx.lineTo(L.to, L.y + 5); ctx.stroke(); }
-    for (const p of S.pits) if (p.w != null && p.w !== 40) { ctx.strokeStyle = 'rgba(207,62,50,.6)'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(p.x, GY + 6); ctx.lineTo(p.x + p.w, GY + 6); ctx.stroke(); ctx.setLineDash([]); } } },
+  // every leap counts, even one on the spot: the next gap ahead becomes it, and a quarter more
+  onLand(){ if (S.take == null) return; const leap = Math.abs(pcx() - S.take); S.last = {from:S.take, to:pcx()}; S.take = null;
+    const nxt = S.pits.find(p => p.x > pcx()); if (nxt) { const w = clamp(Math.round(leap*1.25), 40, 260); if (w !== nxt.w) { nxt.w = w; nxt.flash = 20; this.layout(); } } },
+  update(){ for (const p of S.pits) if (p.flash) p.flash--; },
+  draw(){ const L = S.last; ctx.strokeStyle = C.red; ctx.lineWidth = 2;
+    if (L) { const y = GY + 8; ctx.beginPath(); ctx.moveTo(L.from, y); ctx.lineTo(L.to, y); ctx.moveTo(L.from, y - 5); ctx.lineTo(L.from, y + 5); ctx.moveTo(L.to, y - 5); ctx.lineTo(L.to, y + 5); ctx.stroke(); }
+    // each pit's width, measured on its lip
+    for (const p of S.pits) { ctx.strokeStyle = p.flash && (p.flash >> 2) % 2 ? C.red : 'rgba(207,62,50,.6)'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(p.x, GY + 6); ctx.lineTo(p.x + p.w, GY + 6); ctx.stroke(); ctx.setLineDash([]); } } },
 
 /* 35. up is a choice, and the floor of the world is the roof of the world */
 { id:'upchoice', was:[11, 4], start:2, flip:true, wrapY:true, vmax:9,
-  build(){ Gd(0,6); Gd(9,16); Gd(19,29); R('b',0,29,4,4); Sp(4,11,3,'up'); Sp(11,13,13,'up'); Sp(17,23,5,'down'); Door(26,4); },
+  build(){ Gd(0,6); Gd(9,16); Gd(19,29); R('b',0,29,4,4); Sp(4,11,3,'up'); Sp(11,13,13,'up'); Sp(17,23,5,'down'); Door(26,4);
+    // a pebble rolls into the first hole, comes in again from the top, and sticks on the thorns on the roof
+    S.peb = {x:4.2*T, y:GY - 6, vy:0, st:'roll', t:0}; S.stuck = []; },
   // upside down under the floor is outside the world
-  update(){ if (P.g < 0 && P.y > GY) die('fall'); } },
+  update(){ if (P.g < 0 && P.y > GY) die('fall');
+    const q = S.peb; q.t++;
+    if (q.st === 'roll') { if (q.t > 30) q.x += 1.5; if (q.x > 7*T + 6) q.st = 'fall'; }
+    else if (q.st === 'fall') { q.vy = Math.min(q.vy + 0.5, 10); q.y += q.vy; if (q.y > H + 10) q.y = -10;
+      if (q.y < 200 && q.y >= 4*T - 16 - 5 && q.vy > 0) { q.y = 4*T - 16 - 5; q.st = 'stuck'; shake = 2; S.stuck.push([q.x, q.y]); q.t = 0; } }
+    else if (q.st === 'stuck' && q.t > 360) Object.assign(q, {x:4.2*T, y:GY - 6, vy:0, st:'roll', t:0}); },
+  draw(){ ctx.fillStyle = C.ink2; for (const [x, y] of S.stuck.slice(-1)) { ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill(); }
+    const q = S.peb; if (q.st !== 'stuck') { ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 7); ctx.fill(); } } },
 
 /* 36. what falls in comes out going up */
 { id:'portal', was:[45], start:2, sy:100,

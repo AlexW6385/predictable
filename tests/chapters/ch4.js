@@ -27,8 +27,15 @@
   check('33 come home over the roof with nothing', run(32, () => script([S.F(() => { for (const c of g.S.cs) c.alive = false; return {k:{}}; }, (P, k) => k >= 1), ...hall33, ...steps33]), {max:2400}), 'timeout');
   check('33 take one coin behind the pillar, come home over the roof', run(32, () => script([...hall33, S.R(16.6), ...steps33]), {max:2400}), 'clear');
   // ---- 34 measure
+  const enough34 = (P, pit) => { for (let h = 1; h <= 30; h++) { const r = window.LIB.sim(h, 1, GY); if (r.c > pit.x + pit.w + 12) return {jump:h, dir:1}; } return {jump:30, dir:1}; };
+  const edge34 = P => g.S.pits.find(p => p.x > P.x && p.x - (P.x + 22) < 6 && p.x - (P.x + 22) > -2);
   check('34 full jumps', run(33, () => P => (P.on && g.S.pits.some(p => p.x > P.x && p.x - (P.x + 22) < 6)) ? {jump:30, dir:1} : R(), {freshMem:true}), 'dead');
-  check('34 always just enough', run(33, () => P => { const pit = g.S.pits.find(p => p.x > P.x && p.x - (P.x + 22) < 6 && p.x - (P.x + 22) > -2); if (P.on && pit) { for (let h = 1; h <= 30; h++) { const r = window.LIB.sim(h, 1, GY); if (r.c > pit.x + pit.w + 12) return {jump:h, dir:1}; } return {jump:30, dir:1}; } return R(); }, {freshMem:true}), 'clear');
+  check('34 always just enough', run(33, () => P => { const pit = edge34(P); if (P.on && pit) return enough34(P, pit); return R(); }, {freshMem:true}), 'dead');
+  check('34 a hop on the spot before each gap, then just enough', run(33, () => { const done = new Set(); let ph = 0, hop = false; return P => {
+      if (!P.on) return hop ? {k:{}} : R(); hop = false;
+      const nx = g.S.pits.find(p => p.x > P.x + 11);
+      if (nx && !done.has(nx) && P.x + 22 >= nx.x - 44) { if (Math.abs(P.vx) > 0.05) return {k:{}}; if (++ph < 8) return {k:{}}; ph = 0; done.add(nx); hop = true; return {jump:3, dir:0}; }
+      const pit = edge34(P); if (pit) return enough34(P, pit); return R(); }; }, {freshMem:true, max:2400}), 'clear');
   // ---- 35 up is a choice
   check('35 just walk', run(34, () => R), 'dead');
   check('35 flip up, walk on upside down', run(34, () => script([S.R(6.2), S.J(1, 1), S.U(P => P.on, {right:true}), S.R(29)])), 'dead');
