@@ -82,7 +82,7 @@
       return onLock ? R() : (t < 60 ? N() : R()); }; };
   check('17 run', run(16, () => R), 'dead');
   check('17 change as soon as it appears', run(16, act17(false), {max:1500}), 'dead');
-  check('17 wait until its ring stops, then change', run(16, act17(true), {max:1500}), 'clear');
+  check('17 wait until its shadow stops, then change', run(16, act17(true), {max:1500}), 'clear');
   // ---- 18 reflection
   const plant18 = x => [S.R(x), S.U(() => g.S.st >= 31), S.W(8)];
   const climbA = [S.R(17.4), S.JT(19.5, 408, {tol:8}), S.U(P => P.on), S.J(30, 1), S.U(P => P.on && P.y < 300)];
