@@ -75,14 +75,16 @@
   check('16 ... and run under the third too', run(15, () => script([S.U(() => th()[0].st === 'fall', {right:true}), S.U(() => th()[0].st === 'down'), S.J(30, 1), S.R(28.5), S.W(20)]), {max:2000}), /dead|timeout/);
   // ---- 17 ice
   const fc17 = () => (g.S.cones || []).filter(c => c.st === 'fall');
-  const act17 = (onLock) => () => { const done = new Set(); let t = 99, mode = null; return P => { t++;
+  const act17 = (onLock, dur) => () => { const done = new Set(); let t = 99, mode = null; return P => { t++;
       const c = fc17().find(c => !done.has(c) && (onLock ? c.locked : true));
       if (c) { done.add(c); t = 0; mode = Math.abs(g.P.vx) > 2.4 ? 'brake' : 'go'; }
-      if (t < 26) return mode === 'brake' ? {k:{left:true}} : {k:{right:true}};
+      if (t < (dur || 26)) return mode === 'brake' ? {k:{left:true}} : {k:{right:true}};
       return onLock ? R() : (t < 60 ? N() : R()); }; };
   check('17 run', run(16, () => R), 'dead');
   check('17 change as soon as it appears', run(16, act17(false), {max:1500}), 'dead');
   check('17 wait until its shadow stops, then change', run(16, act17(true), {max:1500}), 'clear');
+  check('17 run and hop now and then, never changing speed', run(16, () => { let t = 0; return P => (t++ % 40) === 0 && g.P.on ? {jump:20, dir:1} : R(); }, {max:1500}), 'dead');
+  check('17 ... with a short brake', run(16, act17(true, 14), {max:1500}), 'clear');
   // ---- 18 reflection
   const plant18 = x => [S.R(x), S.U(() => g.S.st >= 31), S.W(8)];
   const climbA = [S.R(17.4), S.JT(19.5, 408, {tol:8}), S.U(P => P.on), S.J(30, 1), S.U(P => P.on && P.y < 300)];
