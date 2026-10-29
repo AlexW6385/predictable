@@ -10,11 +10,19 @@
   check('51 key, grow a vine, back over the top', run(50, () => script([S.R(28.6), S.L(27.5), S.W(5), S.U(P => P.y + 28 <= 322 && P.on), S.L(20.5), S.J(6, -1), S.L(15.5), S.J(6, -1), S.L(10.5), S.J(6, -1), S.L(2.6), S.W(30)]), {max:2400}), 'clear');
   // ---- 52 hunger
   const pol52 = slow => () => P => { const pc = cx(), wd = (a, b) => g.lv.wd(a, b);
-    for (const b of g.S.balls) { const dx = wd(b.x, pc); if (Math.hypot(dx, b.y - P.y - 14) < 64) return dx > 0 ? Lk() : R(); }
-    if (g.S.coins >= 3) { const d = wd(27.5*T, pc); return Math.abs(d) < 6 ? N() : d > 0 ? R() : Lk(); }
-    return {k:{right: slow ? Math.abs(g.P.vx) < 2.4 : true}}; };
+    if (!P.on) return R();
+    for (const b of g.S.balls) { const dx = wd(b.x, pc); if (dx > 0 && dx < 40) return {jump:30, dir:1}; if (dx <= 0 && dx > -90) return R(); }
+    if (g.S.coins >= 3) { const d = wd(27.5*T, pc); return Math.abs(d) < 6 ? N() : R(); }
+    if (!slow) return R();
+    // a coin with a ball beyond it: close in slowly; a ball still far beyond the coins: wait for it to come
+    const ahead = g.S.cs.filter(c => c.alive && wd(c.x + 8, pc) > 0);
+    const pinned = ahead.some(c => wd(c.x + 8, pc) < 160 && g.S.balls.some(b => { const e = wd(b.x, c.x + 8); return e > 0 && e < 100; }));
+    if (pinned) return {k:{right: Math.abs(g.P.vx) < 2.2}};
+    const coming = ahead.some(c => g.S.balls.some(b => { const e = wd(b.x, c.x + 8); return e > 0 && e < 360; }));
+    return coming ? N() : {k:{right: Math.abs(g.P.vx) < 2.4}}; };
   check('52 stand and wait', run(51, () => N, {max:1500}), 'dead');
   check('52 run after them', run(51, pol52(false), {max:3000}), /timeout|dead/);
+  check('52 walk slowly after them, never dodging', run(51, () => P => ({k:{right: Math.abs(g.P.vx) < 2.4}}), {max:3000}), /timeout|dead/);
   check('52 walk after them round the world; close in slowly when a ball has it', run(51, pol52(true), {max:4000}), 'clear');
   // ---- 53 gaze
   const perch53 = [S.R(15.3), S.W(4), S.J(30, 0), S.U(P => P.on && P.y < 340)];

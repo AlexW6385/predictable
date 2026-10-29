@@ -1555,7 +1555,7 @@ const LV = [
 { id:'hunger', was:[25], start:2, wrapX:true,
   build(){ Gd(0,29); Door(27,14,{slots:3, onEnter(){ if (S.coins >= 3) levelClear(); }});
     S.cs = [9, 15, 21].map(c => ({x:c*T + 8, y:GY - 20, vx:0, alive:true, hop:null}));
-    S.balls = [[5*T, 160], [24*T, 160]].map(([x,y]) => ({x, y})); },
+    S.balls = [{x:24*T, y:GY - 16}]; },
   // the world has no edges: it goes round
   wd(a, b){ return ((a - b + W*1.5) % W) - W/2; },
   update(){ const pc = pcx();
@@ -1563,14 +1563,15 @@ const LV = [
       if (c.hop) { const h = c.hop; h.t++; const k = Math.min(1, h.t/22); c.x = (h.from + (h.to - h.from)*k + W) % W; c.y = GY - 20 - Math.sin(k*Math.PI)*70; if (k >= 1) { c.hop = null; c.y = GY - 20; } continue; }
       // it runs from you, and from the spiked balls; caught between, it cannot go either way
       const dx = this.wd(c.x + 8, pc); let v = 0, from = 0;
-      if (Math.abs(dx) < 110) { v += Math.sign(dx || 1)*(Math.abs(P.vx)*0.85 + 0.7); from = Math.sign(dx || 1); }
-      let pinned = false; for (const b of S.balls) { const bx = this.wd(c.x + 8, b.x); if (Math.abs(bx) < 70) { const away = Math.sign(bx || 1); if (from && away !== from) pinned = true; else v += away*1.2; } }
+      if (Math.abs(dx) < 120) { v += Math.sign(dx || 1)*(Math.abs(P.vx) + 0.7); from = Math.sign(dx || 1); }
+      let pinned = false; for (const b of S.balls) { const bx = this.wd(c.x + 8, b.x); if (Math.abs(bx) < 100) { const away = Math.sign(bx || 1); if (from && away !== from) pinned = true; else v += away*1.2; } }
       if (pinned) v = 0;
       c.warn = pinned && Math.abs(dx) < 100 && running();
       // pinned, it hops over whoever runs at it
       if (pinned && Math.abs(dx) < 46 && running()) c.hop = {from:c.x, to:c.x - from*150, t:0}; else c.x = (c.x + v + W) % W;
       if (Math.abs(this.wd(c.x + 8, pc)) < 19 && P.y + PH > c.y && P.y < c.y + 20) { c.alive = false; S.coins++; sparkle(c.x + 8, c.y + 10); } }
-    for (const b of S.balls) { const dx = this.wd(pc, b.x), dy = P.y + 14 - b.y, d = Math.hypot(dx, dy) || 1; b.x = (b.x + dx/d*0.6 + W) % W; b.y += dy/d*0.6; if (d < 22) return die('ball'); } },
+    for (const b of S.balls) { const dx = this.wd(pc, b.x), dy = P.y + 14 - b.y, d = Math.hypot(dx, dy) || 1; // they roll along the ground toward you
+      b.x = (b.x + Math.sign(dx)*0.8 + W) % W; if (d < 22) return die('ball'); } },
   draw(){ for (const c of S.cs) if (c.alive) for (const o of [0, -W, W]) drawCoin(c.x + o + (c.warn ? ((frame >> 1) % 2 ? 2 : -2) : 0), c.y - (c.warn ? (frame >> 2) % 2 * 3 : 0));
     for (const b of S.balls) for (const o of [0, -W, W]) { ctx.fillStyle = C.ink; ctx.beginPath(); for (let i = 0; i < 16; i++) { const a = i/16*Math.PI*2 + frame*0.03, r = i%2 ? 7 : 14; ctx.lineTo(b.x + o + Math.cos(a)*r, b.y + Math.sin(a)*r); } ctx.fill(); } } },
 
