@@ -24,7 +24,9 @@
   check('42 stand still in the shade', run(41, () => N, {max:3000}), 'dead');
   check('42 go whenever you have cooled down', run(41, () => P => { const here = !g.lv.lit(cx(), g.P.y + 14); if (here && g.S.burn > 0) return N(); return R(); }, {max:3000}), 'dead');
   check('42 go as soon as the boards are in shade', run(41, () => script([S.U(() => !g.lv.lit(16*T, 434)), S.R(28.5)]), {max:3000}), 'dead');
-  check('42 move with the shade', run(41, ride(96), {max:3000}), 'clear');
+  { const waits = []; for (let w = 0; w <= 1400; w += 100) for (const at of [2, 10]) waits.push(run(41, () => script([S.R(at), S.W(w), S.R(28.5), S.W(20)]), {max:3000})[0]);
+    check('42 wait in some shade, then run for it (any wait)', [waits.filter(r => r.startsWith('dead')).length + '/' + waits.length, waits.some(r => r === 'clear') ? 'clear' : 'dead'], 'dead'); }
+  for (const gm of [0, 96]) check(`42 move with the shade (crossing lit gaps up to ${gm}px)`, run(41, ride(gm), {max:3000}), 'clear');
   // ---- 43 water
   const swimTo = (tx, ty) => P => { const k = {right: cx() < tx*T, left: cx() > tx*T + 20}; return (g.P.y + 14 > ty) && g.P.vy > -1 ? {k, edge:true} : {k}; };
   const wet = [S.L(0.5), S.W(5)], dive = [S.R(5.6)], exitTo = [S.F(swimTo(24.4, 300), () => cx() > 24.2*T), S.F(P => ({k:{right:true}, edge: g.P.y < 262 || g.P.vy > -1}), () => g.P.on && g.P.y < 240), S.R(28.8)];
