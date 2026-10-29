@@ -46,9 +46,12 @@
   check('44 burn the way, send the bomb, stand right by it', run(43, both(60), {max:3000}), 'dead');
   check('44 burn the way, send the bomb, wait not too near', run(43, both(140), {max:3000}), 'clear');
   // ---- 45 spark
+  const wires45 = [S.R(3.6), S.J(30, 1), S.U(P => P.on), S.R(8.4), S.J(30, 1), S.U(P => P.on)];
   check('45 walk', run(44, () => R), 'dead');
-  check('45 never touch a wire', run(44, () => script([S.R(5.6), S.W(2000)]), {max:600}), 'timeout');
-  check('45 jump through them', run(44, () => script([S.R(5.8), S.JT(9.7, GY, {maxPeak:78, tol:12}), S.R(11.6), S.JT(17.2, GY, {tol:20}), S.R(19.7), S.JT(22.8, GY, {maxPeak:78, tol:12}), S.R(28)])), 'clear');
+  check('45 never touch a wire', run(44, () => script([S.R(3.6), S.W(2000)]), {max:600}), 'timeout');
+  check('45 over the ground wires, then jump under the roof', run(44, () => script([...wires45, S.R(18), S.J(30, 1), S.W(60)]), {max:900}), 'dead');
+  check('45 over the ground wires, then creep off the edge', run(44, () => script([...wires45, S.R(21.3), S.F(() => ({k:{right: Math.abs(g.P.vx) < 0.8}}), P => !P.on), S.W(60), S.R(26.8), S.W(30)]), {max:1200}), 'dead');
+  check('45 over the ground wires, then run off the edge through it', run(44, () => script([...wires45, S.R(26.8), S.W(30)]), {max:1200}), 'clear');
   // ---- 46 wind
   check('46 run and jump', run(45, () => script([S.R(6.5), S.J(30, 1), S.R(28)]), {max:600}), 'dead');
   const letgo = (x) => [S.R(x), S.F((P, k) => k === 1 ? {jump:30, dir:0} : {k:{}}, (P, k) => k > 2 && P.on)];

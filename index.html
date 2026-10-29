@@ -875,8 +875,16 @@ const LV = [
 { id:'forged', was:[16], start:1.5,
   build(){ Gd(0,29); for (const c of [6,7,11,12,18,19,23,24]) HS(c); Door(27,14);
     S.forged = [4,5,9,10,14,15].map(c => [c*T + 16, 430]).concat([18,19,23,24].map(c => [c*T + 16, 430])); },
+  update(){ // walking through wet paint smears it
+    for (const m of S.forged) if (P.on && Math.abs(pcx() - m[0]) < 12) m[2] = (m[2] || 0) + 1; },
   drawBack(){ ctx.strokeStyle = C.grid2; ctx.lineWidth = 2; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(15*T, 60); ctx.lineTo(15*T + 6, 200); ctx.lineTo(15*T - 4, 330); ctx.lineTo(15*T + 3, GY); ctx.stroke(); ctx.setLineDash([]);
-    ctx.globalAlpha = 0.5; for (const [x,y] of S.forged) cross(x, y, 6, C.red, 2); ctx.globalAlpha = 1; } },
+    // painted marks: glossy, still wet, dripping; walked through, they smear
+    for (const [x, y, sm] of S.forged) { const k = Math.min(1, (sm || 0)/8); ctx.save(); ctx.translate(x, y); ctx.scale(1 + k*1.6, 1 - k*0.5);
+      ctx.globalAlpha = 0.85; cross(0, 0, 6, '#D8483B', 3); ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-4, -5); ctx.lineTo(-1, -2); ctx.stroke();
+      ctx.fillStyle = '#D8483B'; ctx.fillRect(3, 4, 2, 5 + ((frame >> 4) + x) % 4); ctx.restore(); } },
+  // the hidden spikes catch the light now and then
+  draw(){ for (const e of ents) if (e.t === 's' && e.inv && !e.revealT) { const ph = (frame + e.x*0.7) % 120; if (ph < 14) { const k = Math.sin(ph/14*Math.PI); ctx.strokeStyle = `rgba(255,255,255,${k})`; ctx.lineWidth = 2; const cx0 = e.x + e.w/2, cy0 = e.y + 2;
+      ctx.beginPath(); ctx.moveTo(cx0 - 7*k, cy0); ctx.lineTo(cx0 + 7*k, cy0); ctx.moveTo(cx0, cy0 - 7*k); ctx.lineTo(cx0, cy0 + 7*k); ctx.stroke(); ctx.fillStyle = `rgba(30,43,71,${0.5*k})`; ctx.beginPath(); ctx.moveTo(e.x + 4, e.y + e.h); ctx.lineTo(cx0, e.y + 2); ctx.lineTo(e.x + e.w - 4, e.y + e.h); ctx.fill(); } } } },
 
 /* 23. the screen is part of the world */
 { id:'fourthwall', was:[23], start:2,
@@ -934,12 +942,19 @@ const LV = [
 
 /* 26. on the other side, everything means its opposite */
 { id:'opposites', was:[69], start:2,
-  build(){ Gd(0,6); Gd(9,14); Sp(13,13,13,'up'); Gd(15,23); Gd(26,29); S.inv = [Sp(17,19,13,'up',{kill:false, solid:true}), Sp(21,22,13,'up',{kill:false, solid:true}), Sp(27,29,13,'up',{kill:false, solid:true})];
-    Door(28,13.5,{onEnter(d){ d.bite = true; die('door'); }}); },
+  build(){ Gd(0,4); Gd(7,14); Sp(12,12,13,'up'); Gd(15,23); Gd(26,29);
+    // past the line: the ground kills, the thorns hold you up, the door bites, and the hole is the way out
+    S.inv = [17, 20, 23].map(c => Sp(c,c,13,'up',{kill:false, solid:true})).concat([Sp(26,29,13,'up',{kill:false, solid:true})]);
+    Door(28,13.5,{onEnter(d){ d.bite = true; die('door'); }});
+    // two pebbles show it: one rolls across the line and bursts on the ground, one drops onto the thorns and rests there
+    S.peb = [{x:13.2*T, y:GY - 6, vx:1.6, vy:0, st:'roll'}, {x:17.5*T, y:-20, vx:0, vy:0, st:'fall'}]; },
   update(){ if (P.on && P.stand && P.stand.t === 'g' && pcx() > 15*T) return die('floor');
-    if (pcx() > 24*T && pcx() < 26*T && P.y > 470) levelClear(); },
+    if (pcx() > 24*T && pcx() < 26*T && P.y > 470) levelClear();
+    for (const q of S.peb) { if (q.st === 'gone' && ++q.t > 150) { q.st = 'roll'; q.x = 13.2*T; } if (q.st === 'roll') { q.x += q.vx; if (q.x > 16*T) { q.st = 'gone'; q.t = 0; for (let i = 0; i < 8; i++) parts.push({x:q.x, y:GY - 4, vx:(Math.random() - .5)*4, vy:-Math.random()*3, life:22, r:2, col:C.ink2}); } }
+      else if (q.st === 'fall') { q.vy += 0.5; q.y += q.vy; if (q.y >= GY - 16 - 6) { q.y = GY - 16 - 6; q.st = 'rest'; } } } },
   drawBack(){ ctx.fillStyle = 'rgba(30,43,71,.10)'; ctx.fillRect(15*T, 0, 15*T, H); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.setLineDash([6,6]); ctx.beginPath(); ctx.moveTo(15*T, 0); ctx.lineTo(15*T, GY); ctx.stroke(); ctx.setLineDash([]);
-    drawDoor(24*T + 14, 482, {flip:true}); } },
+    drawDoor(25*T - 18, 482, {flip:true}); },
+  draw(){ for (const q of S.peb) if (q.st !== 'gone') { ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 7); ctx.fill(); } } },
 
 /* 27. what hangs on the wall is not the way out, but some of it is a window */
 { id:'gallery', was:[71, 77], start:2,
@@ -1175,8 +1190,9 @@ const LV = [
 /* ===================== V. Elements ===================== */
 
 /* 41. in the dark, only where you fell is lit; a sound shows you the way, and shows you to it */
-{ id:'dark', was:[26, 56], start:1.5, dark:true,
-  build(){ Gd(0,4); Gd(7,13); Gd(16,22); Gd(25,29); HS(10); HS(19); R('b',7,12,9,9); Sp(7,12,10,'down',{inv:true}); Door(28,14);
+{ id:'dark', was:[26, 56], start:1.5, dark:true, seeR:52,
+  // nothing here is invisible, only unlit: whatever a ring of sound lights, you see
+  build(){ Gd(0,4); Gd(7,13); Gd(16,22); Gd(25,29); Sp(10,10,13,'up'); Sp(19,19,13,'up'); R('b',7,12,9,9); Sp(7,12,10,'down'); Door(28,14);
     S.rings = []; S.bat = {x:15*T, y:30, st:'roost', t:0}; },
   ping(x, y){ S.rings.push({x, y, t:0}); const b = S.bat; if (b.st === 'roost' || b.st === 'back') { b.st = 'dive'; b.tx = x; b.ty = y - 14; } },
   onJump(){ this.ping(pcx(), P.y + PH); },
@@ -1260,14 +1276,20 @@ const LV = [
 
 /* 45. it only hurts if you are standing on something */
 { id:'spark', was:[39], start:2,
-  build(){ Gd(0,29); Door(27,14); R('b',6,9,9,9,{y:298}); R('b',19,23,9,9,{y:298});
-    S.wires = [{x:7*T, y:440, w:2*T, h:8}, {x:13*T, y:440, w:3*T, h:8}, {x:21*T + 10, y:330, w:12, h:118}]; },
-  update(){ if (!P.on) return; for (const w of S.wires) if (ov(pbox(1), w)) return die('shock'); },
+  build(){ Gd(0,21); R('b',16,21,0,11); Sp(16,21,12,'down'); Gd(22,29,{y:GY + 64}); Door(26.5,16);
+    // two wires on the ground; then a low, spiked roof you cannot jump under, and past its end a wire hanging all the way down to the floor below
+    S.wires = [{x:5*T, y:440, w:2*T, h:8}, {x:10*T, y:440, w:3*T, h:8}, {x:22*T + 24, y:300, w:12, h:212}];
+    S.bugs = [{x:5*T + 20, y:436, on:'ground', t:0, dead:false}, {x:22*T + 30, y:380, on:'hang', t:0}]; },
+  update(){ for (const b of S.bugs) { b.t++; if (b.on === 'ground' && !b.dead) { b.x += 0.4; if (b.t > 90) { b.dead = true; for (let i = 0; i < 8; i++) parts.push({x:b.x, y:b.y, vx:(Math.random() - .5)*3, vy:-Math.random()*3, life:20, r:2, col:C.gold}); } } if (b.on === 'hang') b.y = 380 + Math.sin(b.t*0.05)*30; }
+    if (!P.on) return; for (const w of S.wires) if (ov(pbox(1), w)) return die('shock'); },
   draw(){ ctx.strokeStyle = C.gold; ctx.lineWidth = 3; for (const w of S.wires) { ctx.beginPath();
       if (w.w > w.h) { for (let x = w.x; x <= w.x + w.w; x += 6) ctx.lineTo(x, w.y + w.h/2 + ((x/6) % 2 ? -w.h/2 : w.h/2)); }
       else { for (let y = w.y; y <= w.y + w.h; y += 6) ctx.lineTo(w.x + w.w/2 + ((y/6) % 2 ? -w.w/2 : w.w/2), y); }
       ctx.stroke(); }
-    ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; for (const w of S.wires) if (w.w > w.h && w.y < 430) { ctx.beginPath(); ctx.moveTo(w.x, 330); ctx.lineTo(w.x, w.y + 6); ctx.moveTo(w.x + w.w, 330); ctx.lineTo(w.x + w.w, w.y + 6); ctx.stroke(); } } },
+    // the beetles: one walks along a ground wire, one clings to the hanging wire
+    for (const b of S.bugs) { if (b.on === 'ground' && b.dead && b.t > 130) continue; ctx.fillStyle = b.dead ? C.soft : C.ink; ctx.beginPath(); ctx.ellipse(b.x, b.y - 3, 6, 4, 0, 0, 7); ctx.fill();
+      ctx.strokeStyle = b.dead ? C.soft : C.ink; ctx.lineWidth = 1; ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(b.x + s*3, b.y - 1); ctx.lineTo(b.x + s*7, b.y + 3); } ctx.stroke();
+      if (b.on === 'ground' && !b.dead && b.t > 70 && frame % 4 < 2) { ctx.strokeStyle = C.gold; ctx.beginPath(); ctx.arc(b.x, b.y - 3, 9, 0, 7); ctx.stroke(); } } } },
 
 /* 46. it blows against whatever you want; so want nothing, or want the other way */
 { id:'wind', was:[95], start:2,

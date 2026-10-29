@@ -34,9 +34,13 @@
       if (!c2.alive && P.on && cx() > 25.2*T && cx() < 25.8*T) return {jump:30, dir:1};
       return R(); }, {max:1500}), 'clear');
   // ---- 26 opposites
-  check('26 walk on, as usual', run(25, () => P => (P.on && [6.3, 12.3].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:8, dir:1} : R(), {freshMem:true}), 'dead');
-  check('26 stand on the thorns, go in the door', run(25, () => script([S.R(6.3), S.J(30, 1), S.R(12.3), S.JT(18, 432, {tol:20}), S.R(18.7), S.JT(21.5, 432, {tol:16}), S.R(22.2), S.JT(27.6, 432, {tol:20}), S.R(28.3)]), {freshMem:true, max:1500}), 'dead');
-  check('26 stand on the thorns, drop into the pit', run(25, () => script([S.R(6.3), S.J(30, 1), S.R(12.3), S.JT(18, 432, {tol:20}), S.R(18.7), S.JT(21.5, 432, {tol:16}), S.R(22.4), S.JT(25, 600, {tol:20}), S.W(60)]), {freshMem:true, max:1500}), 'clear');
+  const near26 = [S.R(4.3), S.J(30, 1), S.U(P => P.on), S.JT(13.5, GY, {tol:10}), S.U(P => P.on)];
+  const isles26 = [S.JT(17.5, 432, {tol:8}), S.U(P => P.on), S.JT(20.5, 432, {tol:8}), S.U(P => P.on), S.JT(23.5, 432, {tol:8}), S.U(P => P.on)];
+  check('26 walk on, as usual', run(25, () => P => (P.on && [4.3, 11.0].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R(), {freshMem:true}), 'dead');
+  check('26 full jumps past the line', run(25, () => script([...near26, S.J(30, 1), S.U(P => P.on), S.W(30)]), {freshMem:true, max:1500}), 'dead');
+  check('26 hop along the ground past the line', run(25, () => script([...near26, S.R(15.6), S.W(30)]), {freshMem:true, max:1500}), 'dead');
+  check('26 thorn to thorn, then the door', run(25, () => script([...near26, ...isles26, S.JT(27, 432, {tol:20}), S.R(28.3), S.W(30)]), {freshMem:true, max:1500}), 'dead');
+  check('26 thorn to thorn, then down the hole', run(25, () => script([...near26, ...isles26, S.R(24.5), S.W(60)]), {freshMem:true, max:1500}), 'clear');
   // ---- 27 gallery
   check('27 walk in the door', run(26, () => R, {freshMem:true}), 'fake');
   check('27 jump the painted door, walk to the wall', run(26, () => script([S.R(3.0), S.J(30, 1), S.R(29)]), {freshMem:true, max:900}), 'timeout');
