@@ -1529,25 +1529,30 @@ const LV = [
       ctx.strokeStyle = e.tone === 'L' ? C.ink : C.white; ctx.lineWidth = 2; ctx.setLineDash(on ? [] : [4, 3]); ctx.strokeRect(e.x + 2, e.y + 1, e.w - 4, e.h - 2); ctx.setLineDash([]); ctx.globalAlpha = 1; } },
   alpha(e){ return e.tone ? 0 : 1; } },
 
-/* 50. by the light of the storm */
-{ id:'storm', start:1.5, dark:true,
+/* 50. by the light of the storm; and the light comes before the sound */
+{ id:'storm', start:1.5, dark:true, seeR:52,
   darkA(){ return S.flash > 0 ? clamp(1 - S.flash/10, 0, 1) : 1; },
-  build(){ Gd(0,4); Gd(7,14); Gd(17,22); Gd(25,29); HS(12); HS(21); R('b',8,9,10,10,{roof:true}); E({t:'b', x:18*T + 16, y:320, w:48, h:32, solid:true, roof:true}); Door(28,14);
-    S.flash = 0; S.lt = 90; S.n = 0; S.rt = 70; S.rain = []; },
-  ax(){ return (keys.right ? 1 : 0) - (keys.left ? 1 : 0); },
-  gust(){ const pc = pcx(); return (pc > 4.5*T && pc < 7.5*T) || (pc > 22.5*T && pc < 25.5*T); },
-  update(){ if (--S.lt <= 0) { S.flash = 26; S.lt = 170 + (S.n++ * 23) % 40; shake = 3; } if (S.flash > 0) S.flash--;
-    // over the gaps the gusts blow against whatever you push
-    if (this.gust() && !P.on) P.x -= 4.0*this.ax();
-    // and the rain brings the sky down where you are going
-    if (pcx() > 3*T && pcx() < 27*T && --S.rt <= 0) { S.rt = 80; drop(clamp(whereIn(40), 2*T, 27.5*T), 40, {block:true}); }
-    updCones();
+  // narrow stones over the dark; you can stand only where you landed
+  build(){ Gd(0,5); Gd(8,9); Gd(12,13); Gd(16,17); Gd(20,29); Door(28,14);
+    S.flash = 0; S.lt = 150; S.th = 0; S.rain = []; S.bat = {x:14*T, y:30, st:'roost', t:0}; },
+  // the flash, and a little later the thunder; while it rolls, the bat hears nothing else
+  deaf(){ return S.th > 0; },
+  ping(x, y){ if (this.deaf()) return; const b = S.bat; b.st = 'dive'; b.tx = x; b.ty = y - 14; },
+  onJump(){ this.ping(pcx(), P.y + PH); },
+  onLand(){ this.ping(pcx(), P.y + PH); },
+  update(){ if (++S.lt >= 210) { S.lt = 0; S.flash = 26; shake = 3; }
+    if (S.flash > 0) S.flash--;
+    S.th = S.lt >= 70 && S.lt < 160 ? S.th + 1 : 0; if (S.th) shake = Math.max(shake, S.th < 20 ? 7 : 2);
+    batStep(S.bat, 14*T, 30); if (S.bat.st === 'dive') { const b = S.bat, dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy); if (d > 9) { b.x += dx/d*2; b.y += dy/d*2; } }
+    // it comes down where it heard you, and searches the stone it lands on
+    const b = S.bat; if (batHits(b) || (b.st === 'hover' && Math.abs(pcx() - b.x) < 46 && Math.abs(P.y + 14 - b.y) < 30)) return die('bat');
     if (S.rain.length < 70) S.rain.push({x:Math.random()*W, y:-10, v:9 + Math.random()*4}); S.rain = S.rain.filter(r => (r.y += r.v, r.x -= 1.5, r.y < H)); },
   drawOver(){ ctx.strokeStyle = 'rgba(190,205,225,.35)'; ctx.lineWidth = 1; ctx.beginPath(); for (const r of S.rain) { ctx.moveTo(r.x, r.y); ctx.lineTo(r.x + 2, r.y - 9); } ctx.stroke();
-    // the lightning shows even the spikes you cannot see by day
-    if (S.flash > 0) { ctx.globalAlpha = Math.min(1, S.flash/12); ctx.fillStyle = C.white; for (const e of ents) if (e.t === 's' && e.inv && !e.revealT) { spikesPath(e); ctx.fill(); } ctx.globalAlpha = 1; }
-    drawCones(); ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(28*T + 25, GY - 22, 3, 0, 7); ctx.fill();
-    if (S.flash > 20) { ctx.strokeStyle = C.white; ctx.lineWidth = 3; ctx.beginPath(); let x = 300 + (S.lt*37) % 400, y = 0; ctx.moveTo(x, y); while (y < 200) { x += (Math.random() - .5)*40; y += 25; ctx.lineTo(x, y); } ctx.stroke(); } } },
+    ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(28*T + 25, GY - 22, 3, 0, 7); ctx.fill();
+    if (S.flash > 20) { ctx.strokeStyle = C.white; ctx.lineWidth = 3; ctx.beginPath(); let x = 120 + (frame*37) % 700, y = 0; ctx.moveTo(x, y); while (y < 200) { x += (Math.random() - .5)*40; y += 25; ctx.lineTo(x, y); } ctx.stroke(); }
+    drawBat(S.bat);
+    // in the thunder it shuts its eyes
+    if (this.deaf()) { const b = S.bat; ctx.fillStyle = C.ink2; ctx.fillRect(b.x - 5, b.y - 2, 10, 4); } } },
 
 /* ===================== VI. Living ===================== */
 

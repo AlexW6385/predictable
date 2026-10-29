@@ -95,17 +95,13 @@
   check('49 light it; then on to the grey, and straight onto the black', run(48, () => script([...toGrey49, S.R(21.6), S.W(100)]), {max:1200}), 'dead');
   check('49 light it; then to the grey, wait for the dark, walk the black', run(48, () => script([...toGrey49, S.W(185), ...end49]), {max:1500}), 'clear');
   check('49 ... but jump onto the black', run(48, () => script([...toGrey49, S.W(185), S.JT(16.5, 416, {tol:9}), S.W(60)]), {max:1500}), 'dead');
-  // ---- 50 storm
-  const J50 = [[4.0, 30, 0], [11.2, 3, 1], [14.0, 30, 1], [20.2, 3, 1], [22.4, 30, 0]], roofs50 = [8.5, 19.3];
-  const p50 = (letGo, shelter) => () => { let waitAt = -1; return P => { const x = cx();
-    if (!P.on) return letGo && ((x > 4.5*T && x < 7.5*T) || (x > 22.5*T && x < 25.5*T)) ? N() : R();
-    const ri = roofs50.findIndex(r => Math.abs(x - r*T) < 10);
-    if (shelter && ri >= 0 && waitAt !== ri) { if (g.S.rt > 80 - 38 || g.S.rt < 80 - 46) return N(); waitAt = ri; }
-    for (const [at, h, d] of J50) if (x >= at*T && x < (at + 0.45)*T) { if (Math.abs(g.P.vx) < 3) return R(); return {jump:h, dir: letGo ? d : 1}; }
-    return R(); }; };
-  clean('storm'); check('50 run through it', run(49, () => R), 'dead');
-  clean('storm'); check('50 keep pushing over the gaps', run(49, p50(false, true), {max:3000}), 'dead');
-  clean('storm'); check('50 let go over the gaps, never take shelter', run(49, p50(true, false), {max:3000}), 'dead');
-  clean('storm'); check('50 let go over the gaps, roof to roof', run(49, p50(true, true), {max:3000}), 'clear');
+  // ---- 50 storm: narrow stones in the dark; the bat dives at every sound, except while the thunder rolls, and the thunder comes after the flash
+  { const hops = [[5.3, 9.0], [9.4, 13.0], [13.4, 17.0], [17.4, 21.5]];
+    const plan = when => () => script([...hops.flatMap(([e, to]) => [S.R(e), S.U(when, {}), S.JT(to, GY, {tol:10}), S.W(6)]), S.R(28.4), S.W(30)]);
+    clean('storm'); check('50 run through it', run(49, () => R), 'dead');
+    clean('storm'); check('50 jump as soon as you get to each edge', run(49, plan(() => true), {max:3000}), 'dead');
+    clean('storm'); check('50 jump when the lightning shows the way', run(49, plan(() => g.S.flash > 14), {max:3000}), 'dead');
+    clean('storm'); check('50 jump in the quiet after the thunder', run(49, plan(() => g.S.lt > 165), {max:3000}), 'dead');
+    for (const [a, b] of [[2, 30], [20, 48]]) { clean('storm'); check(`50 jump while the thunder rolls (${a}-${b} frames into it)`, run(49, plan(() => g.S.th >= a && g.S.th <= b), {max:4000}), 'clear'); } }
   return out;
 })()
