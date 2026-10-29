@@ -51,13 +51,16 @@
   check('44 burn the way, then kick the bomb and follow it', run(43, () => { const a = script(lightIt); let done = false; return (P, f) => { if (!done && !burnt()) return a(P, f); done = true; return R(); }; }, {max:3000}), 'dead');
   check('44 burn the way, send the bomb, stand right by it', run(43, both(60), {max:3000}), 'dead');
   check('44 burn the way, send the bomb, wait not too near', run(43, both(140), {max:3000}), 'clear');
-  // ---- 45 spark
-  const wires45 = [S.R(3.6), S.J(30, 1), S.U(P => P.on), S.R(8.4), S.J(30, 1), S.U(P => P.on)];
-  check('45 walk', run(44, () => R), 'dead');
-  check('45 never touch a wire', run(44, () => script([S.R(3.6), S.W(2000)]), {max:600}), 'timeout');
-  check('45 over the ground wires, then jump under the roof', run(44, () => script([...wires45, S.R(18), S.J(30, 1), S.W(60)]), {max:900}), 'dead');
-  check('45 over the ground wires, then creep off the edge', run(44, () => script([...wires45, S.R(21.3), S.F(() => ({k:{right: Math.abs(g.P.vx) < 0.8}}), P => !P.on), S.W(60), S.R(26.8), S.W(30)]), {max:1200}), 'dead');
-  check('45 over the ground wires, then run off the edge through it', run(44, () => script([...wires45, S.R(26.8), S.W(30)]), {max:1200}), 'clear');
+  // ---- 45 spark: the floor is live; stand on the cable, and leave it by a jump
+  { const onCab = S.U(P => P.on && P.stand === g.S.cab, {right:true}), up = [S.R(7.2), S.J(30, 1), onCab], off = x => [S.R(x), S.J(30, 1), S.U(P => P.on, {right:true}), S.R(27.5), S.W(30)];
+    check('45 walk', run(44, () => R), 'dead');
+    check('45 hop over the start of the wire', run(44, () => script([S.R(7.0), S.J(8, 1), S.U(P => P.on, {right:true}), S.R(28)]), {max:900}), 'dead');
+    check('45 wait before the wire', run(44, () => script([S.R(6.5), S.W(2000)]), {max:600}), 'timeout');
+    check('45 onto the cable, walk off its end', run(44, () => script([...up, S.R(28)]), {max:900}), 'dead');
+    check('45 onto the cable, jump off it too soon', run(44, () => script([...up, ...off(16.5)]), {max:900}), 'dead');
+    for (const x of [18.6, 19.4]) check(`45 onto the cable, jump off its end (at ${x})`, run(44, () => script([...up, ...off(x)]), {max:900}), 'clear');
+    check('45 onto the cable from a standstill at the edge', run(44, () => script([S.R(7.2), S.W(20), S.J(30, 1), onCab, ...off(19.0)]), {max:900}), 'clear');
+    check('45 onto the cable from a run, a tile back', run(44, () => script([S.R(6.6), S.J(30, 1), onCab, ...off(19.0)]), {max:900}), 'clear'); }
   // ---- 46 wind
   check('46 run and jump', run(45, () => script([S.R(6.5), S.J(30, 1), S.R(28)]), {max:600}), 'dead');
   const letgo = (x) => [S.R(x), S.F((P, k) => k === 1 ? {jump:30, dir:0} : {k:{}}, (P, k) => k > 2 && P.on)];

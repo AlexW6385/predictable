@@ -1426,22 +1426,28 @@ const LV = [
     else { ctx.fillStyle = C.door; ctx.save(); ctx.translate(tr.x + 6, GY - 3); ctx.rotate(1.3*(1 - (tr.fall || 0)/30)); ctx.fillRect(-3, -40, 6, 40); ctx.restore(); }
     drawBomb(S.bomb, S.boom); } },
 
-/* 45. it only hurts if you are standing on something */
+/* 45. it only hurts if you are standing on something else */
 { id:'spark', was:[39], start:2,
-  build(){ Gd(0,21); R('b',16,21,0,11); Sp(16,21,12,'down'); Gd(22,29,{y:GY + 64}); Door(26.5,16);
-    // two wires on the ground; then a low, spiked roof you cannot jump under, and past its end a wire hanging all the way down to the floor below
-    S.wires = [{x:5*T, y:440, w:2*T, h:8}, {x:10*T, y:440, w:3*T, h:8}, {x:22*T + 24, y:300, w:12, h:212}];
-    S.bugs = [{x:5*T + 20, y:436, on:'ground', t:0, dead:false}, {x:22*T + 30, y:380, on:'hang', t:0}]; },
-  update(){ for (const b of S.bugs) { b.t++; if (b.on === 'ground' && !b.dead) { b.x += 0.4; if (b.t > 90) { b.dead = true; for (let i = 0; i < 8; i++) parts.push({x:b.x, y:b.y, vx:(Math.random() - .5)*3, vy:-Math.random()*3, life:20, r:2, col:C.gold}); } } if (b.on === 'hang') b.y = 380 + Math.sin(b.t*0.05)*30; }
-    if (!P.on) return; for (const w of S.wires) if (ov(pbox(1), w)) return die('shock'); },
-  draw(){ ctx.strokeStyle = C.gold; ctx.lineWidth = 3; for (const w of S.wires) { ctx.beginPath();
-      if (w.w > w.h) { for (let x = w.x; x <= w.x + w.w; x += 6) ctx.lineTo(x, w.y + w.h/2 + ((x/6) % 2 ? -w.h/2 : w.h/2)); }
-      else { for (let y = w.y; y <= w.y + w.h; y += 6) ctx.lineTo(w.x + w.w/2 + ((y/6) % 2 ? -w.w/2 : w.w/2), y); }
-      ctx.stroke(); }
-    // the beetles: one walks along a ground wire, one clings to the hanging wire
-    for (const b of S.bugs) { if (b.on === 'ground' && b.dead && b.t > 130) continue; ctx.fillStyle = b.dead ? C.soft : C.ink; ctx.beginPath(); ctx.ellipse(b.x, b.y - 3, 6, 4, 0, 0, 7); ctx.fill();
-      ctx.strokeStyle = b.dead ? C.soft : C.ink; ctx.lineWidth = 1; ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(b.x + s*3, b.y - 1); ctx.lineTo(b.x + s*7, b.y + 3); } ctx.stroke();
-      if (b.on === 'ground' && !b.dead && b.t > 70 && frame % 4 < 2) { ctx.strokeStyle = C.gold; ctx.beginPath(); ctx.arc(b.x, b.y - 3, 9, 0, 7); ctx.stroke(); } } } },
+  // the floor is live from here to past the end of the cable; a cable is strung above it, and it is the same wire
+  build(){ Gd(0,29); Door(27,14); S.live = {x:8*T, y:GY - 4, w:15*T, h:8}; S.cab = {x0:11*T, x1:20*T, on:false};
+    S.bugs = [{x:6*T, on:'floor', t:0, dead:false}, {x:15*T, on:'cable', t:0, d:1}]; },
+  cy(x){ const c = S.cab; return GY - 44 + 18*Math.sin(Math.PI*clamp((x - c.x0)/(c.x1 - c.x0), 0, 1)); },
+  update(){ const c = S.cab, x = pcx(), was = c.on; c.on = false;
+    // you can stand on the cable itself: on it, you touch nothing but the wire
+    if (x > c.x0 && x < c.x1 && P.vy >= 0) { const sy = this.cy(x), feet = P.y + PH; if (feet >= sy - (was ? 6 : 1) && feet - P.vy <= sy + (was ? 8 : 6)) { P.y = sy - PH; P.vy = 0; P.on = true; P.stand = c; c.on = true; } }
+    for (const b of S.bugs) { b.t++;
+      if (b.on === 'floor' && !b.dead) { b.x += 0.4; if (b.x > S.live.x - 2) { b.dead = true; for (let i = 0; i < 8; i++) parts.push({x:b.x, y:GY - 4, vx:(Math.random() - .5)*3, vy:-Math.random()*3, life:20, r:2, col:C.gold}); } }
+      if (b.on === 'cable') { b.x += 0.35*b.d; if (b.x > c.x1 - 30 || b.x < c.x0 + 30) b.d = -b.d; } }
+    // the wire and the ground at once: that is what it waits for
+    if (P.on && P.stand !== c && ov(pbox(1), S.live)) return die('shock'); },
+  draw(){ const c = S.cab, L = S.live; ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath();
+    for (let x = L.x, i = 0; x <= L.x + L.w; x += 6, i++) ctx.lineTo(x, GY - 3 + (i % 2 ? -3 : 1)); ctx.stroke();
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 4; for (const px of [c.x0 - 2, c.x1 + 2]) { ctx.beginPath(); ctx.moveTo(px, GY - 4); ctx.lineTo(px, this.cy(px) - 6); ctx.stroke(); }
+    ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath(); for (let x = c.x0, i = 0; x <= c.x1; x += 6, i++) ctx.lineTo(x, this.cy(x) + (i % 2 ? -2 : 2)); ctx.stroke();
+    // the beetles: one walks onto the live floor, one walks along the cable
+    for (const b of S.bugs) { const by = b.on === 'cable' ? this.cy(b.x) - 2 : GY - 2;
+      ctx.fillStyle = b.dead ? C.soft : C.ink; ctx.beginPath(); ctx.ellipse(b.x, by - 3, 6, 4, 0, 0, 7); ctx.fill();
+      ctx.strokeStyle = b.dead ? C.soft : C.ink; ctx.lineWidth = 1; ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(b.x + s*3, by - 1); ctx.lineTo(b.x + s*7, by + 3); } ctx.stroke(); } } },
 
 /* 46. it blows against whatever you want; so want nothing, or want the other way */
 { id:'wind', was:[95], start:2,
