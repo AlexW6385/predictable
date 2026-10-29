@@ -71,8 +71,10 @@
   const climb29 = [S.R(1.9), S.J(30, 1), S.U(P => P.on), S.W(8), S.J(30, 1), S.U(P => P.on && cx() > 9.3*T, {right:true})];
   check('29 walk on', run(28, () => R, {max:600}), 'timeout');
   check('29 jump the wall you bump into', run(28, () => P => (P.on && Math.abs(P.vx) < 0.5 && cx() > 4*T) ? {jump:30, dir:1} : R(), {max:600}), /timeout|dead/);
-  check('29 follow its hands, and its door', run(28, () => script([...climb29, S.R(29)]), {max:1500}), 'dead');
-  check('29 follow its hands, not its door', run(28, () => script([...climb29, S.R(22.2), S.J(30, 1), S.R(29)]), {max:1500}), 'clear');
+  check('29 over the wall, then walk the bridge', run(28, () => script([...climb29, S.R(29)]), {max:1500}), 'dead');
+  check('29 over the wall, leap the gap in the bridge', run(28, () => script([...climb29, S.R(13.3), S.J(30, 1), S.R(29)]), {max:1500}), 'dead');
+  check('29 follow its hands, and its door', run(28, () => script([...climb29, S.R(13.3), S.J(4, 1), S.R(29)]), {max:1500}), 'dead');
+  for (const h of [1, 4, 7]) check(`29 follow its hands, not its door (hop ${h})`, run(28, () => script([...climb29, S.R(13.3), S.J(h, 1), S.R(22.2), S.J(30, 1), S.R(29)]), {max:1500}), 'clear');
   // ---- 30 cave
   check('30 trust the shadows', run(29, () => hopAt([6.6, 14.6, 22.6], 30), {freshMem:true, max:600}), 'dead');
   check('30 look back, then go', solve(29), 'clear');
