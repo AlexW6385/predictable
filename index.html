@@ -1814,10 +1814,10 @@ const LV = [
     // the first time, what it puts there is only a fist
     const b = S.bonk; if (b) { b.t++; if (b.t < 40 && ov(pbox(), {x:b.x - 10, y:b.y - 22, w:20, h:22})) { P.stun = 16; P.vx = -2; b.t = 40; shake = 3; } } },
   draw(){ const b = S.bonk; if (b && b.t < 40) { const h = Math.min(1, b.t/6)*22*(b.t > 30 ? (40 - b.t)/10 : 1); ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.ellipse(b.x, b.y - h/2, 10, h/2, 0, 0, 7); ctx.fill(); }
-    // the Eye: before the first fork it shows its bet; before the second it only watches you
+    // the Eye stares at its bet: before the first fork, against what you were doing; before the second, against the lane you took at the first
     const ex = 15*T, ey = 110; let lk = {x:pcx(), y:P.y + 14};
     if (S.bet1 && !S.lane1) lk = {x:9.5*T, y:S.bet1 === 'U' ? 350 : 430};
-    else if (S.bet2) lk = {x:22.5*T, y:S.bet2 === 'U' ? 320 : 430};
+    else if (S.lane1 && pcx() > 14*T) { const b2 = S.bet2 || (S.lane1 === 'U' ? 'L' : 'U'); lk = {x:22.5*T, y:b2 === 'U' ? 320 : 430}; }
     drawEye(ex, ey, 18, lk.x, lk.y, 0); } },
 
 /* 66. the one who hears her will go to her: bind that one while you are still this one */
