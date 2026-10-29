@@ -2163,7 +2163,9 @@ const LV = [
 { id:'dancer', was:[74], start:1.5,
   build(){ Gd(0,29); S.my = [4, 6, 8].map(c => ({x:c*T})); S.dn = [20, 22, 24].map(c => ({x:c*T}));
     // facing you, its steps are mirrored in yours; with its back to you, they are the same
-    S.ph = 0; S.seqs = [[0, 2, 1], [1, 0, 2]]; S.got = 0; S.dt = 0; S.dx = 22*T; S.turn = false; S.pit = null;
+    // it dances something new every time, so the steps can't be learned by heart, only the rule
+    const n = M.tries = (M.tries || 0) + 1, A = [[0, 2, 1], [2, 1, 0], [2, 0, 1], [0, 1, 2]], B = [[1, 0, 2], [2, 1, 0], [0, 2, 1], [1, 2, 0]];
+    S.ph = 0; S.seqs = [A[(n - 1) % 4], B[(n*3 - 2) % 4]]; S.got = 0; S.dt = 0; S.dx = 22*T; S.turn = false; S.pit = null;
     S.door = Door(14,14,{inert:true}); },
   onLand(){ if (!S.turn || S.pit) return; const i = S.my.findIndex(p => Math.abs(pcx() - (p.x + 16)) < 14); if (i < 0) return;
     const j = S.seqs[S.ph][S.got], want = S.ph === 0 ? 2 - j : j;
@@ -2180,7 +2182,7 @@ const LV = [
 
 /* 84. when the curtain falls, the stage is changed; the curtain shows what it will be */
 { id:'curtain', was:[79], start:1,
-  build(){ Gd(0,3); R('g',4,25,16,16); Sp(4,25,15,'up'); Gd(26,29); Door(27,14); R('b',10,11,12,12); R('b',18,19,11,11);
+  build(){ Gd(0,3); R('g',4,26,16,16); Sp(4,26,15,'up'); Gd(27,29); Door(28,14); R('b',10,11,12,12); R('b',18,19,11,11);
     S.A = [[5,7,13],[13,15,11]].map(([a, b, r]) => R('b',a,b,r,r,{prop:'A', cond:() => S.act === 'A'}));
     S.B = [[6,8,11],[14,16,13],[22,24,10]].map(([a, b, r]) => R('b',a,b,r,r,{prop:'B', cond:() => S.act === 'B'})); S.t = 0; S.act = 'A'; },
   cur(){ const t = S.t % 300; return t < 220 ? 0 : t < 245 ? (t - 220)/25 : t < 285 ? 1 : 1 - (t - 285)/15; },
@@ -2196,18 +2198,21 @@ const LV = [
 
 /* 85. the only way through the veil is to die in it; then take out the stone that holds it all, and fall with it */
 { id:'keystone', was:[83, 76], start:1.5,
-  build(){ Gd(0,9); Gd(24,29); R('g',10,23,16,16); Sp(10,14,15,'up'); Sp(19,23,15,'up'); Door(16.5,16);
+  build(){ Gd(0,9); R('g',25,29,10,16); R('g',10,24,16,16); Sp(10,16,15,'up'); Sp(19,24,15,'up'); Door(17.5,16);
     S.veil = {x:6*T, w:20};
-    S.deck = []; for (let c = 10; c <= 23; c++) S.deck.push(E({t:'b', x:c*T, y:GY, w:T, h:12, solid:true, deck:true, key:c === 16 || c === 17, c})); S.fallT = null;
+    S.deck = []; for (let c = 10; c <= 24; c++) S.deck.push(E({t:'b', x:c*T, y:GY, w:T, h:12, solid:true, deck:true, key:c === 17 || c === 18, c})); S.fallT = null;
     if (M.rise) { P.x = M.rise.x; P.y = M.rise.y; P.vy = 0; M.rise = null; } },
   update(){ const v = S.veil;
     // the veil kills whoever enters it, and they rise on the far side
     if (ov(pbox(2), {x:v.x, y:0, w:v.w, h:GY})) { M.rise = {x: P.face > 0 ? v.x + v.w + 8 : v.x - PW - 8, y: P.on ? P.y : P.y - 4}; return die('veil'); }
     if (S.fallT == null && P.on && P.stand && P.stand.key) S.fallT = 0;
-    if (S.fallT != null) { S.fallT++; for (const d of S.deck) { const delay = 30 + Math.abs(d.c - 16.5)*6; d.shk = S.fallT > delay - 18 && S.fallT < delay; if (S.fallT === Math.round(delay)) d.fall = 1; } } },
+    // it falls from the middle outward, faster than anyone can run: whoever flees it goes down over the thorns
+    if (S.fallT != null) { S.fallT++; for (const d of S.deck) { const delay = 24 + Math.abs(d.c - 17.5)*3; d.shk = S.fallT > delay - 18 && S.fallT < delay; if (S.fallT === Math.round(delay)) d.fall = 1; } } },
   drawBack(){ const v = S.veil; for (let i = 0; i < 6; i++) { ctx.fillStyle = `rgba(207,62,50,${0.08 + 0.05*Math.sin(frame*0.1 + i)})`; ctx.fillRect(v.x - 6 + i*5, 0, 6, GY); } ctx.fillStyle = C.red; ctx.fillRect(v.x + v.w/2 - 1, 0, 2, GY);
-    ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(17*T, GY + 150, 7.6*T, Math.PI*1.12, Math.PI*1.88); ctx.stroke(); },
-  draw(){ for (const d of S.deck) if (d.key && d.alive && !d.fall) { ctx.fillStyle = C.gold; ctx.fillRect(d.x + 2, d.y + 2, d.w - 4, d.h - 4); } } },
+    ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(17.5*T, GY + 150, 7.75*T, Math.PI*1.12, Math.PI*1.88); ctx.stroke(); },
+  // the keystone is only a wedge cut a little differently from its neighbours
+  draw(){ const k = S.deck.find(d => d.key); if (!k.alive || k.fall) return; const x0 = 17*T, x1 = 19*T, y = k.y + (k.shk ? ((frame>>1)%2 ? 1.5 : -1.5) : 0);
+    ctx.strokeStyle = 'rgba(231,236,241,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0 - 3, y + 1); ctx.lineTo(x0 + 4, y + 11); ctx.lineTo(x1 - 4, y + 11); ctx.lineTo(x1 + 3, y + 1); ctx.stroke(); } },
 
 /* 86. it holds whoever walks off the edge and keeps walking */
 { id:'leap', start:1.5,
@@ -2239,17 +2244,21 @@ const LV = [
   drawPlayer(dx, dy, dw, dh){ if (S.ghost) { ctx.globalAlpha = 0.45 + 0.2*Math.sin(frame*0.3); drawPlayerAt(dx, dy, dw, dh, P.face, '#E8E2F4', C.soft, false); ctx.globalAlpha = 1; ctx.fillStyle = C.grid2; ctx.fillRect(P.x - 2, P.y - 9, PW + 4, 4); ctx.fillStyle = S.sp < 30 ? C.red : C.soft; ctx.fillRect(P.x - 2, P.y - 9, (PW + 4)*S.sp/140, 4); }
     else { drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false); if (S.still > 10) { ctx.globalAlpha = S.still/60*0.6; drawPlayerAt(dx, dy - S.still/3, dw, dh, P.face, '#E8E2F4', C.soft, false); ctx.globalAlpha = 1; } } } },
 
-/* 88. the gate is narrow; whatever you hold makes you wider; give it away */
+/* 88. the gate is narrow; whatever you hold makes you wider; give it away, and let not your eyes see it */
 { id:'needle', was:[85], start:1,
-  build(){ Gd(0,29); R('b',24,24,0,12); S.cs = []; for (let c = 5; c <= 19; c += 2) for (const y of [GY - 20, GY - 92]) S.cs.push({x:c*T + 8, y, vx:0, vy:0, alive:true}); Door(27,14);
-    S.coins = 0; S.beg = {x:21*T, t:0}; },
+  build(){ Gd(0,29); R('b',24,24,0,12); S.cs = []; for (let c = 7; c <= 19; c += 2) S.cs.push({x:c*T + 8, y:GY - 20, vx:0, vy:0, alive:true}); Door(27,14);
+    S.coins = 0; S.beg = {x:4*T, t:0}; },
   update(){ for (const c of S.cs) { if (!c.alive) continue; const dx = pcx() - (c.x + 8), dy = P.y + 14 - (c.y + 9), d = Math.hypot(dx, dy); if (d < 56) { c.vx += dx/d*0.4; c.vy += dy/d*0.4; } c.vx *= 0.92; c.vy *= 0.92; c.x += c.vx; c.y += c.vy;
       if (ov(pbox(), {x:c.x, y:c.y, w:16, h:18})) { c.alive = false; S.coins++; sparkle(c.x + 8, c.y + 9); } }
-    // the beggar takes a coin at a time from whoever stands by him
-    const b = S.beg; if (S.coins > 0 && P.on && Math.abs(pcx() - (b.x + 12)) < 30 && Math.abs(P.vx) < 0.5) { if (++b.t > 30) { b.t = 0; S.coins--; b.thanks = 20; } } else b.t = 0; if (b.thanks) b.thanks--;
+    // the beggar takes a coin at a time from whoever stands by him; but he is ashamed to be watched taking it, so only from someone with their back to him
+    const b = S.beg, rel = pcx() - (b.x + 12); b.near = S.coins > 0 && P.on && Math.abs(rel) < 30 && Math.abs(P.vx) < 0.5; b.seen = b.near && P.face === -Math.sign(rel || 1);
+    if (b.near && !b.seen) { if (++b.t > 30) { b.t = 0; S.coins--; b.thanks = 20; } } else b.t = 0; if (b.thanks) b.thanks--;
     const gx = 24*T; if (S.coins > 0 && P.x + PW + S.coins*3 > gx && P.x < gx + T && P.y + PH > 13*T) { P.x = gx - PW - S.coins*3; P.vx = 0; } },
   draw(){ for (const c of S.cs) if (c.alive) drawCoin(c.x, c.y);
-    const b = S.beg; drawCreature(b.x, GY - 25, false); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x - 4, GY - 12, 6, 0, Math.PI); ctx.stroke(); if (b.thanks) sparkle(b.x + 12, GY - 30);
+    const b = S.beg; drawCreature(b.x, GY - 25, false);
+    // watched, he hides his eyes and lowers his bowl; unwatched, he holds it out
+    const up = b.near && !b.seen ? 6 : 0; if (b.seen) { ctx.fillStyle = C.ink; ctx.fillRect(b.x + 2, GY - 19, 20, 6); }
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x - 4, GY - 12 - up, 6, 0, Math.PI); ctx.stroke(); if (b.thanks) sparkle(b.x + 12, GY - 30);
     if (S.coins && state === 'play') { ctx.fillStyle = C.gold; for (let i = 0; i < S.coins; i++) { ctx.beginPath(); ctx.arc(P.x + PW + 2 + i*3, P.y + 14, 3, 0, 7); ctx.fill(); } } } },
 
 /* 89. the sea opens for whoever keeps going, and closes on whoever follows; stand only on the rock */
@@ -2272,7 +2281,7 @@ const LV = [
     if (!ch.go && pc > s.x0) ch.go = true;
     if (ch.alive && ch.go) {
       if (ch.sink) { ch.sink++; if (ch.sink > 60) ch.alive = false; }
-      else { ch.x += 6; ch.rot += 0.3;
+      else { ch.x += 6.6; ch.rot += 0.3;
         if (ch.x + 40 > s.x0 + 4 && ch.x < s.x1 && this.wet(ch.x + 6, 30)) ch.sink = 1;
         if (ov(pbox(3), {x:ch.x + 2, y:GY - 70, w:38, h:70})) return die('chariot'); } } },
   drawBack(){ const s = S.sea;
