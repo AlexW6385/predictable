@@ -1,2 +1,8 @@
 __pycache__/
 .DS_Store
+
+# stray screenshots and scratch output; only the icons and the share image are published
+*.png
+!icon-192.png
+!icon-512.png
+!og.png
