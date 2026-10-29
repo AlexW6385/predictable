@@ -683,7 +683,7 @@ const LV = [
 
 /* 10. the beginning: it sleeps out of reach and wakes to a noise; it comes to whoever lets go, the short way round, and bites whoever faces it; and the Eye shoots whoever is still in the open */
 { id:'beginning', was:[30], start:8, wrapX:true,
-  build(){ Gd(0,29); R('g',20,25,10,13); R('b',1,4,10,10,{roof:true});
+  build(){ Gd(0,29); S.ledge = R('g',20,25,10,13); R('b',1,4,10,10,{roof:true});
     S.door = {x:22*T, y:-128}; S.awake = 0; S.rings = []; S.las = {ph:'idle', t:0}; S.st = 0; S.drop = 0; S.stillT = 0; },
   // the world wraps: the door goes whichever way round is shorter
   hAt(x){ return x >= 20*T && x < 26*T ? 128 : 0; },
@@ -692,16 +692,18 @@ const LV = [
   onLand(){ this.noise(pcx(), P.landV > 6 ? 60 + 12*P.landV : 0); },
   update(){ const pc = pcx(); if (P.on && running() && frame % 8 === 0) this.noise(pc, 260);
     for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 26);
-    // the Eye shoots whoever stands still in the open
+    // the Eye shoots whoever stands still in the open, and it sees over the ledge
     const sheltered = pc > 1.2*T && pc < 4.8*T && P.y > 352;
     S.st = still() ? S.st + 1 : 0;
     const L = S.las;
     if (L.ph === 'idle' && S.st > 50 && !sheltered) { L.ph = 'aim'; L.t = 30; L.tx = pc; L.ty = P.y + PH/2; }
-    else if (L.ph === 'aim' && --L.t <= 0) { L.ph = 'fire'; L.t = 10; const r = ray(480, 96, L.tx, L.ty); L.ex = r.x; L.ey = r.y; shake = 5; if (r.hit) return die('laser'); }
+    else if (L.ph === 'aim' && --L.t <= 0) { L.ph = 'fire'; L.t = 10; S.ledge.ghost = true; const r = ray(480, 96, L.tx, L.ty); S.ledge.ghost = false; L.ex = r.x; L.ey = r.y; shake = 5; if (r.hit) return die('laser'); }
     else if (L.ph === 'fire' && --L.t <= 0) L.ph = 'idle';
     // the door: asleep on its ledge until a noise reaches it; awake, it runs from whoever comes and comes to whoever lets go, by the shorter way
-    const d = S.door, dw = this.sd(d.x + 18, pc), dir = Math.sign(dw) || 1, dist = Math.abs(dw), base = -this.hAt(d.x + 18);
+    // right on top of you, it still faces the way it came
+    const d = S.door, dw = this.sd(d.x + 18, pc), dir = Math.abs(dw) > 1 ? Math.sign(dw) : (S.dDir || 1), dist = Math.abs(dw), base = -this.hAt(d.x + 18);
     if (d.y < base) { S.drop += 0.6; d.y = Math.min(base, d.y + S.drop); } else { S.drop = 0; d.y = base; }
+    S.dDir = dir;
     S.stillT = still() && !keys.left && !keys.right ? S.stillT + 1 : 0; d.walk = false;
     if (S.awake > 0) { S.awake--; d.teeth = P.face === dir ? 1 : 0;
       let mv = 0; if (P.vx*dir > 0.6 && dist < 320) mv = dir*Math.min(5.4, Math.abs(P.vx) + 0.9); else if (S.stillT > 40) mv = -dir*Math.min(2.2, dist);

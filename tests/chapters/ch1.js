@@ -58,6 +58,8 @@
   check('10 creep to it like in 9', run(9, () => { let t = 0; return P => ({k:{right: (t++ % 8) === 0}}); }, {max:1500}), /timeout|dead/);
   check('10 wake it, then let go out in the open', run(9, () => script([...wake10, S.W(900)]), {max:1200}), 'dead');
   check('10 wake it, under the roof, back to where it sleeps, let go', run(9, () => script([...wake10, S.L(3), S.W(900)]), {max:1500}), 'dead');
+  check('10 round the edge, behind the ledge, let go facing it', run(9, () => script([...wake10, S.L(0.2), S.U(() => cx() > 20*T && cx() < 27*T, {left:true}), S.W(900)]), {max:1500}), 'dead');
+  check('10 round the edge, behind the ledge, let go facing away', run(9, () => script([...wake10, S.L(0.2), S.U(() => cx() > 20*T && cx() < 27*T, {left:true}), S.K({right:true}, 1), S.W(900)]), {max:1500}), 'dead');
   check('10 wake it, under the roof, face where it sleeps, let go', run(9, () => script([...wake10, S.L(3), S.K({right:true}, 1), S.W(900)]), {max:1500}), 'win');
   return out;
 })()
