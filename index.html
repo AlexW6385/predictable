@@ -958,23 +958,36 @@ const LV = [
 
 /* 27. what hangs on the wall is not the way out, but some of it is a window */
 { id:'gallery', was:[71, 77], start:2,
-  build(){ Gd(0,29); R('b',16,16,0,13); Sp(18,20,13,'up');
-    S.fake = Door(4,14,{onEnter(){ fakeClear(); }, painted:true}); Door(26,14);
-    S.pics = [{x:8.5*T, to:[18.4*T, GY - PH - 70], src:[17*T, 9*T]}, {x:11*T, to:[1*T, GY - PH], src:[0, 9*T]}, {x:13.5*T, to:[23*T, GY - PH], src:[22*T, 9*T]}]; S.cool = 0; },
-  hudOffset(){ return M.fake || 0; },
-  update(){ if (S.cool) S.cool--; },
-  // a picture only lets in someone who stands and looks at it, then jumps
-  onJump(){ if (S.cool || Math.abs(P.vx) >= 0.5) return; for (const p of S.pics) if (ov(pbox(), {x:p.x, y:GY - 96, w:64, h:96})) { burst(pcx(), P.y + 14); P.x = p.to[0]; P.y = p.to[1]; P.vx = 0; P.vy = 0; S.cool = 30; burst(pcx(), P.y + 14); break; } },
+  build(){ Gd(0,29); R('b',16,16,0,13); Sp(19,23,13,'up'); Door(27,14);
+    // three frames: a painting of the far room as it was, a window onto where you came in, and a window onto the far room as it is
+    S.pics = [{x:7*T, to:22*T, src:[19*T, 9*T], old:true}, {x:9.8*T, to:1*T, src:[0, 9*T]}, {x:12.6*T, to:26*T, src:[23*T, 9*T]}];
+    S.cool = 0; S.look = [0, 0, 0]; S.bird = {x:25.5*T, d:1, t:0, hop:0}; },
+  update(){ if (S.cool) S.cool--;
+    // a picture wakes for whoever stands still in front of it
+    S.pics.forEach((p, i) => { S.look[i] = (P.on && still() && ov(pbox(), {x:p.x, y:GY - 96, w:64, h:96})) ? S.look[i] + 1 : 0; });
+    // a bird in the far room
+    const b = S.bird; if (++b.t % 46 === 0) { b.hop = 10; if (b.x > 28*T || b.x < 24.2*T) b.d = -b.d; } if (b.hop > 0) { b.hop--; b.x += b.d*1.4; } },
+  // and a woken picture lets in whoever jumps in front of it
+  onJump(){ if (S.cool || Math.abs(P.vx) >= 0.5) return; S.pics.forEach((p, i) => { if (S.cool || S.look[i] < 30) return; burst(pcx(), P.y + 14); P.x = p.to - PW/2; P.y = GY - PH - 40; P.vx = 0; P.vy = 0; S.cool = 30; burst(pcx(), P.y + 14); }); },
+  bird(x, y, hop){ ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(x, y - 6 - Math.sin(hop/10*Math.PI)*6, 7, 5, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(x + 6*S.bird.d, y - 11 - Math.sin(hop/10*Math.PI)*6, 3.5, 0, 7); ctx.fill();
+    ctx.fillStyle = C.gold; ctx.beginPath(); const bx = x + 9*S.bird.d, by = y - 11 - Math.sin(hop/10*Math.PI)*6; ctx.moveTo(bx, by - 1.5); ctx.lineTo(bx + 4*S.bird.d, by); ctx.lineTo(bx, by + 1.5); ctx.fill(); },
   drawBack(){ ctx.fillStyle = '#E3D9C9'; ctx.fillRect(0, 0, 16*T, GY);
-    for (const p of S.pics) { const fx = p.x, fy = GY - 96, fw = 64, fh = 80;
+    S.pics.forEach((p, i) => { const fx = p.x, fy = GY - 96, fw = 64, fh = 80;
       ctx.save(); ctx.beginPath(); ctx.rect(fx + 4, fy + 4, fw - 8, fh - 8); ctx.clip(); ctx.fillStyle = C.paper; ctx.fillRect(fx, fy, fw, fh);
       ctx.translate(fx + 4, fy + 4); ctx.scale((fw - 8)/(6*T), (fh - 8)/(5*T)); ctx.translate(-p.src[0], -p.src[1]);
-      for (const e of ents) if (e.x < p.src[0] + 6*T && e.x + e.w > p.src[0] && e.y < p.src[1] + 5*T && e.y + e.h > p.src[1]) drawEnt(e);
-      if (pcx() > p.src[0] && pcx() < p.src[0] + 6*T && P.y < p.src[1] + 5*T) drawPlayerAt(P.x, P.y, PW, PH, P.face, C.white, C.ink, false);
-      ctx.restore(); ctx.strokeStyle = C.gold; ctx.lineWidth = 6; ctx.strokeRect(fx + 2, fy + 2, fw - 4, fh - 4); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.strokeRect(fx - 1, fy - 1, fw + 2, fh + 2); }
-    const d = S.fake; ctx.fillStyle = C.gold; ctx.fillRect(d.x - 10, d.y - 10, 56, 72); ctx.fillStyle = '#F3EBDD'; ctx.fillRect(d.x - 4, d.y - 4, 44, 60); },
-  draw(){ ctx.fillStyle = C.ink; ctx.beginPath(); for (let x = 5.5*T; x < 7.5*T; x += 16) { const j = Math.sin(x*1.7)*1.5; ctx.moveTo(x + j, GY); ctx.lineTo(x + 8, GY - 16 + j); ctx.lineTo(x + 16 - j, GY); } ctx.fill();
-    ctx.strokeStyle = 'rgba(231,236,241,.35)'; ctx.lineWidth = 1; for (let x = 5.5*T + 4; x < 7.5*T; x += 23) { ctx.beginPath(); ctx.moveTo(x, GY - 3); ctx.lineTo(x + 6, GY - 9); ctx.stroke(); } } },
+      if (p.old) { // painted long ago: the door stood here, before the thorns; the bird has not moved since
+        ctx.fillStyle = 'rgba(226,166,42,.12)'; ctx.fillRect(p.src[0], p.src[1], 6*T, 5*T); drawDoor(21.5*T - 2, 14*T - 56); this.bird(23.4*T, GY, 0); }
+      else { for (const e of ents) if (e.x < p.src[0] + 6*T && e.x + e.w > p.src[0] && e.y < p.src[1] + 5*T && e.y + e.h > p.src[1]) drawEnt(e);
+        if (S.bird.x > p.src[0] && S.bird.x < p.src[0] + 6*T) this.bird(S.bird.x, GY, S.bird.hop);
+        if (p.src[0] === 0) { if (S.entr) { ctx.globalAlpha = 0.42; drawDoor(S.entr.x, S.entr.y, {open:true}); ctx.globalAlpha = 1; } this.thorns(); }
+        if (pcx() > p.src[0] && pcx() < p.src[0] + 6*T && P.y < p.src[1] + 5*T) drawPlayerAt(P.x, P.y, PW, PH, P.face, C.white, C.ink, false); }
+      ctx.restore(); const k = Math.min(1, S.look[i]/30), gl = k >= 1 ? 0.5 + 0.5*Math.sin(frame*0.2) : 0;
+      if (k > 0) { ctx.fillStyle = `rgba(255,236,170,${0.25*k + 0.3*gl})`; ctx.fillRect(fx - 6, fy - 6, fw + 12, fh + 12); }
+      ctx.strokeStyle = C.gold; ctx.lineWidth = 6; ctx.strokeRect(fx + 2, fy + 2, fw - 4, fh - 4); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.strokeRect(fx - 1, fy - 1, fw + 2, fh + 2); }); },
+  draw(){ this.bird(S.bird.x, GY, S.bird.hop); this.thorns(); },
+  // painted thorns, only paint
+  thorns(){ ctx.fillStyle = C.ink; ctx.beginPath(); for (let x = 4.5*T; x < 6.5*T; x += 16) { const j = Math.sin(x*1.7)*1.5; ctx.moveTo(x + j, GY); ctx.lineTo(x + 8, GY - 16 + j); ctx.lineTo(x + 16 - j, GY); } ctx.fill();
+    ctx.strokeStyle = 'rgba(231,236,241,.35)'; ctx.lineWidth = 1; for (let x = 4.5*T + 4; x < 6.5*T; x += 23) { ctx.beginPath(); ctx.moveTo(x, GY - 3); ctx.lineTo(x + 6, GY - 9); ctx.stroke(); } } },
 
 /* 28. the one in the glass does what you do, the other way round; if it falls, so do you */
 { id:'double', start:13,

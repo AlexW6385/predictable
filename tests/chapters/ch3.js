@@ -42,11 +42,13 @@
   check('26 thorn to thorn, then the door', run(25, () => script([...near26, ...isles26, S.JT(27, 432, {tol:20}), S.R(28.3), S.W(30)]), {freshMem:true, max:1500}), 'dead');
   check('26 thorn to thorn, then down the hole', run(25, () => script([...near26, ...isles26, S.R(24.5), S.W(60)]), {freshMem:true, max:1500}), 'clear');
   // ---- 27 gallery
-  check('27 walk in the door', run(26, () => R, {freshMem:true}), 'fake');
-  check('27 jump the painted door, walk to the wall', run(26, () => script([S.R(3.0), S.J(30, 1), S.R(29)]), {freshMem:true, max:900}), 'timeout');
-  check('27 run and jump at the pictures', run(26, () => script([S.R(3.0), S.J(30, 1), S.R(13.0), S.J(30, 1), S.R(29)]), {freshMem:true, max:900}), 'timeout');
-  check('27 stop and jump in front of the first picture', run(26, () => script([S.R(3.0), S.J(30, 1), S.R(9.4), S.W(10), S.F(() => ({jump:4, dir:0}), (P, k) => k >= 1), S.W(120)]), {freshMem:true}), 'dead');
-  check('27 stop and jump in front of the one with the door', run(26, () => script([S.R(3.0), S.J(30, 1), S.R(14.4), S.W(10), S.F(() => ({jump:4, dir:0}), (P, k) => k >= 1), S.W(30), S.R(29)]), {freshMem:true}), 'clear');
+  const look27 = x => [S.R(x), S.W(40), S.F(() => ({jump:4, dir:0}), (P, k) => k >= 1), S.W(40)];
+  check('27 walk on', run(26, () => R, {freshMem:true}), 'timeout');
+  check('27 run and jump at the pictures', run(26, () => script([S.R(8.0), S.J(30, 1), S.R(11.6), S.J(30, 1), S.R(29)]), {freshMem:true, max:900}), 'timeout');
+  check('27 hop at the wall', run(26, () => script([S.R(15.4), S.W(40), S.F(() => ({jump:30, dir:0}), (P, k) => k >= 1), S.W(60), S.R(29)]), {freshMem:true, max:900}), 'timeout');
+  check('27 stop and jump in front of the first picture', run(26, () => script([...look27(8.0)]), {freshMem:true}), 'dead');
+  check('27 stop and jump in front of the second', run(26, () => script([...look27(10.8), S.R(29)]), {freshMem:true, max:900}), 'timeout');
+  check('27 stop and jump in front of the window onto the door', run(26, () => script([...look27(13.6), S.R(29)]), {freshMem:true}), 'clear');
   // ---- 28 double
   check('28 walk it to its door', run(27, () => Lf), 'dead');
   check('28 jump for it when it reaches its pit (still holding left)', run(27, () => P => (P.on && g.S.tw.x + 22 > 21*T - 10 && g.S.tw.x < 21*T) ? {jump:30, dir:-1} : Lf()), 'clear');
