@@ -81,10 +81,10 @@
   const hop = (x, y) => [S.U(P => P.on), S.JT(x, y, {tol:10})];
   const to2 = [...hop(5.5, 416), ...hop(8.5, 384)];
   check('59 step to the next stone after a stone', run(58, () => script([...to2, ...hop(11.5, 384), S.W(30)]), {max:900}), 'dead');
-  check('59 wood, stone, wood, then the next wood', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(15.5, 384), S.W(30)]), {max:900}), 'dead');
+  check('59 wood, stone, wood, then the next wood', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(15.5, 384), S.W(30)]), {max:900}), 'timeout');
   check('59 wood, stone, wood, stone, then the next stone', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(17.5, 416), ...hop(19.5, 384), S.W(30)]), {max:900}), 'dead');
-  check('59 never trust the same look twice in a row', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(17.5, 416), ...hop(20.5, 352), ...hop(23.5, 416), ...hop(26.0, GY), S.R(27.6), S.W(30)]), {max:1500}), 'clear');
-  check('59 ... or skip the last stone', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(17.5, 416), ...hop(20.5, 352), ...hop(26.0, GY), S.R(27.6), S.W(30)]), {max:1500}), 'clear');
+  check('59 never trust the same look twice in a row', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(17.5, 416), S.W(30)]), {max:1500}), 'dead');
+  check('59 change your mind twice, then trust the same look again', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(15.5, 384), ...hop(19.5, 384), ...hop(23.5, 416), ...hop(26.0, GY), S.R(27.6), S.W(30)]), {max:1500}), 'clear');
   // ---- 60 life
   const soft60 = x => S.F(tap, () => cx() > x*T), stamp60 = [S.W(6), S.J(30, 0), S.U(P => P.on), S.U(() => !g.S.fl.away)];
   check('60 run', run(59, () => R), 'dead');

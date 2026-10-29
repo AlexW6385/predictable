@@ -1612,7 +1612,7 @@ const LV = [
     const moving = b.shy ? !b.watched : b.watched; ctx.fillStyle = b.shy ? C.ink : C.white;
     if (b.shy && b.watched) { ctx.fillRect(x + 5, y + 10, 5, 2); ctx.fillRect(x + 14, y + 10, 5, 2); } else { ctx.fillRect(x + 6, y + 8, 4, 5); ctx.fillRect(x + 14, y + 8, 4, 5); }
     if (moving && S.act) { ctx.fillStyle = C.red; ctx.fillRect(x + 9, y + 17, 6, 3); } },
-  draw(){ const dm = S.demo; if (dm && dm.t >= 0) { ctx.save(); ctx.translate(0, 0); ctx.globalAlpha = 0.8; ctx.save(); ctx.translate(dm.a, 186); ctx.scale(0.6, 0.6); this.ghost({shy:true}, 0, 0, 22); ctx.restore(); ctx.save(); ctx.translate(dm.b, 186); ctx.scale(0.6, 0.6); this.ghost({shy:false}, 0, 0, 22); ctx.restore(); ctx.restore(); }
+  draw(){ const dm = S.demo; if (dm && dm.t >= 0) { ctx.save(); ctx.translate(0, 0); ctx.globalAlpha = 0.35; ctx.save(); ctx.translate(dm.a, 186); ctx.scale(0.6, 0.6); this.ghost({shy:true}, 0, 0, 22); ctx.restore(); ctx.save(); ctx.translate(dm.b, 186); ctx.scale(0.6, 0.6); this.ghost({shy:false}, 0, 0, 22); ctx.restore(); ctx.restore(); }
     for (const b of [S.b1, S.b2]) if (b.alive) this.ghost(b, b.x, GY - 4 - b.h + Math.sin(frame*0.1 + b.x)*2, b.h); } },
 
 /* 54. they sleep until you make a sound; what charges at you can break what you cannot */
@@ -1708,18 +1708,19 @@ const LV = [
       else { b.x += (b.hx - b.x)*0.08; b.y += (GY - b.y)*0.08; if (fl.away <= 1) { b.x = b.hx; b.y = GY; b.ghost = false; } } } },
   draw(){ drawNoise(S.rings); drawFlock(S.fl); } },
 
-/* 59. it waits on the next of whatever you last trusted */
+/* 59. it waits on the next of whatever you last trusted, until it learns that you change your mind */
 { id:'mimic', start:1.5,
   build(){ Gd(0,3); Sp(4,24,14,'up'); R('g',4,24,15,16); Gd(25,29); Door(27,14);
     // stepping stones over the thorns, wood and stone; one of them is alive
-    S.bx = [[5,1,'w'], [8,2,'s'], [11,2,'s'], [12,3,'w'], [15,2,'w'], [17,1,'s'], [19,2,'s'], [20,3,'w'], [23,1,'s']]
+    S.bx = [[5,1,'w'], [8,2,'s'], [11,2,'s'], [12,3,'w'], [15,2,'w'], [17,1,'s'], [19,2,'s'], [20,1,'w'], [23,1,'s']]
       .map(([c, h, look], i) => E({t:'b', x:c*T, y:GY - h*T, w:T, h:h*T + 32, solid:true, hidden:true, look, i}));
-    S.mi = 2; S.puff = 0; S.puffs = []; S.bit = -1; },
+    S.mi = 2; S.puff = 0; S.puffs = []; S.bit = -1; S.hist = []; S.learned = false; },
   onLand(){ const b = P.stand; if (!b || b.look == null) return;
     if (b.i === S.mi) { S.bit = b.i; shake = 6; return die('mimic'); }
-    // it saw what you trusted: it goes to wait on the nearest one ahead that looks the same, and every one of them stirs
-    const ahead = S.bx.filter(q => q.look === b.look && q.x > b.x);
-    if (ahead.length) { S.mi = ahead[0].i; S.puffs = ahead.map(q => q.i); S.puff = 36; for (const q of ahead) for (let k = 0; k < 3; k++) parts.push({x:q.x + 10 + k*6, y:q.y - 4, vx:(k - 1)*0.4, vy:-0.7, life:26, r:2.5, col:'rgba(30,43,71,.45)'}); } },
+    // it saw what you trusted, and goes to wait on the nearest one ahead that looks the same; once you have changed your mind twice running, it expects you to change it again
+    S.hist.push(b.look); const h = S.hist, n = h.length; if (n >= 3 && h[n - 1] !== h[n - 2] && h[n - 2] !== h[n - 3]) S.learned = true;
+    const want = S.learned ? (b.look === 'w' ? 's' : 'w') : b.look, ahead = S.bx.filter(q => q.look === want && q.x > b.x);
+    if (ahead.length) S.mi = ahead[0].i; },
   update(){ if (S.puff > 0) S.puff--; },
   draw(){ for (const b of S.bx) { const br = S.puffs.includes(b.i) && S.puff > 0 ? Math.sin((36 - S.puff)/36*Math.PI)*2.5 : 0, bite = b.i === S.bit;
       if (b.look === 'w') drawCrate(b.x, b.y, b.w, b.h, br, bite);
