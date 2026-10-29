@@ -867,11 +867,12 @@ const LV = [
 /* 21. what you see is a little to the side of what is: the drawing is pinned in the middle, and each half has slid toward the pin */
 { id:'offset', was:[8], start:3,
   build(){ // what is, in pencil underneath
-    for (const [a,b] of [[0,6],[9,9],[12,23],[27,29]]) R('g',a,b,14,16,{shadow:true});
-    Sp(20,20,13,'up',{shadow:true}); Door(27.5,14,{shadow:true});
+    for (const [a,b] of [[0,6],[9,9],[12,23],[28,29]]) R('g',a,b,14,16,{shadow:true});
+    Sp(19,19,13,'up',{shadow:true}); Door(28.5,14,{shadow:true});
     // what is drawn in ink: the left half two tiles to the right, the right half two tiles to the left
-    for (const [a,b] of [[2,8],[11,11],[13,21],[25,27]]) R('look',a,b,14,16);
-    Sp(18,18,13,'up',{look:true, kill:false}); Door(25.5,14,{look:true, inert:true}); },
+    // (the last gap is wide: a leap from the drawn lip comes down in the real gap)
+    for (const [a,b] of [[2,8],[11,11],[13,21],[26,27]]) R('look',a,b,14,16);
+    Sp(17,17,13,'up',{look:true, kill:false}); Door(26.5,14,{look:true, inert:true}); },
   drawBack(){ // the sheet: pinned at the top in the middle, bunched there, and bare at both ends
     ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(2*T, 0, 26*T, GY); ctx.strokeStyle = 'rgba(30,43,71,.25)'; ctx.lineWidth = 1.5; ctx.strokeRect(2*T, -2, 26*T, GY + 4);
     ctx.beginPath(); for (const d of [-14, -6, 6, 14]) { ctx.moveTo(15*T, 70); ctx.lineTo(15*T + d, GY); } ctx.stroke();

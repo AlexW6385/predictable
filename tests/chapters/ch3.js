@@ -9,8 +9,10 @@
   check('21 walk on what you see', run(20, () => R), 'dead');
   check('21 jump the hole you see', run(20, () => script([S.R(8.4), S.J(30, 1), S.R(29)])), 'dead');
   check('21 learned "two tiles back", hop the spike as drawn two back', run(20, () => script([...pencil21, S.R(15.0), S.J(12, 1), S.U(P => P.on), S.R(23.4), S.J(30, 1), S.R(29)]), {max:900}), 'dead');
-  check('21 hop the spike as drawn', run(20, () => script([...pencil21, S.R(16.6), S.J(14, 1), S.U(P => P.on), S.R(29)]), {max:900}), 'dead');
-  check('21 follow the pencil lines', run(20, () => script([...pencil21, S.R(18.8), S.JT(21.6, GY, {tol:10}), S.U(P => P.on), S.R(23.4), S.J(30, 1), S.R(27.6), S.W(20)]), {max:900}), 'clear');
+  check('21 hop the spike as drawn', run(20, () => script([...pencil21, S.R(16.2), S.J(6, 1), S.U(P => P.on), S.R(29)]), {max:900}), 'dead');
+  check('21 leap over everything as drawn', run(20, () => script([...pencil21, S.R(15.8), S.J(30, 1), S.U(P => P.on), S.R(21.8), S.J(30, 1), S.R(29)]), {max:900}), 'dead');
+  check('21 leap the spike, then leap at once', run(20, () => script([...pencil21, S.R(16.4), S.J(30, 1), S.U(P => P.on), S.J(30, 1), S.R(29)]), {max:900}), 'dead');
+  check('21 follow the pencil lines', run(20, () => script([...pencil21, S.R(17.8), S.JT(20.6, GY, {tol:10}), S.U(P => P.on), S.R(23.4), S.J(30, 1), S.R(29), S.W(20)]), {max:900}), 'clear');
   // ---- 22 forged
   check('22 walk', run(21, () => R), 'dead');
   check('22 avoid the X marks', run(21, () => script([S.R(3.3), S.JT(6.5), S.R(29)])), 'dead');
