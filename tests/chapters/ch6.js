@@ -9,17 +9,20 @@
   check('51 stand and think', run(50, () => script([S.W(400)]), {max:600}), 'dead');
   check('51 key, grow a vine, back over the top', run(50, () => script([S.R(28.6), S.L(27.5), S.W(5), S.U(P => P.y + 28 <= 322 && P.on), S.L(20.5), S.J(6, -1), S.L(15.5), S.J(6, -1), S.L(10.5), S.J(6, -1), S.L(2.6), S.W(30)]), {max:2400}), 'clear');
   // ---- 52 hunger
-  check('52 chase the coins', run(51, () => P => { const c = g.S.cs.find(c => c.alive); if (!c) return R(); return c.x + 8 > cx() ? R() : Lk(); }, {max:1500}), /timeout|dead/);
-  check('52 herd them slowly into the corner', run(51, () => P => { const c = g.S.cs.filter(c => c.alive).sort((a,b) => Math.abs(a.x - cx()) - Math.abs(b.x - cx()))[0];
-      if (!c) return cx() < 27.3*T ? R() : cx() > 27.8*T ? Lk() : {k:{}};
-      const dir = c.x + 8 > cx() ? 1 : -1; const slow = Math.abs(g.P.vx) < 2.4;
-      return dir > 0 ? {k:{right:slow}} : {k:{left:slow}}; }, {max:3000}), 'clear');
+  const pol52 = slow => () => P => { const pc = cx(), wd = (a, b) => g.lv.wd(a, b);
+    for (const b of g.S.balls) { const dx = wd(b.x, pc); if (Math.hypot(dx, b.y - P.y - 14) < 64) return dx > 0 ? Lk() : R(); }
+    if (g.S.coins >= 3) { const d = wd(27.5*T, pc); return Math.abs(d) < 6 ? N() : d > 0 ? R() : Lk(); }
+    return {k:{right: slow ? Math.abs(g.P.vx) < 2.4 : true}}; };
+  check('52 stand and wait', run(51, () => N, {max:1500}), 'dead');
+  check('52 run after them', run(51, pol52(false), {max:3000}), /timeout|dead/);
+  check('52 walk after them round the world; close in slowly when a ball has it', run(51, pol52(true), {max:4000}), 'clear');
   // ---- 53 gaze
-  const b2near = () => g.S.b2.x + 12 - cx();
-  check('53 walk to the gate and wait', run(52, () => script([S.R(17.3), S.W(3000)]), {max:900}), 'dead');
-  check('53 look back while waiting, then walk on', run(52, () => script([S.R(17.3), S.K({left:true}, 2), S.U(() => g.S.open, {}), S.R(28)]), {max:1500}), /dead|timeout/);
-  check('53 jump the dark one, then walk at the door', run(52, () => script([S.R(17.3), S.K({left:true}, 2), S.U(() => g.S.open, {}), S.F(P => (P.on && b2near() > 10 && b2near() < 70) ? {jump:30, dir:1} : R(), () => cx() > 23.5*T), S.R(29)]), {max:1500}), /dead|timeout/);
-  check('53 jump the dark one, then look away for the door', run(52, () => script([S.R(17.3), S.K({left:true}, 2), S.U(() => g.S.open, {}), S.F(P => (P.on && b2near() > 10 && b2near() < 70) ? {jump:30, dir:1} : R(), () => cx() > 23.5*T), S.U(P => P.on), S.K({left:true}, 2), S.W(300)]), {max:1500}), 'clear');
+  const perch53 = [S.R(15.3), S.W(4), S.J(30, 0), S.U(P => P.on && P.y < 340)];
+  check('53 walk on', run(52, () => R, {max:900}), 'dead');
+  check('53 look back the whole time', run(52, () => script([S.R(10), S.K({left:true}, 2), S.W(900)]), {max:900}), 'timeout');
+  check('53 jump the dark one', run(52, () => script([S.R(20), S.J(30, 1), S.R(28)]), {max:900}), 'dead');
+  check('53 up into the gap, facing on; when they have met, go', run(52, () => script([...perch53, S.U(() => !g.S.b1.alive), S.W(10), S.R(28), S.W(30)]), {max:1500}), 'clear');
+  check('53 up into the gap, but look back', run(52, () => script([...perch53, S.K({left:true}, 2), S.W(900)]), {max:1500}), 'timeout');
   // ---- 54 sleepers
   const dodge = () => P => { const b = g.S.bull; const bx = b.x + b.w/2, dx = bx - cx();
     if (b.st === 'charge' && Math.abs(dx) < 90 && Math.sign(dx) === -b.dir && P.on) return {jump:30, dir:0};

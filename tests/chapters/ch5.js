@@ -54,21 +54,22 @@
   const letgo = (x) => [S.R(x), S.F((P, k) => k === 1 ? {jump:30, dir:0} : {k:{}}, (P, k) => k > 2 && P.on)];
   check('46 jump and let go, twice', run(45, () => script([...letgo(6.6), ...letgo(16.6), S.R(28)]), {max:900}), 'dead');
   check('46 let go at the first; stand and jump at the second', run(45, () => script([...letgo(6.6), S.R(16.5), S.W(20), S.J(30, 1), S.R(28)]), {max:900}), 'dead');
-  check('46 let go at the first; leap backwards at the second', run(45, () => script([...letgo(6.6), S.R(16.5), S.U(P => P.vx < -0.2, {left:true}), S.F((P, k) => k === 1 ? {jump:30, dir:0, k:{left:true}} : {k:{right:true}}, (P, k) => k > 2 && P.on), S.R(28)]), {max:900}), 'clear');
+  check('46 let go at the first; leap backwards at the second', run(45, () => script([...letgo(6.6), S.R(16.5), S.U(P => P.vx < -0.2, {left:true}), S.F((P, k) => k === 1 ? {jump:30, dir:0, k:{left:true}} : {k:{right:true}}, (P, k) => k > 2 && P.on), S.R(28)]), {max:900}), 'dead');
+  check('46 let go at the first; at the second jump on and push back', run(45, () => script([...letgo(6.6), S.R(16.6), S.F((P, k) => k === 1 ? {jump:30, dir:0, k:{right:true}} : {k:{left:true}}, (P, k) => k > 2 && P.on), S.R(28)]), {max:900}), 'clear');
   // ---- 47 geyser
   const gy = () => g.S.gy;
-  const careful47 = to => S.F(P => { const q = gy(); if (q && q.st !== 'col' && q.st !== 'sink' && q.x > cx() - 30 && q.x - cx() < 280) return N(); return R(); }, () => cx() >= to*T);
+  const wary47 = to => S.F(P => { const q = gy(); if (q && q.x > cx() - 20 && q.x - cx() < 110) return N(); return R(); }, () => cx() >= to*T);
   check('47 walk on', run(46, () => R), 'dead');
   check('47 wait where you are', run(46, () => N, {max:600}), 'dead');
-  check('47 stop for it, then wait by the ledge', run(46, () => script([careful47(14.0), S.W(400)]), {max:900}), 'dead');
-  check('47 wait by the ledge, step aside, ride it up', run(46, () => script([careful47(13.5), S.W(5), S.U(() => gy() && gy().st === 'bub' && Math.abs(gy().x - cx()) < 30), S.L(12.3), S.U(() => gy() && gy().st === 'col'), S.R(13.7), S.W(4), S.U(P => P.y < 200), S.R(16.5), S.W(20)]), {max:1500}), 'clear');
+  check('47 stop beside the first bubbles, then run for the fire', run(46, () => script([S.R(9), S.U(() => gy() && gy().st === 'bub'), S.F(R, () => cx() > gy().x - 45), S.U(() => !gy() || gy().st !== 'bub'), S.U(() => !gy()), S.R(28.5)]), {max:1500}), 'dead');
+  check('47 wait by the fire, step aside toward it, run through', run(46, () => script([wary47(19.0), S.U(() => !gy()), S.U(() => gy() && gy().st === 'bub'), S.R(20.0), S.U(() => g.S.wet > 150), S.R(28.5), S.W(20)]), {max:2000}), 'clear');
+  check('47 ... or step aside away from it, and go once the water falls', run(46, () => script([wary47(19.0), S.U(() => !gy()), S.U(() => gy() && gy().st === 'bub'), S.L(17.9), S.U(() => g.S.wet > 150), S.U(() => !gy()), S.R(28.5), S.W(20)]), {max:2000}), 'clear');
   // ---- 48 bubble
-  const p48 = h => () => { let j = false; return P => { if (!j) { if (cx() < 12.9*T) return R(); if (Math.abs(g.P.vx) > 0.3) return N(); j = true; return {jump:h, dir:0}; }
-      const c = 15.5*T; return {k: g.P.y + 28 < 254 ? {right: cx() < c - 8, left: cx() > c + 8} : {right: cx() < 12.6*T, left: cx() > 13.2*T}}; }; };
-  check('48 jump at the platform', run(47, () => P => (P.on && cx() > 12.3*T) ? {jump:30, dir:1} : R(), {max:600}), /timeout|dead/);
-  check('48 a big jump from beside it', run(47, p48(60)), 'dead');
-  check('48 tiny hops', run(47, () => P => (P.on && cx() > 11.5*T && cx() < 13*T) ? {jump:1, dir:1} : (cx() < 12.5*T ? R() : N()), {max:600}), 'timeout');
-  check('48 a measured jump from beside it', run(47, p48(20)), 'clear');
+  const float48 = () => P => { if (cx() < 20*T) return R(); return (g.S.inB && Math.abs(P.vy) < 0.05) ? R() : N(); };
+  const back48 = [S.L(2.5), S.W(6), S.J(3, -1), S.U(P => P.on), S.R(2.2), S.U(P => P.on)];
+  check('48 walk on (two keys)', run(47, () => script([S.F(float48(), () => false)]), {max:1200}), 'timeout');
+  check('48 hop the first key (one)', run(47, () => script([S.R(5.9), S.J(8, 1), S.F(float48(), () => false)]), {max:1200}), 'timeout');
+  check('48 go back for the third key', run(47, () => script([...back48, S.F(float48(), () => false)]), {max:1500}), 'clear');
   // ---- 49 light and dark
   const light49 = [S.R(4.3), S.W(5), S.J(10, 0), S.U(P => P.on)];
   const toGrey49 = [...light49, S.JT(7.5, 416, {tol:9}), S.U(P => P.on), S.JT(10.5, 416, {tol:9}), S.U(P => P.on), S.JT(13.7, 416, {tol:10}), S.U(P => P.on)];

@@ -14,8 +14,21 @@
       if (nxt.length) return {jumpTo: nxt[nxt.length-1], landY:432, tol:9, k:{right:true}};
       if (pc > 3.6*T) return {jump:30, dir:1};
       return R(); }; };
+  // there and back: out over your bodies to the key, then home over them; jump only onto bodies of the side the jump will take you to
+  const both61 = (fix) => life => { const out = build61(false)(life); let ph = 0; return P => {
+      const pc = cx();
+      if (ph === 0) { if (P.on && pc > 25.4*T) ph = 1; else return out(P); }
+      if (ph === 1) { if (!g.S.key.alive) { ph = 2; return N(); } if (!P.on) return N(); if (pc > 26.4*T) return Lk(); if (pc < 25.6*T) return R(); return {jumpTo:27.5*T, landY:416, tol:10, k:{right:true}}; }
+      if (ph === 2) { if (!P.on) return N(); if (P.y < 400) return Lk(); if (pc > 25.4*T) return Lk(); ph = 3; }
+      if (!P.on) return Lk();
+      if (pc < 3.5*T) return Lk();
+      const all = g.ents.filter(e => e.t === 'crate'), ok = all.filter(e => e.set !== g.S.tog).map(e => e.x + 16).filter(x => x < pc - 20 && x > pc - 170).sort((a,b) => a-b);
+      if (pc - 3.4*T < 168 && P.y > 380) return {jumpTo:2.6*T, landY:448, tol:24, dir:-1, k:{left:true}};
+      if (ok.length) return {jumpTo: ok[0], landY:432, tol:9, dir:-1, k:{left:true}};
+      if (fix && all.some(e => e.x + 16 < pc - 20 && e.x + 16 > pc - 170)) return {jump:1, dir:0};
+      return {jump:30, dir:-1}; }; };
   check('61 refuse to die (wait at the edge)', run(60, () => script([S.R(3.4), S.W(3000)]), {max:600, freshMem:true}), 'timeout');
-  check('61 build a path of yourself, same rhythm each time', run(60, build61(false), {lives:10, freshMem:true}), 'clear');
+  check('61 out over your bodies to the key, home over them (a hop in place to change sides)', run(60, both61(true), {lives:12, freshMem:true, max:3000}), 'clear');
   const crates61 = g.prof.mem && g.prof.mem.data.crates ? g.prof.mem.data.crates.length : 0;
   g.setLvl(60);
   check(`61 (same remains, ${crates61}) but hop first`, run(60, build61(true), {lives:1}), 'dead');
@@ -35,6 +48,7 @@
   const gaps64 = [5.6, 11.6, 17.6, 29.6, 35.6, 41.6];
   check('64 run and jump each gap', run(63, () => P => (P.on && gaps64.some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R(), {freshMem:true, max:1500}), 'dead');
   check('64 break the rhythm, take it, walk under at the end', run(63, () => script([S.R(5.4), S.W(20), S.J(30, 1), S.R(11.4), S.W(8), S.J(30, 1), S.R(17.4), S.W(30), S.J(30, 1), S.R(29.5), S.J(30, 1), S.R(35.4), S.W(14), S.J(30, 1), S.R(41.5), S.W(5), S.J(30, 1), S.R(50.4)]), {freshMem:true, max:2000}), 'clear');
+  check('64 break the rhythm after the gem by stopping for a moment', run(63, () => script([S.R(5.4), S.W(20), S.J(30, 1), S.R(11.4), S.W(8), S.J(30, 1), S.R(17.4), S.W(30), S.J(30, 1), S.R(29.5), S.J(30, 1), S.R(35.4), S.W(45), S.J(30, 1), S.R(50.4)]), {freshMem:true, max:2000}), 'dead');
   check('64 take it, then wait to think', run(63, () => script([S.R(5.4), S.W(20), S.J(30, 1), S.R(11.4), S.W(8), S.J(30, 1), S.R(17.4), S.W(30), S.J(30, 1), S.R(29.5), S.W(120), S.J(30, 1), S.R(50.4)]), {freshMem:true, max:2000}), 'dead');
   // ---- 65 changed mind
   const hi1 = [S.R(4.0), S.JT(7.0, 384, {tol:14, minPeak:70}), S.R(13.5), S.U(P => P.on)], lo1 = [S.R(13.5)];
@@ -79,9 +93,10 @@
   { const rs = []; for (const dx of [-0.3, -0.15, 0.15, 0.3]) for (const h of [24, 30]) { rs.push(life68((P, d) => jumpAt(sp68.map(x => x + (d ? dx : 0)), d ? h : 30)(P), 3000).split(' ')[0]); }
     check('68 understood, a little sloppy (8 tries)', [rs.filter(r => r === 'clear').length + '/8'], '8/8'); }
   // ---- 69 remembered
-  const lidBroken = () => g.ents.filter(e => e.t === 'bb' && e.alive).length < 6;
+  const lidBroken = () => g.ents.filter(e => e.t === 'bb' && e.alive).length < 3;
   clean('remembered'); check('69 jump the thorns, keep off the lid', run(68, () => script([S.R(7.9), S.J(30, 1), S.R(14.6), S.W(600)]), {max:900}), 'timeout');
-  clean('remembered'); check('69 die on the lid; then wait for the sky', run(68, life => life === 0 ? script([S.R(7.9), S.J(30, 1), S.R(18)]) : script([S.R(7.9), S.J(30, 1), S.R(14.6), S.U(lidBroken), S.U(() => !(g.S.cones || []).some(c => c.st === 'fall')), S.R(18.8), S.U(P => P.y > 470), S.W(30)]), {lives:2, max:1500}), 'clear');
+  clean('remembered'); check('69 die on the lid, not above the door; then wait for the sky', run(68, life => life === 0 ? script([S.R(7.9), S.J(30, 1), S.R(14.4), S.JT(16.8, 432, {tol:10}), S.W(60)]) : script([S.R(7.9), S.J(30, 1), S.R(14.6), S.U(lidBroken), S.U(() => !(g.S.cones || []).some(c => c.st === 'fall')), S.F(P => { const h = g.ents.find(e => e.t === 'bb' && !e.alive); return {k:{right: cx() < h.x + 14, left: cx() > h.x + 18}}; }, P => P.y > 470), S.W(60)]), {lives:2, max:1500}), 'dead');
+  clean('remembered'); check('69 die on the lid above the door; then wait for the sky, and jump into the hole', run(68, life => life === 0 ? script([S.R(7.9), S.J(30, 1), S.R(14.4), S.JT(18.6, 432, {tol:10}), S.W(60)]) : script([S.R(7.9), S.J(30, 1), S.R(14.0), S.U(lidBroken), S.U(() => !(g.S.cones || []).some(c => c.st === 'fall')), S.JT(18.8, 432, {tol:6}), S.W(60)]), {lives:2, max:1500}), 'clear');
   // ---- 70 self
   const wall70 = S.R(20.2), firmAt = h => () => g.S.ghosts.some(q => q.p && q.p[3] && Math.abs(q.p[0] - g.P.x) < 8 && q.p[1] === GY - 28*h);
   const base70 = () => script([wall70, S.W(900)]);
