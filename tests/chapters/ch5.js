@@ -34,21 +34,31 @@
     clean('dark'); check('41 ... stepping on late, and pausing', run(40, () => script(route(1.6, 1.1, {late:22, pause:90})), {max:3500}), 'clear');
     clean('dark'); check('41 ... landing short', run(40, () => script(route(1.6, 1.1, {to:[8.2, 13.2, 19.0, 25.8]})), {max:3000}), 'clear');
     clean('dark'); check('41 ... landing long', run(40, () => script(route(1.6, 0.9, {to:[9.1, 14.2, 20.2, 26.8]})), {max:3000}), 'clear'); }
-  // ---- 42 sun
-  const board42 = X => [14,15,16,17,18,22,23].includes(Math.floor(X/T));
-  const ride = gapMax => () => P => { const x = cx(), y = g.P.y + 14, lit = X => g.lv.lit(X, y);
-    if (x > 27.3*T) return R();
-    if (lit(x)) { let l = null, r = null; for (let d = 4; d < 300; d += 4) { if (l === null && !lit(x - d)) l = d; if (r === null && !lit(x + d)) r = d; } return (r !== null && (l === null || r <= l)) ? R() : Lk(); }
-    if (!lit(x + 14)) return R();
-    let gap = 0, brd = false; while (x + 14 + gap < 960 && lit(x + 14 + gap)) { if (board42(x + 14 + gap)) brd = true; gap += 4; }
-    return (gap <= gapMax && !brd) ? R() : N(); };
-  check('42 run for the door', run(41, () => R), 'dead');
-  check('42 stand still in the shade', run(41, () => N, {max:3000}), 'dead');
-  check('42 go whenever you have cooled down', run(41, () => P => { const here = !g.lv.lit(cx(), g.P.y + 14); if (here && g.S.burn > 0) return N(); return R(); }, {max:3000}), 'dead');
-  check('42 go as soon as the boards are in shade', run(41, () => script([S.U(() => !g.lv.lit(16*T, 434)), S.R(28.5)]), {max:3000}), 'dead');
-  { const waits = []; for (let w = 0; w <= 1400; w += 100) for (const at of [2, 10]) waits.push(run(41, () => script([S.R(at), S.W(w), S.R(28.5), S.W(20)]), {max:3000})[0]);
-    check('42 wait in some shade, then run for it (any wait)', [waits.filter(r => r.startsWith('dead')).length + '/' + waits.length, waits.some(r => r === 'clear') ? 'clear' : 'dead'], 'dead'); }
-  for (const gm of [0, 96]) check(`42 move with the shade (crossing lit gaps up to ${gm}px)`, run(41, ride(gm), {max:3000}), 'clear');
+  // ---- 42 sun: a bridge of flowers in two halves; a flower is open only in sunlight, and your shadow is the only shade
+  { const day = () => g.S.day, th = () => g.S.th, fl = c => g.S.fl.find(e => e.x === c*T);
+    const aft = d => () => day() && th() >= 145 + d, noon = () => day() && th() >= 85 && th() < 100, morning = () => day() && th() < 30;
+    // wait at an edge until the afternoon has come (d degrees in) and the flower in front of you is open, then go
+    const go = (edge, c, d) => [S.R(edge), S.U(() => aft(d)() && fl(c).open > 0.9)];
+    const pillar = [S.U(() => !day()), S.U(() => day() && th() < 90)];
+    const intended = (d1, d2, o) => { o = o || {}; return [...go(1.6, 2, d1), ...(o.pause1 ? [S.R(5.5), S.W(o.pause1)] : []), ...(o.jump ? [S.R(3.5), S.J(30, 1), S.R(5.5), S.J(30, 1)] : []), S.R(o.rest || 10.6), ...pillar, ...go(19.6, 20, d2), ...(o.pause2 ? [S.R(23.5), S.W(o.pause2)] : []), S.R(28.8), S.W(20)]; };
+    check('42 walk now', run(41, () => R, {max:600}), 'dead');
+    check('42 jump over your shadow', run(41, () => script([S.R(1.7), S.J(30, 1), S.R(28.8)]), {max:600}), 'dead');
+    check('42 hop from flower to flower in the morning', run(41, () => P => (P.on && cx() > 1.5*T) ? {jump:6, dir:1} : R(), {max:600}), 'dead');
+    check('42 wait for noon, when your shadow is shortest, then go', run(41, () => script([S.R(1.6), S.U(noon), S.R(28.8)]), {max:2000}), 'dead');
+    check('42 jump along at noon', run(41, () => script([S.R(1.6), S.U(noon), S.F(P => P.on ? {jump:30, dir:1} : R(), () => false)]), {max:2000}), 'dead');
+    { const res = []; for (let w = 0; w <= 1700; w += 20) res.push(run(41, () => script([S.R(1.6), S.W(w), S.R(28.8), S.W(20)]), {max:2600})[0]);
+      check('42 wait any time, then walk to the door', [res.filter(r => r.startsWith('dead')).length + '/' + res.length, res.some(r => r === 'clear') ? 'clear' : 'dead'], 'dead'); }
+    for (const d of [0, 4]) check(`42 go in the afternoon and keep going (${d} deg in)`, run(41, () => script([...go(1.6, 2, d), S.R(28.8), S.W(20)]), {max:2600}), 'dead');
+    { const res = []; for (let d = -10; d <= 10; d++) for (const x of [0.9, 1.6]) res.push(run(41, () => script([S.R(x), S.U(aft(d)), S.R(28.8), S.W(20)]), {max:2600})[0]);
+      check('42 run for it from any moment around the start of the afternoon', [res.filter(r => r.startsWith('dead')).length + '/' + res.length, res.some(r => r === 'clear') ? 'clear' : 'dead'], 'dead'); }
+    check('42 go in the afternoon, stop on the flowers for the night', run(41, () => script([...go(1.6, 2, 0), S.R(6), S.W(400)]), {max:2600}), 'dead');
+    check('42 rest on the pillar, then go in the morning', run(41, () => script([...go(1.6, 2, 0), S.R(10.6), S.U(() => !day()), S.U(() => day() && th() > 8), S.R(28.8), S.W(20)]), {max:3000}), 'dead');
+    check('42 rest on the pillar, then go at noon', run(41, () => script([...go(1.6, 2, 0), S.R(10.6), ...pillar, S.R(19.6), S.U(noon), S.R(28.8), S.W(20)]), {max:3000}), 'dead');
+    check('42 cross one half each afternoon, resting on the pillar', run(41, () => script(intended(0, 0)), {max:3200}), 'clear');
+    for (const d of [8, 16]) check(`42 ... going ${d} deg into each afternoon`, run(41, () => script(intended(d, d)), {max:3200}), 'clear');
+    check('42 ... pausing on the bridge', run(41, () => script(intended(2, 2, {pause1:20, pause2:20})), {max:3200}), 'clear');
+    check('42 ... resting at the near end of the pillar', run(41, () => script(intended(0, 4, {rest:11.2})), {max:3200}), 'clear');
+    check('42 ... jumping along the flowers', run(41, () => script(intended(0, 0, {jump:true})), {max:3200}), 'clear'); }
   // ---- 43 water
   const swimTo = (tx, ty) => P => { const k = {right: cx() < tx*T, left: cx() > tx*T + 20}; return (g.P.y + 14 > ty) && g.P.vy > -1 ? {k, edge:true} : {k}; };
   const wet = [S.L(0.5), S.W(5)], dive = [S.R(5.6)], exitTo = [S.F(swimTo(24.4, 300), () => cx() > 24.2*T), S.F(P => ({k:{right:true}, edge: g.P.y < 262 || g.P.vy > -1}), () => g.P.on && g.P.y < 240), S.R(28.8)];
