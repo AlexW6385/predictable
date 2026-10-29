@@ -24,6 +24,7 @@
   const swimTo = (tx, ty) => P => { const k = {right: cx() < tx*T, left: cx() > tx*T + 20}; return (g.P.y + 14 > ty) && g.P.vy > -1 ? {k, edge:true} : {k}; };
   const wet = [S.L(0.5), S.W(5)], dive = [S.R(5.6)], exitTo = [S.F(swimTo(24.4, 300), () => cx() > 24.2*T), S.F(P => ({k:{right:true}, edge: g.P.y < 262 || g.P.vy > -1}), () => g.P.on && g.P.y < 240), S.R(28.8)];
   check('43 walk on', run(42, () => R), 'dead');
+  check('43 jump the first fire', run(42, () => script([S.R(1.6), S.J(30, 1), S.R(29)])), 'dead');
   check('43 get wet, swim along the bottom', run(42, () => script([...wet, ...dive, S.F(() => ({k:{right:true}}), () => false)]), {max:1500}), 'dead');
   check('43 get wet, breathe at every gap', run(42, () => script([...wet, ...dive, S.F(swimTo(11.6, 300), () => cx() > 11.3*T), S.F(swimTo(11.6, 200), () => g.P.y < 250), S.F(swimTo(17.6, 300), () => g.P.y < 250 || g.S.air < 5), S.F(swimTo(24.5, 300), () => false)]), {max:2000}), 'dead');
   check('43 get wet, breathe at the first gap, swim for the exit', run(42, () => script([...wet, ...dive, S.F(swimTo(11.6, 300), () => cx() > 11.3*T), S.F(swimTo(11.6, 200), () => g.P.y < 250), ...exitTo]), {max:2400}), 'dead');

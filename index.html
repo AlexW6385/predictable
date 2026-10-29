@@ -1343,12 +1343,16 @@ const LV = [
 { id:'water', was:[41, 42], start:1.2, sy:228,
   swim(){ return pcx() > 5*T && pcx() < 25*T && P.y + PH/2 > 256; },
   build(){ R('g',0,4,8,16); R('g',25,29,8,16); Door(28.4,8); Gd(5,24);
-    R('b',6,10,0,7); R('b',13,16,0,7); R('b',19,23,0,7); S.lid = R('b',17,18,7,7,{cond:() => S.shut}); S.air = 125; S.used1 = false;
-    S.pud = {x:0, y:250, w:T, h:8}; S.fire = [{x:2*T + 8, y:256 - 18, w:2.6*T, h:18}, {x:26*T, y:256 - 18, w:2*T, h:18}]; S.wet = 0; },
+    R('b',6,10,0,7); R('b',13,16,0,7); R('b',19,23,0,7); S.lid = E({t:'b', x:17*T, y:248, w:2*T, h:10, solid:true, hidden:true, cond:() => S.shut}); S.air = 125; S.used1 = false;
+    // a low roof over the first fire, so it can't be jumped; a board afloat beside the second gap
+    R('b',2,4,6,6); S.board = {x:15.2*T, tx:15.2*T}; S.rip = null;
+    S.pud = {x:0, y:250, w:T, h:8}; S.fire = [{x:2*T + 8, y:256 - 18, w:2.6*T, h:18}, {x:25*T + 8, y:256 - 18, w:2.8*T, h:18}]; S.wet = 0; },
   update(){ const under = this.swim() && P.y < 448 && P.y > 258;
-    if (P.y < 252) { if (pcx() > 11*T && pcx() < 13*T) S.used1 = true; S.air = 125; } else if (under) S.air--;
+    if (P.y < 252) { if (pcx() > 11*T && pcx() < 13*T && !S.used1) { S.used1 = true; S.rip = {x:pcx(), r:0}; } S.air = 125; } else if (under) S.air--;
     if (Math.abs(pcx() - 19.5*T) < 14 && under) S.air = Math.min(125, S.air + 3);
-    if (S.used1 && !S.shut && under && Math.abs(pcx() - 18*T) < 2.5*T) { S.shut = true; shake = 5; }
+    // coming up at the first gap sends a ripple along the surface; it pushes the board over the second
+    if (S.rip) { S.rip.r += 4; if (S.rip.x + S.rip.r >= S.board.x) { S.board.tx = 17*T; S.rip = null; } }
+    const bd = S.board; if (bd.x < bd.tx) { bd.x = Math.min(bd.tx, bd.x + 2); if (bd.x >= 17*T && !S.shut) { S.shut = true; shake = 4; } }
     if (S.air <= 0) return die('drown');
     if (this.swim() || (P.on && ov(pbox(), S.pud))) S.wet = 200;
     let inF = false; for (const f of S.fire) if (ov(pbox(2), f)) inF = true;
@@ -1357,6 +1361,8 @@ const LV = [
   drawBack(){ ctx.fillStyle = 'rgba(70,110,170,.22)'; ctx.fillRect(5*T, 256, 20*T, GY - 256); ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let x = 5*T; x <= 25*T; x += 8) ctx.lineTo(x, 256 + Math.sin(x*0.08 + frame*0.08)*2); ctx.stroke();
     for (let i = 0; i < 5; i++) { const y = GY - ((frame*1.6 + i*60) % (GY - 256)); ctx.strokeStyle = 'rgba(30,43,71,.4)'; ctx.beginPath(); ctx.arc(19.5*T + Math.sin(y*0.1)*3, y, 3 + i%2, 0, 7); ctx.stroke(); } },
   draw(){ ctx.fillStyle = '#7F9CC8'; ctx.beginPath(); ctx.ellipse(16, 255, 17, 4, 0, 0, 7); ctx.fill();
+    const bd = S.board, bob = Math.sin(frame*0.08)*1.2; ctx.fillStyle = C.door; ctx.fillRect(bd.x, 249 + bob, 2*T, 9); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(bd.x + 1, 249 + bob, 2*T - 2, 9); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(bd.x + 20, 251 + bob); ctx.lineTo(bd.x + 20, 256 + bob); ctx.moveTo(bd.x + 44, 251 + bob); ctx.lineTo(bd.x + 44, 256 + bob); ctx.stroke();
+    if (S.rip) { ctx.strokeStyle = 'rgba(30,43,71,.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(S.rip.x, 256, S.rip.r, Math.PI*1.1, Math.PI*1.9); ctx.stroke(); ctx.beginPath(); ctx.moveTo(S.rip.x + S.rip.r, 252); ctx.lineTo(S.rip.x + S.rip.r, 260); ctx.stroke(); }
     for (const f of S.fire) drawFlames(f.x, f.w, f.y + f.h);
     if (S.wet > 0 && !this.swim()) { ctx.fillStyle = `rgba(79,111,166,${0.15 + S.wet/400})`; ctx.fillRect(P.x, P.y, PW, PH); }
     if (this.swim() && P.y > 258) { const n = Math.ceil(S.air/25); for (let i = 0; i < n; i++) { ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(P.x + 2 + i*5, P.y - 8, 2.5, 0, 7); ctx.stroke(); } } } },
