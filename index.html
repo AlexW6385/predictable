@@ -2209,17 +2209,21 @@ const LV = [
   drawPlayer(dx, dy, dw, dh){ if (S.ghost) { ctx.globalAlpha = 0.45 + 0.2*Math.sin(frame*0.3); drawPlayerAt(dx, dy, dw, dh, P.face, '#E8E2F4', C.soft, false); ctx.globalAlpha = 1; ctx.fillStyle = C.grid2; ctx.fillRect(P.x - 2, P.y - 9, PW + 4, 4); ctx.fillStyle = S.sp < 30 ? C.red : C.soft; ctx.fillRect(P.x - 2, P.y - 9, (PW + 4)*S.sp/140, 4); }
     else { drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false); if (S.still > 10) { ctx.globalAlpha = S.still/60*0.6; drawPlayerAt(dx, dy - S.still/3, dw, dh, P.face, '#E8E2F4', C.soft, false); ctx.globalAlpha = 1; } } } },
 
-/* 88. the gate is narrow; whatever you hold makes you wider; give it away */
+/* 88. the gate is narrow; whatever you hold makes you wider; give it away, and let not your eyes see it */
 { id:'needle', was:[85], start:1,
-  build(){ Gd(0,29); R('b',24,24,0,12); S.cs = []; for (let c = 5; c <= 19; c += 2) for (const y of [GY - 20, GY - 92]) S.cs.push({x:c*T + 8, y, vx:0, vy:0, alive:true}); Door(27,14);
-    S.coins = 0; S.beg = {x:21*T, t:0}; },
+  build(){ Gd(0,29); R('b',24,24,0,12); S.cs = []; for (let c = 7; c <= 19; c += 2) S.cs.push({x:c*T + 8, y:GY - 20, vx:0, vy:0, alive:true}); Door(27,14);
+    S.coins = 0; S.beg = {x:4*T, t:0}; },
   update(){ for (const c of S.cs) { if (!c.alive) continue; const dx = pcx() - (c.x + 8), dy = P.y + 14 - (c.y + 9), d = Math.hypot(dx, dy); if (d < 56) { c.vx += dx/d*0.4; c.vy += dy/d*0.4; } c.vx *= 0.92; c.vy *= 0.92; c.x += c.vx; c.y += c.vy;
       if (ov(pbox(), {x:c.x, y:c.y, w:16, h:18})) { c.alive = false; S.coins++; sparkle(c.x + 8, c.y + 9); } }
-    // the beggar takes a coin at a time from whoever stands by him
-    const b = S.beg; if (S.coins > 0 && P.on && Math.abs(pcx() - (b.x + 12)) < 30 && Math.abs(P.vx) < 0.5) { if (++b.t > 30) { b.t = 0; S.coins--; b.thanks = 20; } } else b.t = 0; if (b.thanks) b.thanks--;
+    // the beggar takes a coin at a time from whoever stands by him; but he is ashamed to be watched taking it, so only from someone with their back to him
+    const b = S.beg, rel = pcx() - (b.x + 12); b.near = S.coins > 0 && P.on && Math.abs(rel) < 30 && Math.abs(P.vx) < 0.5; b.seen = b.near && P.face === -Math.sign(rel || 1);
+    if (b.near && !b.seen) { if (++b.t > 30) { b.t = 0; S.coins--; b.thanks = 20; } } else b.t = 0; if (b.thanks) b.thanks--;
     const gx = 24*T; if (S.coins > 0 && P.x + PW + S.coins*3 > gx && P.x < gx + T && P.y + PH > 13*T) { P.x = gx - PW - S.coins*3; P.vx = 0; } },
   draw(){ for (const c of S.cs) if (c.alive) drawCoin(c.x, c.y);
-    const b = S.beg; drawCreature(b.x, GY - 25, false); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x - 4, GY - 12, 6, 0, Math.PI); ctx.stroke(); if (b.thanks) sparkle(b.x + 12, GY - 30);
+    const b = S.beg; drawCreature(b.x, GY - 25, false);
+    // watched, he hides his eyes and lowers his bowl; unwatched, he holds it out
+    const up = b.near && !b.seen ? 6 : 0; if (b.seen) { ctx.fillStyle = C.ink; ctx.fillRect(b.x + 2, GY - 19, 20, 6); }
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x - 4, GY - 12 - up, 6, 0, Math.PI); ctx.stroke(); if (b.thanks) sparkle(b.x + 12, GY - 30);
     if (S.coins && state === 'play') { ctx.fillStyle = C.gold; for (let i = 0; i < S.coins; i++) { ctx.beginPath(); ctx.arc(P.x + PW + 2 + i*3, P.y + 14, 3, 0, 7); ctx.fill(); } } } },
 
 /* 89. the sea opens for whoever keeps going, and closes on whoever follows; stand only on the rock */

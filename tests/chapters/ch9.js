@@ -63,7 +63,9 @@
   check('87 ... but come back inside the thick wall', run(86, () => script([S.R(8.4), S.U(ghost, {}), S.R(12.5), S.U(() => !ghost(), {}), S.U(ghost, {}), S.R(16.0), S.U(() => !ghost(), {}), S.W(30)]), {freshMem:true, max:1500}), 'dead');
   // ---- 88 needle: coins come to you and make you wider; give them to the beggar
   check('88 walk to the gate', run(87, () => script([S.R(29), S.W(300)]), {freshMem:true, max:900}), 'timeout');
-  check('88 stop by the beggar until he has taken it all', run(87, () => script([S.R(21.3), S.U(() => g.S.coins === 0, {}), S.R(27.5), S.W(30)]), {freshMem:true, max:1500}), 'clear');
+  check('88 go back to the beggar and stand there, looking at him', run(87, () => script([S.R(23), S.L(4.9), S.W(400), S.R(27.5), S.W(30)]), {freshMem:true, max:1500}), 'timeout');
+  check('88 stand by him at the start, before anything came to you', run(87, () => script([to(4.8), S.W(300), S.R(27.5), S.W(30)]), {freshMem:true, max:1500}), 'timeout');
+  check('88 go back to him, turn your back, and let him take it all', run(87, () => script([S.R(23), S.L(4.9), S.K({right:true}, 2), S.U(() => g.S.coins === 0, {}), S.R(27.5), S.W(30)]), {freshMem:true, max:1500}), 'clear');
   // ---- 89 sea: it parts for whoever keeps going; stop anywhere but the rock and it closes on you; stop on the rock and it closes on the chariot
   check('89 run straight across', run(88, () => R, {freshMem:true, max:900}), 'dead');
   check('89 run, hop over the rock, keep going', run(88, () => P => P.on && cx() > 13.0*T && cx() < 13.4*T ? {jump:30, dir:1} : R(), {freshMem:true, max:900}), 'dead');
