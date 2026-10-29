@@ -42,9 +42,14 @@
   check('35 flip up, flip down under the door', run(34, () => script([S.R(6.2), S.J(1, 1), S.U(P => P.on, {right:true}), S.R(14.5), S.J(1, 1), S.U(P => P.on, {right:true}), S.R(25.6), S.W(10), S.J(1, 0), S.W(200)]), {max:900}), 'timeout');
   check('35 come down past the hole, step back into it', run(34, () => script([S.R(6.2), S.J(1, 1), S.U(P => P.on, {right:true}), S.R(14.5), S.J(1, 1), S.U(P => P.on, {right:true}), S.L(17.6), S.U(P => P.on && P.y < 200), S.R(26.6)]), {max:1200}), 'clear');
   // ---- 36 portal
-  check('36 run off the ledge', run(35, () => R), 'dead');
-  check('36 walk down and step into the gold hole', run(35, () => script([S.R(5.5), S.U(() => g.P.y > 430, {right:true}), S.F(P => ({k:{right: cx() < 7.6*T, left: cx() > 8*T}}), () => g.P.vy < -1), S.W(80)]), {max:600}), /timeout|dead/);
-  check('36 drop straight in from the top, then drift', run(35, () => script([S.F(P => ({k:{right: Math.abs(g.P.vx) < 0.9}}), () => !g.P.on), S.F(P => ({k:{}}), () => g.P.vy < -1), S.F(R, () => g.P.on), S.R(26.5)]), {max:900}), 'clear');
+  const go36 = (tx, until) => S.F(() => ({k:{left: cx() > tx*T + 3, right: cx() < tx*T - 3}}), until);
+  const thru36 = (P, k, st) => { if (P.vy > 0) st.down = true; return st.down && P.vy < -2; };
+  const up36 = S.F(() => ({jump:30, dir:0}), (P, k) => k >= 1);
+  const onL1 = [go36(11, (P, k) => k > 40), up36, go36(9, thru36), go36(24.5, (P, k) => P.on && k > 5)];
+  check('36 walk into a portal', run(35, () => script([S.L(5), go36(3, (P, k) => k > 200), S.L(1), S.W(30)]), {max:900}), 'timeout');
+  check('36 jump into a portal from the floor, steer for the door', run(35, () => script([S.R(13), go36(11, (P, k) => k > 30), up36, go36(21.5, thru36), go36(3, (P, k) => P.on && k > 5), S.L(1), S.W(30)]), {max:900}), 'timeout');
+  check('36 onto the low ledge, step off into the portal', run(35, () => script([...onL1, go36(21.5, thru36), go36(3, (P, k) => P.on && k > 5), S.L(1), S.W(30)]), {max:900}), 'timeout');
+  check('36 onto the low ledge, jump off into the portal', run(35, () => script([...onL1, go36(23.5, (P, k) => k > 30), up36, go36(21.5, thru36), go36(3, (P, k) => P.on && k > 5), S.L(2), S.W(30)]), {max:1200}), 'clear');
   // ---- 37 hard landing
   const creep37 = S.F(P => ({k:{right: Math.abs(P.vx) < 0.4}}), P => !P.on);
   const down37 = [creep37, S.U(P => P.on), S.W(10), creep37, S.U(P => P.on), S.W(4)];

@@ -9,13 +9,16 @@
   check('21 walk on what you see', run(20, () => R), 'dead');
   check('21 jump the hole you see', run(20, () => script([S.R(8.4), S.J(30, 1), S.R(29)])), 'dead');
   check('21 learned "two tiles back", hop the spike as drawn two back', run(20, () => script([...pencil21, S.R(15.0), S.J(12, 1), S.U(P => P.on), S.R(23.4), S.J(30, 1), S.R(29)]), {max:900}), 'dead');
-  check('21 hop the spike as drawn', run(20, () => script([...pencil21, S.R(16.6), S.J(14, 1), S.U(P => P.on), S.R(29)]), {max:900}), 'dead');
-  check('21 follow the pencil lines', run(20, () => script([...pencil21, S.R(18.8), S.JT(21.6, GY, {tol:10}), S.U(P => P.on), S.R(23.4), S.J(30, 1), S.R(27.6), S.W(20)]), {max:900}), 'clear');
+  check('21 hop the spike as drawn', run(20, () => script([...pencil21, S.R(16.2), S.J(6, 1), S.U(P => P.on), S.R(29)]), {max:900}), 'dead');
+  check('21 leap over everything as drawn', run(20, () => script([...pencil21, S.R(15.8), S.J(30, 1), S.U(P => P.on), S.R(21.8), S.J(30, 1), S.R(29)]), {max:900}), 'dead');
+  check('21 leap the spike, then leap at once', run(20, () => script([...pencil21, S.R(16.4), S.J(30, 1), S.U(P => P.on), S.J(30, 1), S.R(29)]), {max:900}), 'dead');
+  check('21 follow the pencil lines', run(20, () => script([...pencil21, S.R(17.8), S.JT(20.6, GY, {tol:10}), S.U(P => P.on), S.R(23.4), S.J(30, 1), S.R(29), S.W(20)]), {max:900}), 'clear');
   // ---- 22 forged
   check('22 walk', run(21, () => R), 'dead');
-  check('22 avoid the X marks', run(21, () => script([S.R(3.3), S.JT(6.5), S.R(29)])), 'dead');
-  check('22 the marks lie everywhere', run(21, () => script([S.R(5.5), S.J(10, 1), S.R(10.5), S.J(10, 1), S.R(29)])), /dead@1[78]/);
-  check('22 left: the marks lie; right: the marks are true', run(21, () => script([S.R(5.5), S.J(10, 1), S.R(10.5), S.J(10, 1), S.R(17.5), S.J(10, 1), S.R(22.5), S.J(10, 1), S.R(27.5)])), 'clear');
+  const hop22 = (xs, h) => P => (P.on && xs.some(c => Math.abs(cx() - c*T) < 3)) ? {jump:h, dir:1} : R();
+  for (const h of [8, 14, 30]) for (const d of [0.1, 0.7]) check(`22 leap the marks (hold ${h}, ${d} early)`, run(21, () => hop22([3, 10, 19, 24].map(c => c - d), h), {max:900}), 'dead');
+  check('22 the marks lie everywhere', run(21, () => hop22([5.4, 12.4, 21.4, 26.4], 8), {max:900}), /dead@(18.9|19)/);
+  check('22 left: walk through the paint; right: it is painted on the spikes', run(21, () => hop22([5.4, 12.4, 18.4, 23.4], 8), {max:900}), 'clear');
   // ---- 23 fourth wall
   check('23 press jump when you die', run(22, () => P => g.S.over && g.S.over.kind === 'death' && g.S.over.t > 25 ? {jump:1} : R()), 'dead');
   check('23 wait out the death, press start on the title', run(22, () => P => g.S.over && g.S.over.kind === 'title' && g.S.over.t > 30 ? {jump:1} : R()), 'dead');
@@ -24,8 +27,11 @@
   // ---- 24 mirror
   const lagUp = () => g.S.hist.length ? g.S.hist[0][2] : false;
   check('24 walk on the floor', run(23, () => R), 'dead');
-  check('24 jump what the mirror shows, trust it everywhere', run(23, () => script([S.R(4.4), S.J(30, 1), S.R(10.3), S.J(30, 1), S.R(16.3), S.J(30, 1), S.R(22.0), S.U(() => !lagUp()), S.R(25.4), S.J(8, 1), S.R(29)]), {max:1500}), 'dead');
-  check('24 jump what it shows; where it lags, go when it shows the spike', run(23, () => script([S.R(4.4), S.J(30, 1), S.R(10.3), S.J(30, 1), S.R(16.3), S.J(30, 1), S.R(22.0), S.U(() => !lagUp()), S.U(() => lagUp()), S.R(25.4), S.J(8, 1), S.R(29)]), {max:1500}), 'clear');
+  const pre24 = [S.R(4.4), S.J(30, 1), S.R(10.3), S.J(30, 1), S.R(16.3), S.J(30, 1)];
+  check('24 jump what the mirror shows, walk on under the slab', run(23, () => script([...pre24, S.R(26.0), S.J(8, 1), S.R(29)]), {max:1500}), 'dead');
+  check('24 leap the stretch where the spike comes and goes', run(23, () => script([...pre24, S.R(20.2), S.J(30, 1), S.R(26.0), S.J(8, 1), S.R(29)]), {max:1500}), 'dead');
+  check('24 jump what the mirror shows, trust it everywhere', run(23, () => script([...pre24, S.R(21.0), S.U(() => !lagUp()), S.R(26.0), S.J(8, 1), S.R(29)]), {max:1500}), 'dead');
+  check('24 jump what it shows; where it lags, go when it shows the spike', run(23, () => script([...pre24, S.R(21.0), S.U(() => lagUp()), S.R(26.0), S.J(8, 1), S.R(29)]), {max:1500}), 'clear');
   // ---- 25 imitation
   const nearC = (c, a, b) => c.alive && c.x - g.P.x > a && c.x - g.P.x < b;
   check('25 just walk', run(24, () => R), 'dead');
@@ -52,6 +58,9 @@
   check('27 stop and jump in front of the first picture', run(26, () => script([...look27(8.0)]), {freshMem:true}), 'dead');
   check('27 stop and jump in front of the second', run(26, () => script([...look27(10.8), S.R(29)]), {freshMem:true, max:900}), 'timeout');
   check('27 stop and jump in front of the window onto the door', run(26, () => script([...look27(13.6), S.R(29)]), {freshMem:true}), 'clear');
+  check('27 one picture a life, left to right (they are rehung)', run(26, life => script([...look27([8.0, 10.8, 13.6][life])]), {freshMem:true, lives:3}), 'dead');
+  check('27 after a death, the last picture (now the way back)', run(26, life => script([...look27(life ? 13.6 : 8.0), S.R(29)]), {freshMem:true, lives:2}), /dead|timeout/);
+  check('27 next life, the window is where the painting was', run(26, life => script([...look27(life ? 8.0 : 8.0), S.R(29)]), {freshMem:true, lives:2}), 'clear');
   // ---- 28 double
   // jump when its box nears an edge: the first gap (col 17) and the step (col 23)
   const at28 = (x0, x1) => g.S.tw.x + 22 > x0 && g.S.tw.x + 22 < x1;
@@ -62,8 +71,10 @@
   const climb29 = [S.R(1.9), S.J(30, 1), S.U(P => P.on), S.W(8), S.J(30, 1), S.U(P => P.on && cx() > 9.3*T, {right:true})];
   check('29 walk on', run(28, () => R, {max:600}), 'timeout');
   check('29 jump the wall you bump into', run(28, () => P => (P.on && Math.abs(P.vx) < 0.5 && cx() > 4*T) ? {jump:30, dir:1} : R(), {max:600}), /timeout|dead/);
-  check('29 follow its hands, and its door', run(28, () => script([...climb29, S.R(29)]), {max:1500}), 'dead');
-  check('29 follow its hands, not its door', run(28, () => script([...climb29, S.R(22.2), S.J(30, 1), S.R(29)]), {max:1500}), 'clear');
+  check('29 over the wall, then walk the bridge', run(28, () => script([...climb29, S.R(29)]), {max:1500}), 'dead');
+  check('29 over the wall, leap the gap in the bridge', run(28, () => script([...climb29, S.R(13.3), S.J(30, 1), S.R(29)]), {max:1500}), 'dead');
+  check('29 follow its hands, and its door', run(28, () => script([...climb29, S.R(13.3), S.J(4, 1), S.R(29)]), {max:1500}), 'dead');
+  for (const h of [1, 4, 7]) check(`29 follow its hands, not its door (hop ${h})`, run(28, () => script([...climb29, S.R(13.3), S.J(h, 1), S.R(22.2), S.J(30, 1), S.R(29)]), {max:1500}), 'clear');
   // ---- 30 cave
   check('30 trust the shadows', run(29, () => hopAt([6.6, 14.6, 22.6], 30), {freshMem:true, max:600}), 'dead');
   check('30 look back, then go', solve(29), 'clear');

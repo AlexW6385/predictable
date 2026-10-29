@@ -867,11 +867,12 @@ const LV = [
 /* 21. what you see is a little to the side of what is: the drawing is pinned in the middle, and each half has slid toward the pin */
 { id:'offset', was:[8], start:3,
   build(){ // what is, in pencil underneath
-    for (const [a,b] of [[0,6],[9,9],[12,23],[27,29]]) R('g',a,b,14,16,{shadow:true});
-    Sp(20,20,13,'up',{shadow:true}); Door(27.5,14,{shadow:true});
+    for (const [a,b] of [[0,6],[9,9],[12,23],[28,29]]) R('g',a,b,14,16,{shadow:true});
+    Sp(19,19,13,'up',{shadow:true}); Door(28.5,14,{shadow:true});
     // what is drawn in ink: the left half two tiles to the right, the right half two tiles to the left
-    for (const [a,b] of [[2,8],[11,11],[13,21],[25,27]]) R('look',a,b,14,16);
-    Sp(18,18,13,'up',{look:true, kill:false}); Door(25.5,14,{look:true, inert:true}); },
+    // (the last gap is wide: a leap from the drawn lip comes down in the real gap)
+    for (const [a,b] of [[2,8],[11,11],[13,21],[26,27]]) R('look',a,b,14,16);
+    Sp(17,17,13,'up',{look:true, kill:false}); Door(26.5,14,{look:true, inert:true}); },
   drawBack(){ // the sheet: pinned at the top in the middle, bunched there, and bare at both ends
     ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(2*T, 0, 26*T, GY); ctx.strokeStyle = 'rgba(30,43,71,.25)'; ctx.lineWidth = 1.5; ctx.strokeRect(2*T, -2, 26*T, GY + 4);
     ctx.beginPath(); for (const d of [-14, -6, 6, 14]) { ctx.moveTo(15*T, 70); ctx.lineTo(15*T + d, GY); } ctx.stroke();
@@ -884,11 +885,12 @@ const LV = [
 
 /* 22. not every mark is a memory */
 { id:'forged', was:[16], start:1.5,
-  build(){ Gd(0,29); for (const c of [6,7,11,12,18,19,23,24]) HS(c); Door(27,14);
-    S.forged = [4,5,9,10,14,15].map(c => [c*T + 16, 430]).concat([18,19,23,24].map(c => [c*T + 16, 430])); },
+  build(){ Gd(0,29); for (const c of [6,7,8,13,14,15,19,20,24,25]) HS(c); Door(28,14);
+    // on the left the paint lures you into leaping early: three marks, three spikes, too far for one leap; on the right it is painted on the spikes, for whoever learned to walk through it
+    S.forged = [3,4,5,10,11,12].map(c => [c*T + 16, 430]).concat([19,20,24,25].map(c => [c*T + 16, 430])); },
   update(){ // walking through wet paint smears it
     for (const m of S.forged) if (P.on && Math.abs(pcx() - m[0]) < 12) m[2] = (m[2] || 0) + 1; },
-  drawBack(){ ctx.strokeStyle = C.grid2; ctx.lineWidth = 2; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(15*T, 60); ctx.lineTo(15*T + 6, 200); ctx.lineTo(15*T - 4, 330); ctx.lineTo(15*T + 3, GY); ctx.stroke(); ctx.setLineDash([]);
+  drawBack(){ ctx.strokeStyle = C.grid2; ctx.lineWidth = 2; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(17*T, 60); ctx.lineTo(17*T + 6, 200); ctx.lineTo(17*T - 4, 330); ctx.lineTo(17*T + 3, GY); ctx.stroke(); ctx.setLineDash([]);
     // painted marks: glossy, still wet, dripping; walked through, they smear
     for (const [x, y, sm] of S.forged) { const k = Math.min(1, (sm || 0)/8); ctx.save(); ctx.translate(x, y); ctx.scale(1 + k*1.6, 1 - k*0.5);
       ctx.globalAlpha = 0.85; cross(0, 0, 6, '#D8483B', 3); ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-4, -5); ctx.lineTo(-1, -2); ctx.stroke();
@@ -912,10 +914,13 @@ const LV = [
 { id:'mirror', start:1,
   build(){ S.tiles = Gt(0,29); for (const c of [5, 6, 17, 18]) S.tiles[c].alive = false;
     for (const c of [5, 6, 17, 18]) E({t:'g', x:c*T, y:GY, w:T, h:96, solid:false, falsef:true});
-    for (const c of [11, 12, 26]) HS(c);
+    for (const c of [11, 12, 27]) HS(c);
+    // a block hangs from the mirror over the stretch where it is late: under it you can only walk
+    R('b', 21, 24, 4, 12);
     S.pis = {x:23*T, up:false}; S.t = 0; S.hist = []; Door(28.5,14); },
-  pistonUp(t){ return Math.floor(t/60) % 2 === 1; },
-  update(){ S.t++; S.pis.up = this.pistonUp(S.t); S.hist.push([P.x, P.y, S.pis.up]); if (S.hist.length > 61) S.hist.shift();
+  // it lies down until you come under the slab, then it beats: up a while, down a while
+  pistonUp(t){ return t > 0 && Math.floor((t - 1)/60) % 2 === 0; },
+  update(){ if (S.t || pcx() > 20.2*T) S.t++; S.pis.up = this.pistonUp(S.t); S.hist.push([P.x, P.y, S.pis.up]); if (S.hist.length > 61) S.hist.shift();
     for (const e of ents) if (e.falsef && e.alive && ov(pbox(), {x:e.x, y:GY - 2, w:T, h:4})) { e.alive = false; }
     if (S.pis.up && ov(pbox(3), {x:S.pis.x + 4, y:GY - 18, w:T - 8, h:18})) return die('spike'); },
   // the mirror: the floor seen from the ceiling, upside down; between columns 18 and 23 it shows what was there 60 frames ago
@@ -958,12 +963,11 @@ const LV = [
     // past the line: the ground kills, the thorns hold you up, the door bites, and the hole is the way out
     S.inv = [17, 20, 23].map(c => Sp(c,c,13,'up',{kill:false, solid:true})).concat([Sp(26,29,13,'up',{kill:false, solid:true})]);
     Door(28,13.5,{onEnter(d){ d.bite = true; die('door'); }});
-    // two pebbles show it: one rolls across the line and bursts on the ground, one drops onto the thorns and rests there
-    S.peb = [{x:13.2*T, y:GY - 6, vx:1.6, vy:0, st:'roll'}, {x:17.5*T, y:-20, vx:0, vy:0, st:'fall'}]; },
+    // a pebble rolls across the line and bursts on the ground; the rest you learn by dying
+    S.peb = [{x:13.2*T, y:GY - 6, vx:1.6, vy:0, st:'roll'}]; },
   update(){ if (P.on && P.stand && P.stand.t === 'g' && pcx() > 15*T) return die('floor');
     if (pcx() > 24*T && pcx() < 26*T && P.y > 470) levelClear();
-    for (const q of S.peb) { if (q.st === 'gone' && ++q.t > 150) { q.st = 'roll'; q.x = 13.2*T; } if (q.st === 'roll') { q.x += q.vx; if (q.x > 16*T) { q.st = 'gone'; q.t = 0; for (let i = 0; i < 8; i++) parts.push({x:q.x, y:GY - 4, vx:(Math.random() - .5)*4, vy:-Math.random()*3, life:22, r:2, col:C.ink2}); } }
-      else if (q.st === 'fall') { q.vy += 0.5; q.y += q.vy; if (q.y >= GY - 16 - 6) { q.y = GY - 16 - 6; q.st = 'rest'; } } } },
+    for (const q of S.peb) { if (q.st === 'gone' && ++q.t > 150) { q.st = 'roll'; q.x = 13.2*T; } if (q.st === 'roll') { q.x += q.vx; if (q.x > 16*T) { q.st = 'gone'; q.t = 0; for (let i = 0; i < 8; i++) parts.push({x:q.x, y:GY - 4, vx:(Math.random() - .5)*4, vy:-Math.random()*3, life:22, r:2, col:C.ink2}); } } } },
   drawBack(){ ctx.fillStyle = 'rgba(30,43,71,.10)'; ctx.fillRect(15*T, 0, 15*T, H); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.setLineDash([6,6]); ctx.beginPath(); ctx.moveTo(15*T, 0); ctx.lineTo(15*T, GY); ctx.stroke(); ctx.setLineDash([]);
     drawDoor(25*T - 18, 482, {flip:true}); },
   draw(){ for (const q of S.peb) if (q.st !== 'gone') { ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 7); ctx.fill(); } } },
@@ -973,6 +977,8 @@ const LV = [
   build(){ Gd(0,29); R('b',16,16,0,13); Sp(19,23,13,'up'); Door(27,14);
     // three frames: a painting of the far room as it was, a window onto where you came in, and a window onto the far room as it is
     S.pics = [{x:7*T, to:22*T, src:[19*T, 9*T], old:true}, {x:9.8*T, to:1*T, src:[0, 9*T]}, {x:12.6*T, to:26*T, src:[23*T, 9*T]}];
+    // the gallery is rehung every time you come back, so only what a picture shows can tell you which it is
+    M.hang = ((M.hang ?? -1) + 1) % 3; const xs = S.pics.map(p => p.x); S.pics.forEach((p, i) => { p.x = xs[(i + M.hang) % 3]; });
     S.cool = 0; S.look = [0, 0, 0]; S.bird = {x:25.5*T, d:1, t:0, hop:0}; },
   update(){ if (S.cool) S.cool--;
     // a picture wakes for whoever stands still in front of it
@@ -1029,11 +1035,11 @@ const LV = [
 /* 29. follow its hands, not its door */
 { id:'mime', start:1,
   build(){ Gd(0,9); Gd(17,22); S.hole = Gt(23,24); Gd(25,29); Door(27.5,14); Sp(10,16,14,'up',{y:GY + 24});
-    // what is there but not drawn: a rung in the air, a wall too tall to climb from the floor, a bridge
-    S.inv = [E({t:'b', x:4*T, y:376, w:2*T, h:16, solid:true, hidden:true}), R('b',7,8,10,13,{hidden:true}), R('b',10,16,14,14,{hidden:true, h:12}), E({t:'s', x:12*T, y:330, w:10*T, h:16, dir:'down', kill:true, inv:true})];
+    // what is there but not drawn: a rung in the air, a wall too tall to climb from the floor, a bridge with a gap in it, under a low spiked ceiling
+    S.inv = [E({t:'b', x:4*T, y:376, w:2*T, h:16, solid:true, hidden:true}), R('b',7,8,10,13,{hidden:true}), R('b',10,13,14,14,{hidden:true, h:12}), R('b',15,16,14,14,{hidden:true, h:12}), E({t:'s', x:12*T, y:330, w:10*T, h:16, dir:'down', kill:true, inv:true})];
     for (const t of S.hole) t.falsef = true;
     S.mi = {x:2.2*T, y:GY - 30, i:0, pose:'walk', t:0, gone:false};
-    S.path = [[3.0*T, 'walk'], [3.0*T, 'rung', 40], [4.3*T, 'climb', 0, 376], [5.6*T, 'walk', 0, 376], [5.6*T, 'push', 40], [7.2*T, 'climb', 0, 320], [8.6*T, 'walk', 0, 320], [9.2*T, 'drop', 0, GY], [11.6*T, 'walk', 0, GY], [17*T, 'low', 0, GY], [21.9*T, 'low', 0, GY], [22.3*T, 'walk', 0, GY], [22.3*T, 'door', 60], [23.4*T, 'fall', 0, GY]]; },
+    S.path = [[3.0*T, 'walk'], [3.0*T, 'rung', 40], [4.3*T, 'climb', 0, 376], [5.6*T, 'walk', 0, 376], [5.6*T, 'push', 40], [7.2*T, 'climb', 0, 320], [8.6*T, 'walk', 0, 320], [9.2*T, 'drop', 0, GY], [11.6*T, 'walk', 0, GY], [13.4*T, 'low', 0, GY], [14.2*T, 'low', 0, GY - 18], [15.0*T, 'low', 0, GY], [17*T, 'low', 0, GY], [21.9*T, 'low', 0, GY], [22.3*T, 'walk', 0, GY], [22.3*T, 'door', 60], [23.4*T, 'fall', 0, GY]]; },
   update(){ const m = S.mi;
     for (const t of S.hole) if (t.alive && P.on && ov({x:P.x + 2, y:P.y + PH, w:PW - 4, h:3}, t)) t.alive = false;
     if (m.gone) return; const tgt = S.path[m.i]; if (!tgt) return;
@@ -1061,7 +1067,7 @@ const LV = [
 /* 30. what you see is cast by what is behind you */
 { id:'cave', was:[89], start:2,
   build(){ const sh = (e, z) => { e.z = z; return e; };
-    sh(Gd(0,6), 1); sh(Gd(9,14), 1.12); sh(Gd(17,21), 1.16); sh(Gd(24,29), 1); sh(Sp(11,11,13,'up'), 1.3); sh(R('b',24,24,11,11), 1.05);
+    sh(Gd(0,6), 1); sh(Gd(9,14), 1.12); sh(Gd(17,21), 1.16); sh(Gd(24,29), 1); sh(Sp(11,11,13,'up'), 1.3);
     sh(Door(27,14), 1);
     S.pup = {x:20*T, y:GY - 56}; },
   F:{x:-220, y:GY},
@@ -1158,31 +1164,23 @@ const LV = [
 
 /* 35. up is a choice, and the floor of the world is the roof of the world */
 { id:'upchoice', was:[11, 4], start:2, flip:true, wrapY:true, vmax:9,
-  build(){ Gd(0,6); Gd(9,16); Gd(19,29); R('b',0,29,4,4); Sp(4,11,3,'up'); Sp(11,13,13,'up'); Sp(17,23,5,'down'); Door(26,4);
-    // a pebble rolls into the first hole, comes in again from the top, and sticks on the thorns on the roof
-    S.peb = {x:4.2*T, y:GY - 6, vy:0, st:'roll', t:0}; S.stuck = []; },
+  build(){ Gd(0,6); Gd(9,16); Gd(19,29); R('b',0,29,4,4); Sp(4,11,3,'up'); Sp(11,13,13,'up'); Sp(17,23,5,'down'); Door(26,4); },
   // upside down under the floor is outside the world
-  update(){ if (P.g < 0 && P.y > GY) die('fall');
-    const q = S.peb; q.t++;
-    if (q.st === 'roll') { if (q.t > 30) q.x += 1.5; if (q.x > 7*T + 6) q.st = 'fall'; }
-    else if (q.st === 'fall') { q.vy = Math.min(q.vy + 0.5, 10); q.y += q.vy; if (q.y > H + 10) q.y = -10;
-      if (q.y < 200 && q.y >= 4*T - 16 - 5 && q.vy > 0) { q.y = 4*T - 16 - 5; q.st = 'stuck'; shake = 2; S.stuck.push([q.x, q.y]); q.t = 0; } }
-    else if (q.st === 'stuck' && q.t > 360) Object.assign(q, {x:4.2*T, y:GY - 6, vy:0, st:'roll', t:0}); },
-  draw(){ ctx.fillStyle = C.ink2; for (const [x, y] of S.stuck.slice(-1)) { ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill(); }
-    const q = S.peb; if (q.st !== 'stuck') { ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 7); ctx.fill(); } } },
+  // falling off the bottom brings you in at the top; the first hole shows you that by itself
+  update(){ if (P.g < 0 && P.y > GY) die('fall'); } },
 
-/* 36. what falls in comes out going up */
-{ id:'portal', was:[45], start:2, sy:100,
-  build(){ Gd(0,6); Gd(9,10); Gd(13,18); Gd(21,29); R('g',0,6,4,4); E({t:'g', x:22*T, y:336, w:7*T, h:112, solid:true}); Door(26,14,{y:336 - 56});
-    Sp(13,15,13,'up');
-    S.po = [{x:7*T, gold:true, to:19*T}, {x:19*T, gold:true, to:7*T}, {x:11*T, gold:false, to:null}]; S.cool = 0; },
+/* 36. what falls in comes out going up, as fast as it went in */
+{ id:'portal', was:[45], start:12, vmax:16,
+  // two gold mouths in the floor, each the other's way out; the door is high above the left one, a low ledge stands by the right one
+  build(){ Gd(0,7); Gd(10,19); Gd(23,29); R('g',0,6,9,9); E({t:'g', x:23*T, y:368, w:7*T, h:80, solid:true}); Door(2.5,9);
+    S.po = [{x:8*T, w:2*T}, {x:20*T, w:3*T}]; S.cool = 0; },
   update(){ if (S.cool > 0) { S.cool--; return; }
-    for (const p of S.po) if (P.vy > 0 && pcx() > p.x + 4 && pcx() < p.x + 60 && P.y + PH > GY + 6) {
-      const v = Math.max(3, Math.min(12, P.vy)); S.cool = 12;
-      if (p.gold) { P.x = p.to + 32 - PW/2 + (pcx() - p.x - 32); P.y = GY - PH - 2; P.vy = -v; P.noCutT = 60; }
-      else { S.chomp = 20; return die('portal'); }
+    for (const p of S.po) if (P.vy > 0 && pcx() > p.x + 4 && pcx() < p.x + p.w - 4 && P.y + PH > GY + 6) {
+      // out of the other one, from the same depth, as fast as you fell in
+      const v = Math.max(3, Math.min(16, P.vy)), q = S.po.find(o => o !== p); S.cool = 12;
+      P.x = clamp(q.x + (pcx() - p.x)*q.w/p.w, q.x + 12, q.x + q.w - 12) - PW/2; P.y = GY + 6 - PH; P.vy = -v; P.noCutT = 60;
       burst(pcx(), P.y + 14); return; } },
-  drawBack(){ for (const p of S.po) { ctx.fillStyle = p.gold ? C.gold : C.red; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x + 32, GY + 2, 30, 7, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(p.x + 32, GY + 2, 20, 4, 0, 0, 7); ctx.fill(); } } },
+  drawBack(){ for (const p of S.po) { ctx.fillStyle = C.gold; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x + p.w/2, GY + 2, p.w/2 - 2, 7, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(p.x + p.w/2, GY + 2, p.w/2 - 12, 4, 0, 0, 7); ctx.fill(); } } },
 
 /* 37. the ground hits back as hard as you fall */
 { id:'hardlanding', was:[35], start:2, sy:68,
@@ -1191,26 +1189,16 @@ const LV = [
     E({t:'g', x:0, y:3*T, w:6*T, h:T, solid:true}); E({t:'g', x:4*T, y:6*T, w:3.5*T, h:T, solid:true});
     // the long step is brittle, tile by tile; under its far end, the last step
     S.c = []; for (let c = 6; c <= 14; c++) S.c.push(R('g', c, c, 9, 9, {crumble:24}));
-    E({t:'g', x:12.5*T, y:12*T, w:4*T, h:T, solid:true}); Door(27,14);
-    S.ball = {x:3.6*T, y:3*T - 6, vx:4.4, vy:0, st:'roll', t:0}; S.splat = []; },
+    E({t:'g', x:12.5*T, y:12*T, w:4*T, h:T, solid:true}); Door(27,14); S.splat = []; },
   onLand(){ if (P.landV >= 11.5) return die('fall'); if (P.landV > 8) { shake = 4; dust(pcx(), P.y + PH); S.splat.push([pcx(), P.y + PH, 0]); } },
-  update(){ const b = S.ball; b.t++;
-    // a ball rolls off the top at a run, sails past the step below, and bursts where it lands
-    if (b.st === 'roll') { b.x += b.vx; if (b.x > 6*T) b.st = 'fly'; }
-    else if (b.st === 'fly') { b.x += b.vx; b.vy = Math.min(b.vy + 0.55, 12); b.y += b.vy;
-      const fl = b.x > 6*T && b.x < 15*T && b.y >= 9*T - 6 ? 9*T : b.y >= GY - 6 ? GY : null;
-      if (fl) { b.st = 'gone'; b.t = 0; shake = 3; S.splat.push([b.x, fl, 1]); for (let i = 0; i < 12; i++) parts.push({x:b.x, y:fl - 4, vx:(Math.random() - .5)*5, vy:-Math.random()*3.5, life:26, r:2.5, col:C.ink2}); } }
-    else if (b.t > 200) Object.assign(b, {x:3.6*T, y:3*T - 6, vy:0, st:'roll'});
-    for (const sp of S.splat) sp[3] = (sp[3] || 0) + 1; S.splat = S.splat.filter(sp => sp[3] < 240); },
+  update(){ for (const sp of S.splat) sp[3] = (sp[3] || 0) + 1; S.splat = S.splat.filter(sp => sp[3] < 240); },
   draw(){ ctx.strokeStyle = C.white; ctx.lineWidth = 1.2;
     // hairline cracks on the brittle tiles
     for (const e of S.c) if (e.alive && !e.fall) { ctx.beginPath(); ctx.moveTo(e.x + 9, e.y + 4); ctx.lineTo(e.x + 14, e.y + 14); ctx.lineTo(e.x + 11, e.y + 22); ctx.moveTo(e.x + 23, e.y + 5); ctx.lineTo(e.x + 20, e.y + 16); ctx.stroke(); }
-    // a hard landing leaves a crack; a burst ball leaves a scatter
+    // a hard landing leaves a crack
     for (const [x, y, k, t] of S.splat) { ctx.globalAlpha = Math.min(1, (240 - t)/60); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath();
-      if (k) for (let i = 0; i < 6; i++) { ctx.moveTo(x - 10 + i*4, y - 1); ctx.lineTo(x - 13 + i*5, y - 4 - (i % 2)*3); }
-      else { ctx.moveTo(x - 8, y + 2); ctx.lineTo(x - 2, y + 7); ctx.lineTo(x + 3, y + 3); ctx.lineTo(x + 9, y + 8); }
-      ctx.stroke(); ctx.globalAlpha = 1; }
-    const b = S.ball; if (b.st !== 'gone') { ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); } } },
+      ctx.moveTo(x - 8, y + 2); ctx.lineTo(x - 2, y + 7); ctx.lineTo(x + 3, y + 3); ctx.lineTo(x + 9, y + 8);
+      ctx.stroke(); ctx.globalAlpha = 1; } } },
 
 /* 38. a pip on the wheel weighs three on the axle */
 { id:'wheel', was:[36], start:2,
