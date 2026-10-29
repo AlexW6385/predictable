@@ -76,12 +76,30 @@
   check('39 take all three keys', run(38, () => script([...key39(3.875), ...key39(5.19), ...key39(6.5), S.R(8.4), S.W(300)]), {max:1200}), 'dead');
   check('39 take two keys and ride', run(38, () => script([...key39(3.875), ...key39(6.5), ...ride39]), {max:1800}), 'clear');
   // ---- 40 balance
-  const hopOn = [S.L(13.0), S.W(10), S.R(13.25), S.J(30, 1), S.U(P => P.on, {right:true})];
-  const stopShort = [S.F(R, () => g.S.blk.st === 'fall'), S.R(20.4), S.W(80)], home40 = [S.L(1.6), S.W(30)];
-  check('40 take the keys as you meet them', run(39, () => script([...upR(9.5), ...upR(11.5), ...hopOn, ...stopShort, ...home40]), {max:2400}), 'timeout');
-  check('40 top key first, then walk on', run(39, () => script([...upR(11.5), ...upL(9.5), ...hopOn, S.R(29)]), {max:2000}), 'dead');
-  check('40 no keys, stop short of it', run(39, () => script([...hopOn, ...stopShort, ...home40]), {max:2000}), 'timeout');
-  check('40 top key first, stop on the box\'s side of the middle', run(39, () => script([...upR(11.5), ...upL(9.5), ...hopOn, S.F(R, () => g.S.blk.st === 'fall'), S.W(80), ...home40]), {max:2400}), 'timeout');
-  check('40 top key first, stop short of it on its side', run(39, () => script([...upR(11.5), ...upL(9.5), ...hopOn, ...stopShort, ...home40]), {max:2400}), 'clear');
+  // keys lie behind you at 1.5, 4.5 and 7.5: walk back to x and stop
+  const keys40 = x => x == null ? [] : [S.L(x), S.W(12)];
+  // over the seesaw to the tower, call the block (run at it), go back to the near end, lean on the tower as it throws you
+  const call40 = (turn, lean) => [S.R(25.6), S.W(20), S.L(turn ?? 23.5), S.U(P => !P.on, lean === false ? {} : {right:true}), S.U(P => P.on, lean === false ? {} : {right:true}), S.W(10)], door40 = [S.R(29.3), S.W(30)];
+  check('40 hold right', run(39, () => R, {freshMem:true, max:900}), 'timeout');
+  check('40 ride it as you are, as in 32 (into the spikes)', run(39, () => script(call40()), {freshMem:true, max:1500}), /dead@2[3-6]/);
+  check('40 take every key, ride it (too low)', run(39, () => script([...keys40(0.8), ...call40(), ...door40]), {freshMem:true, max:1500}), 'timeout');
+  check('40 take every key, ride it twice (it comes back; still too low)', run(39, () => script([...keys40(0.8), ...call40(), S.W(150), ...call40(), S.U(() => g.S.blk.st === 'down'), ...door40]), {freshMem:true, max:2400}), 'timeout');
+  check('40 one key, ride it (still the spikes)', run(39, () => script([...keys40(9.0), ...call40(), ...door40]), {freshMem:true, max:1500}), /dead@2[3-6]/);
+  check('40 jump at the tower, no keys', run(39, () => script([S.R(25.6), S.W(10), S.J(30, 1), S.W(20), S.J(30, 1), S.W(60)]), {freshMem:true, max:900}), 'timeout');
+  check('40 jump at the tower, two keys', run(39, () => script([...keys40(4.2), S.R(25.6), S.W(10), S.J(30, 1), S.W(20), S.J(30, 1), S.W(60)]), {freshMem:true, max:900}), 'timeout');
+  check('40 call it and keep running (it lands on you)', run(39, () => script([...keys40(4.2), S.R(25.6), S.W(20), S.L(1)]), {freshMem:true, max:1500}), /dead@1[4-6]/);
+  check('40 jump at everything', run(39, () => P => P.on ? {jump:30, dir:1} : R(), {freshMem:true, max:1200}), 'timeout');
+  check('40 two keys, ride it, but don\'t lean on the tower', run(39, () => script([...keys40(4.2), ...call40(23.5, false), ...door40, S.W(60)]), {freshMem:true, max:1500}), 'timeout');
+  check('40 two keys, ride it, lean on the tower', run(39, () => script([...keys40(4.2), ...call40(), ...door40]), {freshMem:true, max:1500}), 'clear');
+  // the same with slop: another spot between the keys, an early or a late turn, standing anywhere on the near half, leaning late
+  check('40 ... stop nearer the second key', run(39, () => script([...keys40(5.0), ...call40(), ...door40]), {freshMem:true, max:1500}), 'clear');
+  check('40 ... stop nearer the third key', run(39, () => script([...keys40(2.6), ...call40(), ...door40]), {freshMem:true, max:1500}), 'clear');
+  check('40 ... turn back early', run(39, () => script([...keys40(4.2), ...call40(24.6), ...door40]), {freshMem:true, max:1500}), 'clear');
+  check('40 ... turn back late', run(39, () => script([...keys40(4.2), ...call40(20.0), ...door40]), {freshMem:true, max:1500}), 'clear');
+  check('40 ... stand near the middle when it lands, lean from there', run(39, () => script([...keys40(4.2), S.R(25.6), S.W(20), S.L(21.0), S.R(21.6), S.U(P => !P.on), S.U(P => P.on, {right:true}), S.R(29.3), S.W(30)]), {freshMem:true, max:1500}), 'clear');
+  check('40 ... lean only at the top of the throw', run(39, () => script([...keys40(4.2), S.R(25.6), S.W(20), S.L(23.5), S.R(25.0), S.U(P => !P.on), S.U(P => P.vy >= 0), S.U(P => P.on, {right:true}), S.R(29.3), S.W(30)]), {freshMem:true, max:1500}), 'clear');
+  { const rs = []; for (let seed = 1; seed <= 6; seed++) { window.__NOISE = {seed, delay:seed*3, jit:6}; rs.push(run(39, () => script([...keys40(5.0), ...call40(), ...door40]), {freshMem:true, max:1800})[0]); } window.__NOISE = null;
+    check('40 ... with human delays (6 tries)', [rs.filter(r => r === 'clear').length + '/6'], '6/6'); }
+  check('40 ... a pause on the way, and a wasted ride first', run(39, () => script([...keys40(4.2), S.R(20), S.W(40), ...call40(23.5, false), S.W(150), ...call40(), ...door40]), {freshMem:true, max:2400}), 'clear');
   return out;
 })()

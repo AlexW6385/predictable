@@ -1308,37 +1308,32 @@ const LV = [
     for (let i = 0; i < 4; i++) { const x = g.x + 48 - 27 + i*18, y = g.y + 5; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 7);
       if (i < L) { ctx.fillStyle = i === 3 ? C.red : C.white; ctx.fill(); } else { ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1; ctx.stroke(); } } } },
 
-/* 40. whatever is lighter flies, and a heavy thing thrown breaks what is cracked */
-{ id:'balance', start:8.5,
+/* 40. whatever is lighter flies, and the lighter it is, the higher it flies */
+{ id:'balance', start:10.5, vmax:24,
   jumpV(){ return 10.6 - 1.6*S.keys; },
   drawPlayer: heavyPlayer,
   build(){ Gd(0,29);
-    S.wall = E({t:'b', x:3*T, y:0, w:T, h:GY, solid:true, hidden:true}); Door(1,14);
-    E({t:'b', x:5*T, y:300, w:2*T, h:GY - 30 - 300, solid:true});
-    for (const [c, a] of [[10,21],[12,84]]) E({t:'key', x:c*T - 7, y:400 - a, w:14, h:20, hang:true});
-    S.pk = plank(14*T, 24*T, GY - 16);
-    S.box = E({t:'b', x:14*T + 2, y:0, w:28, h:20, solid:true, held:true, hidden:true});
-    S.blk = E({t:'th', mode:'pred', x:24*T - 44, y:70, top:70, w:40, h:40, solid:true, ghost:true, st:'wait'});
-    S.box.y = plankY(S.pk, S.box.x + 14) - 20; },
-  update(){ const k = S.pk, b = S.box, bl = S.blk;
-    heavyBlk(bl, k); if (state !== 'play') return;
+    // a spiked ceiling over everything, and the door on a tower beside the seesaw's near end
+    R('b',0,29,0,2); Sp(0,29,3,'down'); E({t:'g', x:26*T, y:7*T, w:4*T, h:GY - 7*T, solid:true}); Door(28.6,7);
+    // three keys lie behind you; nothing here takes keys, they only weigh
+    for (const c of [1.5, 4.5, 7.5]) E({t:'key', x:c*T - 7, y:GY - 22, w:14, h:20});
+    S.pk = plank(14*T, 26*T, GY - 16);
+    S.blk = E({t:'th', mode:'pred', x:14*T + 8, y:128, top:128, ft:70, w:40, h:40, solid:true, ghost:true, st:'wait'}); S.fly = null; },
+  update(){ const k = S.pk, b = S.blk;
+    // it falls where you will be when it lands, and it watches only the seesaw
+    if (b.st === 'wait') { const bc = b.x + 20, pr = k.onP ? whereIn(b.ft) : null;
+      if (pr != null && (Math.abs(pr - bc) < 22 || (S.pr != null && (S.pr - bc)*(pr - bc) < 0))) { b.st = 'fall'; b.vy = 0; b.acc = 2*(plankY(k, bc) - b.y - 40)/(b.ft*b.ft); }
+      S.pr = pr; }
+    if (b.st !== 'wait') heavyBlk(b, k); if (state !== 'play') return;
     plankStand(k);
-    if (b.alive && b.held && !b.fly) { b.y = plankY(k, b.x + 14) - 20; b.vy = 0; }
-    if (b.alive && b.fly) { b.x += b.vx; b.vy = Math.min(b.vy + 0.6, 12); b.y += b.vy;
-      if (ov(b, S.wall)) return this.cancel();
-      if (b.vy > 0) for (const o of ents) if (o !== b && isSolid(o) && ov(b, o)) { b.y = o.y - b.h; b.vy = 0; b.fly = false; b.held = false; b.ghost = false; shake = 6; dust(b.x + 14, b.y + 20); break; } }
-    plankTip(k, [plankMe(k, 1 + S.keys), {w:5, x:bl.x + 20, on:bl.st === 'down', thrown(){}},
-      {w:7, x:b.x + 14, on:b.alive && b.held && !b.fly, thrown(){ b.fly = true; b.ghost = true; b.vx = -8; b.vy = -16; }}]);
-    // the heavy box, thrown, breaks the cracked wall
-    if (b.alive && S.wall.alive && !b.held && ov({x:b.x - 3, y:b.y + 2, w:b.w + 6, h:b.h - 4}, S.wall)) this.cancel(); },
-  cancel(){ const b = S.box; b.alive = false; S.wall.alive = false; burst(b.x, b.y + 12); shake = 10; },
+    // the block gives the same push every time; the lighter you are, the faster it sends you up
+    plankTip(k, [{w:1 + S.keys, x:pcx(), on:k.onP, thrown(){ P.vy = -Math.min(24, 52/(1 + S.keys)); P.on = false; P.coy = 0; P.noCutT = 90; P.y -= 2; k.onP = false; S.fly = {top:P.y + PH}; }},
+      {w:5, x:b.x + 20, on:b.st === 'down', thrown(){}}]);
+    // how high it took you, pencilled on the tower like a child's height on a door frame
+    const f = S.fly; if (f) { f.top = Math.min(f.top, P.y + PH); if (P.on) { (M.ticks = M.ticks || []).push(Math.round(f.top)); if (M.ticks.length > 3) M.ticks.shift(); S.fly = null; } } },
   drawBack(){ drawPlank(S.pk); drawBlkShadow(S.blk, S.pk); },
-  draw(){ drawHung(); const b = S.box, w = S.wall;
-    if (b.alive) { ctx.fillStyle = C.gold; ctx.fillRect(b.x, b.y, 28, 20); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.strokeRect(b.x + 1, b.y + 1, 26, 18); ctx.fillStyle = C.ink; ctx.fillRect(b.x + 8, b.y, 3, 20); ctx.fillRect(b.x + 17, b.y, 3, 20); }
-    if (w.alive) { // a wall of old bricks, cracked through
-      ctx.fillStyle = '#B9A58C'; ctx.fillRect(w.x, w.y, w.w, w.h); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(w.x + 1, w.y - 2, w.w - 2, w.h + 2); ctx.lineWidth = 1;
-      for (let yy = 0, r = 0; yy < w.h; yy += 12, r++) { ctx.beginPath(); ctx.moveTo(w.x, yy); ctx.lineTo(w.x + w.w, yy); const bx = w.x + (r % 2 ? 10 : 22); ctx.moveTo(bx, yy); ctx.lineTo(bx, yy + 12); ctx.stroke(); }
-      ctx.lineWidth = 1.5; ctx.beginPath(); for (const cy of [120, 250, 380]) { ctx.moveTo(w.x + 4, cy); ctx.lineTo(w.x + 14, cy + 10); ctx.lineTo(w.x + 9, cy + 22); ctx.lineTo(w.x + 22, cy + 34); ctx.lineTo(w.x + 28, cy + 30); } ctx.stroke(); } } },
+  draw(){ const t = M.ticks || [];
+    t.forEach((y, i) => { ctx.globalAlpha = 0.3 + 0.6*(i + 1)/t.length; ctx.strokeStyle = C.red; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(26*T - 16, y); ctx.lineTo(26*T - 1, y); ctx.stroke(); ctx.globalAlpha = 1; }); } },
 /* ===================== V. Elements ===================== */
 
 /* 41. in the dark, only where you fell is lit; a sound shows you the way, and shows you to where you are going */
