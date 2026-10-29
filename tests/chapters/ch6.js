@@ -55,16 +55,23 @@
   check('58 jump onto them', run(57, () => script([S.R(7.2), S.J(30, 1), S.R(29)]), {max:900}), 'dead');
   check('58 walk softly across their backs', run(57, () => script([S.F(tap, () => cx() > 27.4*T)]), {max:1500}), 'clear');
   // ---- 59 mimic
-  const upA = [S.R(5.6), S.JT(8.8, 384, {tol:12, minPeak:72}), S.U(P => P.on)];
-  check('59 climb the nearest box', run(58, () => script([...upA, S.R(9.4), S.W(12), S.JT(11.5, 384, {tol:10}), S.W(30)]), {max:600}), 'dead');
-  check('59 climb the others, take the first door', run(58, () => script([...upA, S.R(9.4), S.W(12), S.JT(13.6, 320, {tol:16}), S.R(14.3), S.W(12), S.JT(17.0, 256, {tol:16}), S.R(20.6), S.W(30)]), {max:900}), 'dead');
-  check('59 climb the others, take the still door', run(58, () => script([...upA, S.R(9.4), S.W(12), S.JT(13.6, 320, {tol:16}), S.R(14.3), S.W(12), S.JT(17.0, 256, {tol:16}), S.R(18.6), S.J(30, 1), S.R(25.6), S.W(30)]), {max:900}), 'clear');
+  const hop = (x, y) => [S.U(P => P.on), S.JT(x, y, {tol:10})];
+  const to2 = [...hop(5.5, 416), ...hop(8.5, 384)];
+  check('59 step to the next stone after a stone', run(58, () => script([...to2, ...hop(11.5, 384), S.W(30)]), {max:900}), 'dead');
+  check('59 wood, stone, wood, then the next wood', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(15.5, 384), S.W(30)]), {max:900}), 'dead');
+  check('59 wood, stone, wood, stone, then the next stone', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(17.5, 416), ...hop(19.5, 384), S.W(30)]), {max:900}), 'dead');
+  check('59 never trust the same look twice in a row', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(17.5, 416), ...hop(20.5, 352), ...hop(23.5, 416), ...hop(26.0, GY), S.R(27.6), S.W(30)]), {max:1500}), 'clear');
+  check('59 ... or skip the last stone', run(58, () => script([...to2, ...hop(12.5, 352), ...hop(17.5, 416), ...hop(20.5, 352), ...hop(26.0, GY), S.R(27.6), S.W(30)]), {max:1500}), 'clear');
   // ---- 60 life
-  const seed60 = () => { const b = g.S.vg.beds.find(b => b.seed); return b ? (b.x + b.w/2)/T : null; };
-  const toFlock = [S.F(slowR, () => cx() > 2.8*T), S.JT(6.6, GY, {tol:10}), S.F(tap, () => cx() > 16.4*T)];
+  const across60 = [S.F(tap, () => cx() > 20.3*T), S.W(20)];
+  const scare60 = [S.R(7.4), S.W(10)];
+  const grow60 = [S.U(P => P.y + 28 <= 226), S.R(24.5), S.W(30)];
   check('60 run', run(59, () => R), 'dead');
-  check('60 quiet past the guard, then run', run(59, () => script([S.F(slowR, () => cx() > 2.8*T), S.JT(6.6, GY, {tol:10}), S.R(29)]), {max:1500}), 'dead');
-  check('60 quiet and soft, then run on', run(59, () => script([...toFlock, S.R(29)]), {max:2400}), 'dead');
-  check('60 quiet, soft, then run past the line and let it grow', run(59, () => script([...toFlock, S.R(19.6), S.L(17.6), S.U(() => !cones().length && seed60() !== null), S.F(P => ({k:{right: cx() < seed60()*T - 2, left: cx() > seed60()*T + 2}}), () => Math.abs(cx() - seed60()*T) < 3 && Math.abs(g.P.vx) < 0.2), S.U(P => P.y + 28 <= 226), S.R(27.5), S.W(20)]), {max:2400}), 'clear');
+  check('60 walk softly across, wait by the sleeper', run(59, () => script([S.F(tap, () => cx() > 18.8*T), S.W(600)]), {max:1500}), 'timeout');
+  check('60 walk softly across, wake him, go back softly', run(59, () => script([S.F(tap, () => cx() > 18.5*T), S.J(30, 0), S.F(P => ({k:{left: Math.abs(g.P.vx) < 2.4}}), () => cx() < 4*T), S.W(300)]), {max:1500}), 'dead');
+  check('60 land hard on the first bird', run(59, () => script([S.R(8.3), S.J(30, 1), S.W(200)]), {max:900}), 'dead');
+  check('60 frighten the birds from the bank; then across, and grow', run(59, () => script([...scare60, S.U(() => g.S.gd.gone), S.U(() => !g.S.fl.away), ...across60, ...grow60]), {max:2400}), 'clear');
+  check('60 frighten the birds, but do not wait for them', run(59, () => script([...scare60, S.U(() => g.S.gd.gone), S.R(20.5), S.W(300)]), {max:2400}), 'dead');
+
   return out;
 })()

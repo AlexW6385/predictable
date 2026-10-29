@@ -1393,33 +1393,48 @@ const LV = [
   update(){ flockStep(S.fl); },
   draw(){ drawFlock(S.fl); } },
 
-/* 59. one of them is breathing */
-{ id:'mimic', start:2,
-  build(){ Gd(0,29); R('b',16,29,8,13); S.mim = E({t:'b', x:11*T, y:GY - 64, w:T, h:64, solid:true, hidden:true, mimic:true, bite:0});
-    S.box = [E({t:'b', x:8*T, y:GY - 64, w:2*T, h:64, solid:true, hidden:true}), E({t:'b', x:13*T, y:GY - 128, w:2*T, h:128, solid:true, hidden:true})];
-    S.d1 = Door(20,8,{onEnter(d){ d.bite = true; die('mimic'); }}); S.d2 = Door(25,8); },
-  update(){ const m = S.mim; if (m.bite > 0) m.bite--;
-    if (P.on && P.stand === m) { m.bite = 20; return die('mimic'); } },
-  draw(){ for (const b of S.box) drawCrate(b.x, b.y, b.w, b.h, 0);
-    const br = (Math.sin(frame*0.07) + 1)*0.5; drawCrate(S.mim.x, S.mim.y, S.mim.w, S.mim.h, br, S.mim.bite);
-    const d = S.d1, s = 1 + br*0.03; ctx.save(); ctx.translate(d.x + 18, d.y + 56); ctx.scale(s, 1 + br*0.04); ctx.translate(-d.x - 18, -d.y - 56); drawDoor(d.x, d.y, {bite:d.bite}); ctx.restore(); },
-  alpha(e){ return e === S.d1 ? 0 : 1; } },
+/* 59. it waits on the next of whatever you last trusted */
+{ id:'mimic', start:1.5,
+  build(){ Gd(0,3); Sp(4,24,14,'up'); R('g',4,24,15,16); Gd(25,29); Door(27,14);
+    // stepping stones over the thorns, wood and stone; one of them is alive
+    S.bx = [[5,1,'w'], [8,2,'s'], [11,2,'s'], [12,3,'w'], [15,2,'w'], [17,1,'s'], [19,2,'s'], [20,3,'w'], [23,1,'s']]
+      .map(([c, h, look], i) => E({t:'b', x:c*T, y:GY - h*T, w:T, h:h*T + 32, solid:true, hidden:true, look, i}));
+    S.mi = 2; S.puff = 0; S.puffs = []; S.bit = -1; },
+  onLand(){ const b = P.stand; if (!b || b.look == null) return;
+    if (b.i === S.mi) { S.bit = b.i; shake = 6; return die('mimic'); }
+    // it saw what you trusted: it goes to wait on the nearest one ahead that looks the same, and every one of them stirs
+    const ahead = S.bx.filter(q => q.look === b.look && q.x > b.x);
+    if (ahead.length) { S.mi = ahead[0].i; S.puffs = ahead.map(q => q.i); S.puff = 36; for (const q of ahead) for (let k = 0; k < 3; k++) parts.push({x:q.x + 10 + k*6, y:q.y - 4, vx:(k - 1)*0.4, vy:-0.7, life:26, r:2.5, col:'rgba(30,43,71,.45)'}); } },
+  update(){ if (S.puff > 0) S.puff--; },
+  draw(){ for (const b of S.bx) { const br = S.puffs.includes(b.i) && S.puff > 0 ? Math.sin((36 - S.puff)/36*Math.PI)*2.5 : 0, bite = b.i === S.bit;
+      if (b.look === 'w') drawCrate(b.x, b.y, b.w, b.h, br, bite);
+      else { const g = br*1.6, x = b.x - g/2, y = b.y - g, w = b.w + g, h = b.h + g; ctx.fillStyle = '#B9C0CC'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+        ctx.lineWidth = 1.5; for (let yy = b.y + 16, r = 0; yy < b.y + b.h; yy += 16, r++) { ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + w, yy); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + (r % 2 ? 10 : 22), yy - 16); ctx.lineTo(x + (r % 2 ? 10 : 22), yy); ctx.stroke(); }
+        if (bite) { ctx.fillStyle = C.ink; ctx.fillRect(b.x, b.y - 2, b.w, 10); ctx.fillStyle = C.white; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(b.x + i*8, b.y - 2); ctx.lineTo(b.x + i*8 + 4, b.y + 7); ctx.lineTo(b.x + i*8 + 8, b.y - 2); } ctx.fill(); } } } } },
 
-/* 60. everything alive, each in its turn */
-{ id:'life', start:1,
-  build(){ Gd(0,9); Gd(16,29); R('g',6,7,14,16,{carpet:true}); Sp(10,15,14,'up'); R('g',10,15,15,16); R('b',25,29,7,7); Door(27,7);
-    S.gd = [{x:4*T + 4, y:GY - 24, awake:false}]; S.rings = []; S.fl = flockOf(10, 15); S.vg = vineGarden([], 224); S.armed = true; },
-  noise(x, r){ if (r <= 0) return; S.rings.push({x, r, t:0}); for (const g of S.gd) if (Math.abs(g.x + 12 - x) < r) g.awake = true; },
-  onLand(){ const carpet = ents.some(e => e.carpet && pcx() > e.x + 2 && pcx() < e.x + e.w - 2); this.noise(pcx(), carpet ? 0 : 40 + 10*P.landV); flockLand(S.fl); },
-  update(){ const pc = pcx(); S.runG = P.on && Math.abs(P.vx) >= 3.2 ? (S.runG || 0) + 1 : 0; if (S.runG > 10 && frame % 14 === 0) this.noise(pc, 80);
-    for (const g of S.gd) { if (g.awake) g.x += Math.sign(pc - g.x - 12)*5.6; if (ov(pbox(3), {x:g.x + 2, y:g.y + 2, w:20, h:20})) return die('guard'); }
+/* 60. everything alive answers to everything alive: the birds fly from a threat, their flight is a noise, and the sleeper runs at a noise */
+{ id:'life', start:1.5,
+  build(){ Gd(0,8); Sp(9,16,14,'up'); R('g',9,16,15,16); Gd(17,29); R('b',21,26,7,7); Door(24,7);
+    // the only soil is under the sleeper; a vine on it would reach the door's ledge
+    S.vg = vineGarden([{x:20*T, w:T}], 224); S.fl = flockOf(9, 16); S.rings = [];
+    S.gd = {x:20*T + 4, y:GY - 24, vy:0, awake:false, gone:false}; },
+  noise(x, r){ if (r <= 0) return; S.rings.push({x, r, t:0}); const g = S.gd; if (!g.gone && Math.abs(g.x + 12 - x) < r) g.awake = true; },
+  onLand(){ this.noise(pcx(), P.landV > 6 ? 40 + 10*P.landV : 0); flockLand(S.fl); },
+  update(){ const pc = pcx(), fl = S.fl, g = S.gd, wasAway = fl.away;
+    S.runG = P.on && Math.abs(P.vx) >= 3.2 ? (S.runG || 0) + 1 : 0; if (S.runG > 10 && frame % 14 === 0) this.noise(pc, 80);
+    flockStep(fl); if (state !== 'play') return;
+    // a flock taking off all at once is loud
+    if (fl.away && !wasAway) this.noise(12.5*T + 16, 300);
+    // awake, the sleeper runs at you; over the pit, the birds take him for a threat, and without them there is nothing under him
+    if (!g.gone && g.awake) { const over = g.x + 12 > 9*T && g.x + 12 < 17*T;
+      if (over && !fl.away && g.vy === 0) flockScare(fl);
+      if ((over && fl.away) || g.vy > 0) { g.vy += 0.6; g.y += g.vy; if (g.y > GY + 30) { g.gone = true; dust(g.x + 12, GY + 10); shake = 6; } }
+      else g.x += Math.sign(pc - g.x - 12)*5.6;
+      if (ov(pbox(3), {x:g.x + 2, y:g.y + 2, w:20, h:20})) return die('guard'); }
+    else if (!g.gone && ov(pbox(3), {x:g.x + 2, y:g.y + 2, w:20, h:20})) return die('guard');
     for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 24);
-    flockStep(S.fl); if (state !== 'play') return;
-    if (S.armed && pc > 18.5*T && P.vx > 0.5) { S.armed = false; drop(whereIn(40), 40, {onLand: c => plantSeed(S.vg, c.x)}); }
-    if (!S.armed && pc < 17*T) S.armed = true;
-    vineStep(S.vg); updCones(); },
-  drawBack(){ ctx.strokeStyle = C.red; ctx.lineWidth = 2; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(18.5*T, GY); ctx.lineTo(18.5*T, GY - 30); ctx.stroke(); ctx.setLineDash([]); },
-  draw(){ drawNoise(S.rings); for (const g of S.gd) drawGuard(g); drawCarpets(); drawFlock(S.fl); drawVines(S.vg); drawCones(); } },
+    vineStep(S.vg); },
+  draw(){ drawNoise(S.rings); drawVines(S.vg); if (!S.gd.gone) drawGuard(S.gd); drawFlock(S.fl); } },
 
 /* ===================== VII. Self ===================== */
 
@@ -1472,27 +1487,84 @@ const LV = [
     if (!S.route && pc > 8.5*T) { S.route = P.y + PH <= 354 ? 'U' : 'L'; M.last = S.route; save(); }
     if (S.route === S.trap && !S.fired && pc > 12*T && P.on) { S.fired = true; spikeGrow(P.x + PW + 4 + P.vx*3, S.route === 'U' ? 352 : GY); } } },
 
-/* 66. what you see has already happened, and your body arrives after you meant it to */
-{ id:'late', was:[48, 59], start:2,
-  build(){ Gd(0,29); S.door = Door(27,14,{inert:true}); S.t = 0; S.hist = []; S.lag = 30;
-    S.bl = [[8, 0], [15, 2.1], [22, 4.2]].map(([c, ph]) => ({px:c*T + 16, py:190, len:230, ph, per:150})); },
-  pos(b, t){ const a = Math.sin(t*2*Math.PI/b.per + b.ph)*0.85; return {x:b.px + Math.sin(a)*b.len, y:b.py + Math.cos(a)*b.len}; },
-  body(){ const h = S.hist; return h.length > S.lag ? h[h.length - 1 - S.lag] : (h[0] || [P.x, P.y, true]); },
-  update(){ S.t++; S.hist.push([P.x, P.y, P.on]); if (S.hist.length > 400) S.hist.shift();
-    const b = this.body(), bx = b[0] + PW/2, by = b[1] + 14;
-    for (const bl of S.bl) { const p = this.pos(bl, S.t); if (Math.hypot(bx - p.x, by - p.y) < 25) { P.x = b[0]; P.y = b[1]; return die('blade'); } }
-    if (b[2] && ov({x:b[0] + 6, y:b[1] + 6, w:PW - 12, h:PH - 12}, S.door)) levelClear(); },
-  drawPlayer(){ const b = this.body(); ctx.strokeStyle = 'rgba(30,43,71,.55)'; ctx.lineWidth = 2; ctx.setLineDash([4,3]); ctx.strokeRect(P.x, P.y, PW, PH); ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(30,43,71,.4)'; ctx.fillRect(P.x + PW/2 + P.face*4 - 6, P.y + 8, 3, 6); ctx.fillRect(P.x + PW/2 + P.face*4 + 2, P.y + 8, 3, 6);
-    drawPlayerAt(b[0], b[1], PW, PH, P.face, C.white, C.ink, false); },
-  draw(){ const D = 26;
-    for (const b of S.bl) { const now = this.pos(b, S.t), k = clamp((now.y - 330)/90, 0, 1);
-      ctx.fillStyle = `rgba(30,43,71,${0.12 + 0.5*k})`; ctx.beginPath(); ctx.ellipse(now.x, GY - 1, 8 + 14*k, 2.5 + 2.5*k, 0, 0, 7); ctx.fill();
-      if (k > 0.85) { ctx.strokeStyle = 'rgba(207,62,50,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(now.x - 20, GY + 4); ctx.lineTo(now.x + 20, GY + 4); ctx.stroke(); } }
-    for (const b of S.bl) { const p = this.pos(b, S.t - D);
-      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(b.px, b.py); ctx.lineTo(p.x, p.y); ctx.stroke();
-      ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(b.px, b.py, 5, 0, 7); ctx.fill();
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(S.t*0.35); ctx.fillStyle = C.ink2; ctx.beginPath(); for (let i = 0; i < 16; i++) { const a = i/16*Math.PI*2, r = i % 2 ? 14 : 22; ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r); } ctx.closePath(); ctx.fill(); ctx.fillStyle = C.paper; ctx.beginPath(); ctx.arc(0, 0, 4, 0, 7); ctx.fill(); ctx.restore(); } } },
+/* 66. the one who hears her will go to her: bind that one while you are still this one */
+{ id:'mast', start:1.5,
+  get noJump(){ return !!(S && (S.tied || S.thrall > 0)); },
+  build(){ Gd(0,3); Gd(26,29);
+    // the ship: it sails once you are aboard, and the rope at its mast holds whoever jumps into it
+    S.deck = E({t:'deck', x:4*T, y:GY, w:6*T, h:12, solid:true}); S.aboard = 0; S.go = false; S.docked = false; S.tied = false; S.untie = 0;
+    // the siren, her three notes, and a gull
+    S.sx = 15*T; S.notes = []; S.nt = 24; S.nk = 0; S.heard = [false, false, false]; S.thrall = 0; S.pull = 0;
+    S.gull = {x:W + 30, y:GY - 20, st:'fly', t:0, d:0};
+    // the door is locked with her tune: it opens to whoever has heard all three notes
+    Door(27.5,14,{slots:3, fill:() => S.heard.filter(Boolean).length, onEnter(d){ if (S.heard.every(Boolean)) levelClear(); else { d.bite = true; die('door'); } }}); },
+  mx(){ return S.deck.x + 96; },
+  input(ax){ return (S.tied || S.thrall > 0) ? {ax:S.tied ? 0 : S.pull, acc:0.9, max:2.2} : {ax, acc:P.on ? 0.9 : 0.6, max:4.4}; },
+  update(){ const d = S.deck, pc = pcx(), on = P.on && P.stand === d;
+    if (!S.go) { S.aboard = (on || S.tied) ? S.aboard + 1 : 0; if (S.aboard > 45) S.go = true; }
+    let dx = 0; if (S.go && !S.docked) { dx = Math.min(1.4, 20*T - d.x); d.x += dx; if (d.x >= 20*T) { S.docked = true; if (S.tied) { S.tied = false; S.untie = 40; } } }
+    if (on || S.tied) P.x += dx;
+    if (S.untie) S.untie--;
+    // the rope: rise straight into its loop before she sails and it binds you to the mast until the ship is in; once she sails, the rope is stowed
+    const mx = this.mx();
+    if (!S.tied && !S.go && !P.on && Math.abs(P.vx) < 1.2 && ov(pbox(), {x:mx - 8, y:GY - 110, w:16, h:16})) { S.tied = true; P.vy = 0; sparkle(mx, GY - 96); shake = 3; }
+    if (S.tied) { P.x = mx - PW/2; P.vx = 0; if (P.y > GY - PH) P.y = GY - PH; }
+    // her song: a note each way, each of the three in turn; whoever a note touches has heard it, and goes to her
+    if (--S.nt <= 0) { S.nt = 40; const k = S.nk++ % 3; for (const v of [-1.8, 1.8]) S.notes.push({x:S.sx, y:GY - 16, vx:v, k, d:0}); }
+    for (const n of S.notes) { n.x += n.vx; n.d += 1.8; n.y = GY - 16 + Math.sin(n.d*0.07)*4;
+      if (ov(pbox(), {x:n.x - 6, y:n.y - 8, w:12, h:14})) { n.gone = true; if (!S.heard[n.k]) { S.heard[n.k] = true; sparkle(pcx(), P.y - 10); } S.thrall = 60; } }
+    S.notes = S.notes.filter(n => !n.gone && n.d < 150);
+    if (S.thrall > 0) { S.thrall--; S.pull = Math.abs(S.sx - pc) < 4 ? 0 : Math.sign(S.sx - pc); if (!S.tied) { P.vx = S.pull*2.2; if (S.pull) P.face = S.pull; } }
+    if (P.y > GY + 24) return die('sea');
+    // the gull shows what her song does to whoever hears it
+    const g = S.gull; g.t++;
+    if (g.st === 'fly') { g.x -= 2; g.y = GY - 22 + Math.sin(g.t*0.15)*3; if (S.notes.some(n => Math.abs(n.x - g.x) < 10)) { g.st = 'drawn'; g.d = 0; } if (g.x < -40) { g.x = W + 30; g.t = 0; } }
+    else if (g.st === 'drawn') { const ax = S.sx - g.x, ay = GY - 36 - g.y, l = Math.hypot(ax, ay); if (l < 5) { g.st = 'gone'; g.t = 0; for (let i = 0; i < 10; i++) parts.push({x:g.x, y:g.y, vx:(Math.random() - .5)*3, vy:-Math.random()*2, life:40, r:2, col:C.white}); } else { g.x += ax/l*1.8; g.y += ay/l*1.8; } }
+    else if (g.t > 240) { g.st = 'fly'; g.x = W + 30; g.t = 0; } },
+  note(x, y, k, filled, a){ const col = [C.red, C.gold, '#4C78B5'][k]; ctx.globalAlpha = a == null ? 1 : a; ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2;
+    const head = (hx, hy) => { ctx.beginPath(); ctx.ellipse(hx, hy, 4.5, 3.2, -0.4, 0, 7); if (filled) ctx.fill(); else ctx.stroke(); ctx.beginPath(); ctx.moveTo(hx + 4, hy - 1); ctx.lineTo(hx + 4, hy - 14); ctx.stroke(); };
+    head(x, y + 4);
+    if (k === 0) { ctx.beginPath(); ctx.moveTo(x + 4, y - 10); ctx.quadraticCurveTo(x + 11, y - 6, x + 9, y); ctx.stroke(); }
+    if (k === 1) { head(x + 10, y + 2); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 4, y - 10); ctx.lineTo(x + 14, y - 12); ctx.stroke(); }
+    if (k === 2) { ctx.beginPath(); ctx.moveTo(x + 4, y - 10); ctx.lineTo(x + 10, y - 7); ctx.moveTo(x + 4, y - 5); ctx.lineTo(x + 10, y - 2); ctx.stroke(); }
+    ctx.globalAlpha = 1; },
+  drawBack(){ // the sea
+    ctx.fillStyle = 'rgba(76,120,181,.28)'; ctx.fillRect(4*T, GY + 6, 22*T, H - GY); ctx.strokeStyle = 'rgba(76,120,181,.6)'; ctx.lineWidth = 2; ctx.beginPath();
+    for (let x = 4*T; x <= 26*T; x += 8) ctx.lineTo(x, GY + 8 + Math.sin(x*0.08 + frame*0.08)*2); ctx.stroke();
+    // her rock, and her
+    const sx = S.sx; ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.moveTo(sx - 34, GY + 10); ctx.lineTo(sx - 20, GY - 12); ctx.lineTo(sx + 4, GY - 20); ctx.lineTo(sx + 24, GY - 8); ctx.lineTo(sx + 36, GY + 10); ctx.closePath(); ctx.fill();
+    const lx = Math.sign(pcx() - sx)*2, sing = S.nt > 26;
+    ctx.strokeStyle = C.gold; ctx.lineWidth = 3; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(sx - 6 + i*3, GY - 58); ctx.quadraticCurveTo(sx - 16 + i*3 + Math.sin(frame*0.05 + i)*4, GY - 36, sx - 10 + i*4, GY - 22); ctx.stroke(); }
+    ctx.fillStyle = C.white; ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.fillRect(sx - 9, GY - 44, 18, 26); ctx.strokeRect(sx - 9, GY - 44, 18, 26);
+    ctx.beginPath(); ctx.arc(sx, GY - 54, 10, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.fillRect(sx - 5 + lx, GY - 57, 2.5, 4); ctx.fillRect(sx + 2 + lx, GY - 57, 2.5, 4);
+    if (sing) { ctx.beginPath(); ctx.ellipse(sx + lx, GY - 49, 2.5, 3, 0, 0, 7); ctx.fill(); } else { ctx.fillRect(sx - 2 + lx, GY - 49, 5, 1.5); }
+    ctx.fillStyle = C.gold; ctx.beginPath(); ctx.moveTo(sx - 10, GY - 60); ctx.quadraticCurveTo(sx, GY - 72, sx + 10, GY - 60); ctx.quadraticCurveTo(sx, GY - 66, sx - 10, GY - 60); ctx.fill(); },
+  draw(){ const d = S.deck, mx = this.mx();
+    // the deck and the hull
+    ctx.fillStyle = C.door; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.fillRect(d.x, d.y, d.w, d.h); ctx.strokeRect(d.x + 1, d.y + 1, d.w - 2, d.h - 2); for (let x = d.x + 16; x < d.x + d.w; x += 16) { ctx.beginPath(); ctx.moveTo(x, d.y); ctx.lineTo(x, d.y + d.h); ctx.stroke(); }
+    ctx.fillStyle = '#9C6A45'; ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(d.x - 8, GY + 12); ctx.lineTo(d.x + d.w + 8, GY + 12); ctx.lineTo(d.x + d.w - 14, GY + 34); ctx.lineTo(d.x + 14, GY + 34); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // the mast, its furled sail, the rope wound round it and the loop at its end
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(mx, GY); ctx.lineTo(mx, GY - 150); ctx.moveTo(mx - 40, GY - 140); ctx.lineTo(mx + 40, GY - 140); ctx.stroke();
+    ctx.fillStyle = C.white; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(mx, GY - 134, 38, 6, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#B8894F'; ctx.lineWidth = 3; for (let y = GY - 120; y < GY - 74; y += 7) { ctx.beginPath(); ctx.moveTo(mx - 4, y); ctx.lineTo(mx + 4, y + 4); ctx.stroke(); }
+    if (S.tied || S.untie) {}
+    else if (!S.go) { const sw = Math.sin(frame*0.05)*2; ctx.strokeStyle = '#B8894F'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(mx + 2, GY - 120); ctx.lineTo(mx + sw, GY - 110); ctx.stroke(); ctx.beginPath(); ctx.ellipse(mx + sw, GY - 102, 7, 8, 0, 0, 7); ctx.stroke(); }
+    else { ctx.strokeStyle = '#B8894F'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(mx + 14, GY - 128, 9, 4, 0, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.ellipse(mx + 14, GY - 124, 9, 4, 0, 0, 7); ctx.stroke(); }
+    // her notes
+    for (const n of S.notes) this.note(n.x - 5, n.y, n.k, true, 1 - Math.max(0, n.d - 110)/40);
+    // the lock: her tune, note by note
+    const dr = ents.find(e => e.t === 'door'); for (let k = 0; k < 3; k++) this.note(dr.x + 2 + k*12, dr.y - 22, k, S.heard[k], S.heard[k] ? 1 : 0.4);
+    // the gull
+    const g = S.gull; if (g.st !== 'gone') { const fl = Math.sin(g.t*0.4)*5; ctx.strokeStyle = C.ink; ctx.fillStyle = C.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(g.x, g.y, 9, 5, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(g.x - 2, g.y - 2); ctx.lineTo(g.x + 6, g.y - 10 - fl); ctx.moveTo(g.x - 2, g.y - 2); ctx.lineTo(g.x - 10, g.y - 10 - fl); ctx.stroke();
+      ctx.fillStyle = g.st === 'drawn' ? C.red : C.ink; ctx.beginPath(); ctx.arc(g.x - 5, g.y - 1, g.st === 'drawn' ? 2.2 : 1.4, 0, 7); ctx.fill(); ctx.fillStyle = C.gold; ctx.beginPath(); ctx.moveTo(g.x - 9, g.y); ctx.lineTo(g.x - 14, g.y + 1); ctx.lineTo(g.x - 9, g.y + 2); ctx.fill(); } },
+  drawPlayer(dx, dy, dw, dh){ const th = S.thrall > 0;
+    drawPlayerAt(dx + (th && S.tied ? S.pull*2 : 0), dy, dw, dh, P.face, C.white, C.ink, false);
+    if (th) { const ex = dx + dw/2 + P.face*4; ctx.fillStyle = C.red; for (const ox of [-5, 3]) { ctx.beginPath(); ctx.arc(ex + ox, dy + 10, 1.8, 0, 7); ctx.arc(ex + ox + 2.5, dy + 10, 1.8, 0, 7); ctx.moveTo(ex + ox - 1.8, dy + 10.5); ctx.lineTo(ex + ox + 1.2, dy + 14); ctx.lineTo(ex + ox + 4.3, dy + 10.5); ctx.fill(); } }
+    if (S.tied || S.untie) { ctx.globalAlpha = S.untie ? S.untie/40 : 1; ctx.strokeStyle = '#B8894F'; ctx.lineWidth = 3;
+      for (const yy of [dy + 7, dy + 15, dy + 23]) { ctx.beginPath(); ctx.moveTo(dx - 4, yy); ctx.lineTo(dx + dw + 4, yy + 2); ctx.stroke(); } ctx.globalAlpha = 1; }
+    for (let k = 0; k < 3; k++) if (S.heard[k]) this.note(dx + k*9 - 3, dy - 12, k, true, 0.8); } },
 
 /* 67. the harder you want it, the better it knows where you will be */
 { id:'wanting', was:[55], start:2, noJump:true, noCut:true, vmax:14,
@@ -1547,35 +1619,32 @@ const LV = [
     updCones(); },
   draw(){ drawCones(); } },
 
-/* 70. every life you had is still here: as a body, as a ghost, as a habit, as a place the sky remembers */
-{ id:'self', start:1.5, w:48,
-  build(){ Gd(0,3); Sp(4,9,14,'up'); R('g',4,9,15,16); Gd(10,16);
-    // the gate, the plate that opens it, and the ghosts of every earlier life
-    S.plate = {x:12*T + 2, y:GY - 6, w:T - 4, h:6}; S.gate = R('b',15,15,9,13,{cond:() => !S.open}); S.open = false; S.hold = 0; S.pst = 0;
-    // three gaps at one rhythm, and a low spiked roof where the fourth would take you
-    Gd(19,22); Gd(25,28); Gd(31,38); Sp(35,37,11,'down');
-    // the door, under a lid of bricks with thorns
-    for (const c of [39,40,41]) R('bb',c,c,14,14,{hp:1}); S.lidSp = [39,40,41].map(c => Sp(c,c,13,'up')); R('g',39,41,16,16,{y:GY + 64}); Gd(42,47); Door(40,16);
-    for (const k of (M.crates || [])) E({t:'crate', x:k.c*T, y:432 - 32*k.k, w:T, h:T, solid:true});
-    S.ghosts = (M.lives || []).map(rec => ({rec, i:0, p:null})); S.rec = []; S.js = []; S.hab = null; S.holdLen = 30;
-    S.marks = marksOf().slice(); S.k = 0; S.rt = 90; },
-  onJump(){ habitJump(); },
-  update(){ if (S.rec.length < 5400) S.rec.push([Math.round(P.x), Math.round(P.y)]);
-    let held = P.on && ov(pbox(), S.plate);
-    for (const g of S.ghosts) { g.p = g.i < g.rec.length ? g.rec[g.i++] : null; if (g.p && ov({x:g.p[0], y:g.p[1], w:PW, h:PH}, S.plate)) held = true; }
-    if (held) S.hold = 10; else if (S.hold > 0) S.hold--;
-    const inGate = ov(pbox(), {x:15*T, y:9*T, w:T, h:5*T}); S.open = S.hold > 0 || (S.open && inGate);
-    // stand on the plate too long and it closes on you
-    S.pst = P.on && ov(pbox(), S.plate) ? S.pst + 1 : 0; if (S.pst > 200) return die('plate');
-    for (const s of S.lidSp) if (s.alive && !ents.some(e => e.t === 'bb' && e.alive && Math.abs(e.x - s.x) < 2)) s.alive = false;
-    if (S.marks.length && --S.rt <= 0) { S.rt = 75; const m = S.marks[S.k++ % S.marks.length]; drop(m[0], 40); }
-    habitStep(); updCones(); },
-  onDeath(cause){ (M.lives || (M.lives = [])).push(S.rec); if (M.lives.length > 6) M.lives.shift();
-    const pc = pcx(); if (cause === 'spike' && pc > 4*T && pc < 10*T) { M.crates = M.crates || []; const c = Math.floor(pc/T), k = M.crates.filter(z => z.c === c).length; if (k < 3) M.crates.push({c, k}); } },
-  draw(){ const p = S.plate, pr = S.hold > 0; ctx.fillStyle = pr ? C.gold : C.red; ctx.fillRect(p.x, p.y + (pr ? 3 : 0), p.w, p.h - (pr ? 3 : 0)); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(p.x, p.y + (pr ? 3 : 0), p.w, p.h - (pr ? 3 : 0));
-    if (S.pst > 120) { ctx.fillStyle = `rgba(207,62,50,${(S.pst - 120)/80})`; ctx.fillRect(p.x - 2, p.y - 4, p.w + 4, 4); }
-    ctx.globalAlpha = 0.4; for (const g of S.ghosts) if (g.p) drawPlayerAt(g.p[0], g.p[1], PW, PH, 1, C.white, C.soft, false); ctx.globalAlpha = 1;
-    drawCones(); drawHabit(); } },
+/* 70. one life is too short to reach it; every life you had is still here, and holds you up wherever it stood still */
+{ id:'self', start:2,
+  build(){ Gd(0,20); E({t:'g', x:21*T, y:GY - 144, w:9*T, h:H - GY + 144, solid:true}); Door(25.5, (GY - 144)/T);
+    S.t = 0; S.life = 720; S.rec = [];
+    // every earlier life, replayed from its first moment; where it stood still, its head is a step
+    S.ghosts = (M.lives || []).map(rec => { const gh = {rec, p:null}; gh.top = E({t:'gtop', x:-99, y:-99, w:PW, h:4, solid:true, oneway:true, cond:() => !!(gh.p && gh.p[3])}); return gh; }); },
+  update(){ S.t++;
+    S.rec.push([Math.round(P.x), Math.round(P.y), P.face, P.on && Math.abs(P.vx) < 0.3 ? 1 : 0]);
+    for (const gh of S.ghosts) { gh.p = S.t - 1 < gh.rec.length ? gh.rec[S.t - 1] : null;
+      if (gh.p) { const dx = gh.p[0] - gh.top.x; if (P.on && P.stand === gh.top && gh.p[3]) P.x += dx; gh.top.x = gh.p[0]; gh.top.y = gh.p[1]; } else { gh.top.x = -99; gh.top.y = -99; } }
+    // a life here is as long as the sand
+    if (S.t >= S.life) return die('time'); },
+  onDeath(){ (M.lives || (M.lives = [])).push(S.rec); if (M.lives.length > 6) M.lives.shift(); },
+  drawBack(){ // the hourglass
+    const x = 12*T, y = 110, k = Math.min(1, S.t/S.life); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.fillStyle = C.white;
+    ctx.beginPath(); ctx.moveTo(x - 22, y - 34); ctx.lineTo(x + 22, y - 34); ctx.lineTo(x + 3, y); ctx.lineTo(x + 22, y + 34); ctx.lineTo(x - 22, y + 34); ctx.lineTo(x - 3, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.gold; const a = 30*(1 - k), b = 30*k;
+    if (a > 0.5) { ctx.beginPath(); ctx.moveTo(x - a*0.62, y - a); ctx.lineTo(x + a*0.62, y - a); ctx.lineTo(x + 1, y - 1); ctx.lineTo(x - 1, y - 1); ctx.closePath(); ctx.fill(); }
+    if (b > 0.5) { ctx.beginPath(); ctx.moveTo(x - 19, y + 32); ctx.lineTo(x + 19, y + 32); ctx.lineTo(x + 19 - b*0.62, y + 32 - b); ctx.lineTo(x - 19 + b*0.62, y + 32 - b); ctx.closePath(); ctx.fill(); }
+    if (k < 1 && state === 'play') { ctx.fillRect(x - 1, y, 2, 32 - b); }
+    ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x - 26, y - 36); ctx.lineTo(x + 26, y - 36); ctx.moveTo(x - 26, y + 36); ctx.lineTo(x + 26, y + 36); ctx.stroke(); },
+  draw(){ // your earlier lives: faint while they move, firm where they stand still
+    for (const gh of S.ghosts) if (gh.p) { const firm = gh.p[3]; ctx.globalAlpha = firm ? 0.6 : 0.25; drawPlayerAt(gh.p[0], gh.p[1], PW, PH, gh.p[2], C.white, firm ? C.ink : C.soft, false); ctx.globalAlpha = 1;
+      if (firm) { ctx.strokeStyle = 'rgba(30,43,71,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(gh.p[0] - 2, gh.p[1] + 1); ctx.lineTo(gh.p[0] + PW + 2, gh.p[1] + 1); ctx.stroke(); } } },
+  drawPlayer(dx, dy, dw, dh){ const k = Math.max(0, (S.t - S.life + 150)/150); drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false);
+    if (k > 0) { ctx.fillStyle = `rgba(226,166,42,${0.6*k})`; ctx.fillRect(dx, dy + dh*(1 - k), dw, dh*k); } } },
 
 /* ===================== VIII. Others ===================== */
 

@@ -98,7 +98,7 @@ These come back through the whole game, each time doing something new.
 | **The sky** | Cones fall where you are going (2). | Break bricks (12), plant stakes (13), aim at your reflection (18). Fall on your old ✕ (69) and plant seeds (57). |
 | **The Eye** | Bites the door you look at (5). | Blinks (6), aims the sky (20), sweeps as a searchlight (73). Takes you for your double (94), fills Newcomb's boxes (98), and at last sees itself (99). |
 | **The ✕** | Your deaths stay where they happened. | Get forged (22), light the dark (41), become your bodies (61) and your coins (33), and draw the sky (69). |
-| **The ghost** | Your last attempt walks again (15). | Holds a plate for you (62), chases you (64), carries a key further (77). In 100 it is you who walks toward the one you were. |
+| **The ghost** | Your last attempt walks again (15). | Holds a plate for you (62), chases you (64), and in 70 every earlier life stands under you as a step. Carries a key further (77). In 100 it is you who walks toward the one you were. |
 | **The entrance** | Every level starts in front of the open door you came in by. | Usually scenery. In 7 it is the way out; in 100 the one you were goes home to it. |
 
 ## The dialectic
@@ -203,7 +203,7 @@ Light, water, fire and air each have a rule, and most levels pair two that pull 
 
 ## VI. Living (51–60)
 
-The world is alive. It grows where you stand, sleeps until you make a sound, and follows you. From here, levels ask for an order: first make the thing grow, then climb it; first wake the right creature, then hide from it.
+The world is alive. It grows where you stand, sleeps until you make a sound, and follows you. From here, levels ask for an order: first make the thing grow, then climb it; first wake the right creature, then hide from it. In the last level the creatures answer each other as they answer you.
 
 | # | Level | What is in it | The idea you need | Without it |
 | --- | --- | --- | --- | --- |
@@ -215,8 +215,8 @@ The world is alive. It grows where you stand, sleeps until you make a sound, and
 | 56 | **Snake** | A snake follows your exact path a little behind you, and catches you if you stop. The key is behind you. | Come back by a different height so your path never crosses itself, and keep moving. | Turning back on the same floor; stopping. |
 | 57 | **Seed** | Crossing the line calls a cone where you will be, and a cone plants a seed where it lands. Stand still on a seed and a vine grows under you. The door is on a high ledge. | Run across the line so it aims at the ledge's foot, turn back, then stand on the seed. | Running on (it lands on you); jumping at the ledge. |
 | 58 | **Flock** | Birds perched in a row over a pit are the bridge. Running near them, or landing hard on them, scares them off. | Walk softly, a tap at a time, across their backs. | Running across; jumping onto them. |
-| 59 | **Mimic** | Boxes you must climb; the nearest one breathes, and bites when you stand on it. Of two doors, the first breathes too. | Watch for the breathing; climb the other boxes and take the still door. | Climbing the nearest box; the first door. |
-| 60 | **Life** | A sleeper with a rug, a flock over a pit, a line that calls the sky, and a ledge you can only reach on a vine. | Quiet past the sleeper, soft over the flock, then run the line, turn back, and stand on the seed. | Any one habit everywhere. |
+| 59 | **Mimic** | Stepping stones over thorns, some wood and some stone. One of them is alive. Each time you land, it goes to wait on the nearest stone ahead that looks like the one you stand on, and every stone of that look ahead stirs. | It waits on the next of whatever you last trusted, so never trust the same look twice in a row: from wood step to stone, from stone to wood. | Hopping on to the nearest stone that looks like the last one; avoiding only the stone that bit you last time. |
+| 60 | **Life** | The door is on a ledge above the only soil, and a guard sleeps on the soil. Between you and him, birds perch over a pit. Birds fly from a threat; a whole flock taking off is loud; the guard wakes to a sound and runs at you. | Frighten the birds from your bank: their noise wakes him, he runs at you across a pit with no birds in it, and falls. When they settle, walk softly across and stand still on the soil until the vine lifts you. | Walking softly across and dealing with the guard from his own side. |
 
 ## VII. Self (61–70)
 
@@ -226,6 +226,7 @@ Your own past becomes the material. That past includes:
 - your last attempt;
 - your rhythm;
 - the routes you chose before;
+- what you resolved before you were tempted;
 - the places you died.
 
 Several levels need more than one life on purpose: you spend a life to set up the next.
@@ -237,11 +238,11 @@ Several levels need more than one life on purpose: you spend a life to set up th
 | 63 | **Habit** | Jump three times at one rhythm and your body starts jumping on its own at that rhythm. The fourth lands on spikes. | Break your rhythm before the fourth. | Steady, careful jumping. |
 | 64 | **Habit and shadow** | A long run. The habit takes over, and after you take the gem your own trail chases you. | Break the rhythm, and come back by a path your trail can't follow. | Either trick alone. |
 | 65 | **Changed mind** | Two routes, high and low. It puts the spike on the route it bets you will switch to. | Take the same route as last time. | Switching after a death. |
-| 66 | **Late** | The blades you see are where they were a moment ago, and your body goes where you meant to a moment later. | Act on the shadows on the floor (the present), and send your intentions early. | Reacting to what you see. |
+| 66 | **Mast** | A ship sails past a siren once you are aboard. Every note of hers that touches you draws you to her, off the deck and into the sea. The door is locked with her three-note tune. Until the ship sails, a rope's loop hangs from the mast. | Stand under the loop and rise straight into it before you sail: bound, you hear all three notes and cannot go to her. | Riding loose; jumping her notes (the door wants the tune); thinking it over aboard until the rope is stowed. |
 | 67 | **Wanting** | No jump button: you charge a jump instead. The slab above moves to where your charged jump will peak. | Charge past the height you want, and release on the way back down, after the slab has committed. | Releasing at the height you want. |
 | 68 | **Regret** | Dying rewinds two seconds instead of restarting. Past each spike the ground gives way where you first land; after a rewind, it waits wherever you land instead. | Land exactly where you died. | Landing somewhere new after the rewind. |
 | 69 | **Remembered** | The door is under a lid of thorny bricks. The sky falls on your old ✕ marks, and a falling cone cracks a brick. | Die once on the lid; next life, wait for the sky to open it for you. | Avoiding death on the lid. |
-| 70 | **Self** | The chapter together: a pit too wide to jump, a gate opened by a plate that kills whoever stands on it too long, three gaps at one rhythm with spikes over the fourth jump, and the door under a thorny lid. | Spend your lives in order: a body in the pit, a ghost on the plate, a death on the lid. Then use them all, and break the rhythm on the way. | Treating each life as a fresh start. |
+| 70 | **Self** | The door is on a ledge too high for any jump, and a life here lasts as long as the hourglass. Every earlier life replays beside you, and holds you up wherever it stood still. | Spend a life standing at the wall, and the next standing on that one; the third climbs them both. | Treating each life as a fresh start; riding a past life's jump (it only holds where it stood still). |
 
 ## VIII. Others (71–80)
 

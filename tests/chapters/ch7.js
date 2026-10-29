@@ -37,18 +37,17 @@
   g.prof.mem = null;
   check('65 alternate corridors (L, U, L)', run(64, life => life % 2 === 0 ? R : upper(), {lives:3, freshMem:true}), 'dead');
   check('65 go back where you died (L, L)', run(64, life => R, {lives:2, freshMem:true}), 'clear');
-  // ---- 66 late
-  const p66 = (ahead) => () => { let go = null; return P => { const t = g.S.t + ahead, x = cx();
-    if (go && x > go.px + 130) go = null;
-    if (go) return R();
-    const b = g.S.bl.find(b => b.px + 130 > x); if (!b) return R();
-    if (x < b.px - 4*T) return R();
-    const p = g.lv.pos(b, t), q = g.lv.pos(b, t + 1); if (p.x < b.px && q.x >= b.px) { go = b; return R(); }
-    return N(); }; };
-  clean('late'); check('66 run', run(65, () => R), 'dead');
-  clean('late'); check('66 go by the blades you see', run(65, p66(-26), {max:2400}), 'dead');
-  clean('late'); check('66 go by the shadows', run(65, p66(0), {max:2400}), 'dead');
-  clean('late'); check('66 go by the shadows, half a second early', run(65, p66(30), {max:2400}), 'clear');
+  // ---- 66 mast
+  const dock66 = [S.U(() => g.S.docked), S.W(45), S.R(28.5), S.W(60)];
+  const dodge66 = () => P => { if (g.S.docked) return R(); const n = (g.S.notes || []).find(n => Math.abs(n.x - cx()) < 36 && Math.sign(cx() - n.x) === Math.sign(n.vx) && Math.abs(n.vx) > 0);
+    if (n && P.on && Math.abs(cx() - g.lv.mx()) > 34) return {jump:30, dir:0}; const bow = g.S.deck.x + 178; if (!P.on) return N(); return cx() < bow - 4 ? R() : cx() > bow + 4 ? Lk() : N(); };
+  check('66 ride it loose, in the middle', run(65, () => script([S.R(6.0), S.W(1200)]), {freshMem:true, max:1200}), 'dead');
+  check('66 ride it loose, at the bow', run(65, () => script([S.R(9.3), S.W(1200)]), {freshMem:true, max:1200}), 'dead');
+  check('66 ride it loose, at the stern', run(65, () => script([S.R(4.6), S.W(1200)]), {freshMem:true, max:1200}), 'dead');
+  check('66 (the lock) arrive having heard only two of her notes', run(65, () => script([S.R(6.85), S.W(10), S.J(30, 0), S.U(() => g.S.docked), S.U(() => { g.S.heard[1] = false; return true; }), S.W(45), S.R(28.5), S.W(60)]), {freshMem:true, max:1500}), /dead@2[78]/);
+  check('66 bind yourself to the mast, then go', run(65, () => script([S.R(6.85), S.W(10), S.J(30, 0), ...dock66]), {freshMem:true, max:1500}), 'clear');
+  check('66 think it over aboard first: the rope is stowed', run(65, () => script([S.R(6.85), S.W(60), S.J(30, 0), S.W(1200)]), {freshMem:true, max:1500}), 'dead');
+  check('66 bound, you cannot get off before the ship is in', run(65, () => script([S.R(6.85), S.W(10), S.J(30, 0), S.W(80), S.R(28.5)]), {freshMem:true, max:1500}), /clear|dead/);
   // ---- 67 wanting
   const charge67 = (cond) => ({until: (P, k, st) => { if (!P.on) st.air = true; return st.air && P.on; }, rule: (P, k, st) => { if (st.air || st.rel) return R(); if (k > 3 && cond()) { st.rel = true; return R(); } return {k:{right:true, jump:true}}; }});
   const p67 = (x, c) => () => script([S.R(8.3), S.W(10), charge67(() => g.S.ch > 0.97), S.R(x), S.W(10), charge67(() => g.S.ch > c), S.R(26.5)]);
@@ -76,21 +75,15 @@
   clean('remembered'); check('69 jump the thorns, keep off the lid', run(68, () => script([S.R(7.9), S.J(30, 1), S.R(14.6), S.W(600)]), {max:900}), 'timeout');
   clean('remembered'); check('69 die on the lid; then wait for the sky', run(68, life => life === 0 ? script([S.R(7.9), S.J(30, 1), S.R(18)]) : script([S.R(7.9), S.J(30, 1), S.R(14.6), S.U(lidBroken), S.U(() => !(g.S.cones || []).some(c => c.st === 'fall')), S.R(18.8), S.U(P => P.y > 470), S.W(30)]), {lives:2, max:1500}), 'clear');
   // ---- 70 self
-  const crateX = () => { const c = g.ents.filter(e => e.t === 'crate'); return c.length ? (Math.max(...c.map(e => e.x)) + 16)/T : 9.5; };
-  const cross70 = [S.R(3.5), {until: (P, k, st) => { if (!P.on) st.air = true; return st.air && P.on; }, rule: (P, k, st) => st.air ? R() : {jumpTo: crateX()*T, landY:432, tol:12, k:{right:true}}}, S.R(10.6)];
-  const gate70 = [S.R(13.6), S.U(() => g.S.open), S.R(16.0)];
-  const gaps70 = (w) => [S.R(16.8), S.W(w[0]), S.J(30, 1), S.U(P => P.on, R().k), S.R(22.8), S.W(w[1]), S.J(30, 1), S.U(P => P.on, R().k), S.R(28.8), S.W(w[2]), S.J(30, 1), S.U(P => P.on, R().k)];
-  const broken = gaps70([20, 6, 34]);
-  const hole70 = [S.R(37.8), S.U(() => g.ents.some(e => e.t === 'bb' && !e.alive)), S.F(P => { const h = g.ents.find(e => e.t === 'bb' && !e.alive); return {k:{right: cx() < h.x + 14, left: cx() > h.x + 18}}; }, P => P.y > 470), S.R(40.5), S.W(60)];
-  const pit70 = () => script([S.R(3.5), S.J(30, 1), S.W(200)]), plate70 = () => script([...cross70, S.R(12.4), S.W(400)]);
-  const lives70 = (...ls) => life => ls[Math.min(life, ls.length - 1)]();
-  clean('self'); check('70 jump the pit', run(69, pit70, {freshMem:true}), 'dead');
-  clean('self'); check('70 a body; then wait at the gate', run(69, lives70(pit70, () => script([...cross70, S.R(14.4), S.W(600)])), {lives:2, freshMem:true, max:900}), 'timeout');
-  clean('self'); check('70 a body; then dash off the plate at the gate', run(69, lives70(pit70, () => script([...cross70, S.R(11.0), S.W(30), S.R(17), S.W(300)])), {lives:2, freshMem:true, max:900}), 'timeout');
-  clean('self'); check('70 a body; then from the plate at the gate', run(69, lives70(pit70, () => script([...cross70, S.R(12.5), S.W(30), S.R(17), S.W(300)])), {lives:2, freshMem:true, max:900}), 'timeout');
-  clean('self'); check('70 a body, a ghost; through, and run the gaps in rhythm', run(69, lives70(pit70, plate70, () => script([...cross70, ...gate70, S.R(16.8), S.J(30, 1), S.U(P => P.on, R().k), S.R(22.8), S.J(30, 1), S.U(P => P.on, R().k), S.R(28.8), S.J(30, 1), S.R(38.5), S.W(300)])), {lives:3, freshMem:true, max:1500}), /dead@3[4-8]/);
-  clean('self'); check('70 a body, a ghost; through, break the rhythm, wait at the lid', run(69, lives70(pit70, plate70, () => script([...cross70, ...gate70, ...broken, S.R(37.9), S.W(600)])), {lives:3, freshMem:true, max:1500}), 'timeout');
-  clean('self'); check('70 ... or jump the lid', run(69, lives70(pit70, plate70, () => script([...cross70, ...gate70, ...broken, S.R(38.6), S.J(30, 1), S.R(46), S.W(600)])), {lives:3, freshMem:true, max:1500}), 'timeout');
-  clean('self'); check('70 a body, a ghost, a mark on the lid; then all of them', run(69, lives70(pit70, plate70, () => script([...cross70, ...gate70, ...broken, S.R(39.5), S.W(100)]), () => script([...cross70, ...gate70, ...broken, ...hole70])), {lives:4, freshMem:true, max:2400}), 'clear');
+  const wall70 = S.R(20.2), firmAt = h => () => g.S.ghosts.some(q => q.p && q.p[3] && Math.abs(q.p[0] - g.P.x) < 8 && q.p[1] === GY - 28*h);
+  const base70 = () => script([wall70, S.W(900)]);
+  const on1 = () => script([wall70, S.U(firmAt(1)), S.J(30, 0), S.W(900)]);
+  const climb = () => script([wall70, S.U(firmAt(2)), S.J(30, 0), S.W(6), S.J(30, 1), S.R(25.6), S.W(60)]);
+  check('70 one life: jump at the wall until the sand runs out', run(69, () => script([wall70, ...Array(8).fill(0).map(() => S.J(30, 1)), S.W(900)]), {freshMem:true, max:900}), 'dead');
+  check('70 a life at the wall; then climb onto it and jump', run(69, life => life === 0 ? base70() : script([wall70, S.U(firmAt(1)), S.J(30, 0), S.W(6), S.J(30, 1), S.R(25.6), S.W(900)]), {lives:2, freshMem:true, max:900}), 'dead');
+  check('70 a life hopping at the wall; then ride its hop', run(69, life => life === 0 ? script([wall70, ...Array(14).fill(0).map(() => S.J(30, 0)), S.W(900)]) : script([wall70, S.J(30, 0), S.J(30, 1), S.R(25.6), S.W(900)]), {lives:2, freshMem:true, max:900}), 'dead');
+  check('70 a life at the wall, a life on it; then the third climbs them', run(69, life => [base70, on1, climb][Math.min(life, 2)](), {lives:3, freshMem:true, max:900}), /clear/);
+  check('70 ... with a wasted life in between', run(69, life => [base70, () => script([S.R(10), S.W(900)]), on1, climb][Math.min(life, 3)](), {lives:4, freshMem:true, max:900}), /clear/);
+
   return out;
 })()
