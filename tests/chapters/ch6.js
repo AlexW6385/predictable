@@ -42,9 +42,11 @@
   check('55 asleep, jump the gap in the dream', run(54, () => script([S.R(4.3), S.W(10), sleepW(), S.R(11.3), S.J(30, 1), S.R(27.5)]), {max:2400}), 'dead');
   check('55 asleep, hop the thorn, sleep again', run(54, () => script([S.R(4.3), S.W(10), sleepW(), S.F(P => ({k:{right: cx() < 17.3*T && Math.abs(g.P.vx) < 2.5}}), () => cx() > 17.25*T), S.JT(20.4, GY, {tol:12}), S.W(10), sleepW(), S.R(27.5)]), {max:2400}), 'clear');
   // ---- 56 snake
-  check('56 get the key, come back along the floor', run(55, () => script([S.L(1.5), S.R(28.4)]), {max:1500}), 'dead');
-  check('56 get the key, stop to think', run(55, () => script([S.L(1.5), S.W(150)]), {max:600}), 'dead');
-  check('56 get the key, come back along the top', run(55, () => script([S.L(1.5), S.JT(2.6, 384, {tol:14}), S.JT(6.0, 320, {tol:20}), S.R(28.4)]), {max:1500}), 'clear');
+  check('56 get the key, come back', run(55, () => script([S.R(28.4), S.L(1.5)]), {max:1500}), 'dead');
+  check('56 get the key, stop to think', run(55, () => script([S.R(28.4), S.W(150)]), {max:600}), 'dead');
+  check('56 pause on the way, then go', run(55, () => script([S.R(20), S.W(40), S.R(28.4), S.L(1.5)]), {max:1500}), 'dead');
+  check('56 hop on the spot on the way, walk on, then come back', run(55, () => script([S.R(18), S.W(4), S.J(30, 0), S.U(P => P.on), S.R(28.4), S.W(30), S.L(1.5)]), {max:1500}), 'clear');
+  check('56 step back and forth on the way, walk on, then come back', run(55, () => script([S.R(20), S.L(18.6), S.R(28.4), S.W(30), S.L(1.5)]), {max:1500}), 'clear');
   // ---- 57 seed
   const cones = () => (g.S.cones || []).filter(c => c.st === 'fall');
   const seedX = () => { const b = g.S.vg.beds.find(b => b.seed); return b ? (b.x + b.w/2)/T : null; };

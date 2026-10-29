@@ -1623,17 +1623,28 @@ const LV = [
   draw(){ if (S.still > 20 && !S.sleep) { ctx.globalAlpha = Math.min(1, (S.still - 20)/50); txt('z', pcx() + 10, P.y - 6, `12px ${FD}`, C.soft); ctx.globalAlpha = 1; }
     if (S.sleep) for (let i = 0; i < 3; i++) { const t = (S.zt*0.6 + i*20) % 60; ctx.globalAlpha = 1 - t/60; txt('z', pcx() + 8 + t*0.3, P.y - 4 - t*0.6, `${11 + i*3}px ${FD}`, 'rgb(110,90,170)'); ctx.globalAlpha = 1; } } },
 
-/* 56. it follows exactly where you went, a little after you */
+/* 56. it follows exactly where you went, a little after you; and where its way crosses itself, it bites its own tail */
 { id:'snake', start:15,
-  build(){ Gd(0,29); R('b',5,25,10,10); R('b',2,3,12,12); Door(28,14,{slots:1, onEnter(){ if (S.keys > 0) levelClear(); }});
-    E({t:'key', x:1*T + 9, y:13*T + 6, w:14, h:20}); S.path = []; S.go = false; },
+  build(){ Gd(0,29); Door(1,14,{slots:1, onEnter(){ if (S.keys > 0) levelClear(); }});
+    E({t:'key', x:28*T + 9, y:13*T + 6, w:14, h:20}); S.path = []; S.go = false; S.dead = 0; },
+  DELAY: 70, LEN: 90,
   update(){ if (!S.go && (Math.abs(P.vx) > 0.5 || !P.on)) S.go = true; if (!S.go) return;
-    S.path.push([P.x, P.y]);
-    const head = S.path.length - 70; if (head < 0) return;
-    for (let i = Math.max(0, head - 44); i <= head; i += 4) { const [x, y] = S.path[i]; if (ov(pbox(4), {x:x + 4, y:y + 6, w:PW - 8, h:PH - 8})) return die('snake'); } },
-  draw(){ const head = S.path.length - 70; if (head < 0) return;
-    for (let i = Math.max(0, head - 44), k = 0; i <= head; i += 4, k++) { const [x, y] = S.path[i]; const last = i + 4 > head; ctx.fillStyle = last ? C.ink : (k % 2 ? '#4E6B3A' : '#6B8E4E'); ctx.beginPath(); ctx.ellipse(x + PW/2, y + PH - 9, last ? 11 : 9, last ? 9 : 7, 0, 0, 7); ctx.fill();
-      if (last) { ctx.fillStyle = C.gold; ctx.fillRect(x + PW/2 - 5, y + PH - 13, 3, 3); ctx.fillRect(x + PW/2 + 2, y + PH - 13, 3, 3); } } } },
+    S.path.push([P.x, P.y]); if (S.dead) { S.dead++; return; }
+    const h = S.path.length - 1 - this.DELAY; if (h < 0) return;
+    for (let i = Math.max(0, h - this.LEN); i <= h; i += 4) { const [x, y] = S.path[i]; if (ov(pbox(4), {x:x + 4, y:y + 6, w:PW - 8, h:PH - 8})) return die('snake'); }
+    // its head on a spot its body still lies on, after going somewhere else in between: it bites itself
+    const [hx, hy] = S.path[h];
+    for (let i = Math.max(0, h - this.LEN); i < h - 12; i++) { const [x, y] = S.path[i]; if (Math.hypot(x - hx, y - hy) > 14) continue;
+      let far = 0; for (let k = i; k < h; k += 2) far = Math.max(far, Math.hypot(S.path[k][0] - hx, S.path[k][1] - hy));
+      if (far > 24) { S.dead = 1; S.bite = [hx, hy, h]; shake = 4; for (let j = 0; j < 16; j++) parts.push({x:hx + PW/2, y:hy + PH - 9, vx:(Math.random() - .5)*4, vy:-Math.random()*3, life:30, r:3, col:j % 2 ? '#4E6B3A' : '#6B8E4E'}); return; } } },
+  drawBack(){ // scratched faintly on the wall: a ring, its head at its tail
+    ctx.strokeStyle = 'rgba(78,107,58,.22)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(15*T, 190, 26, 0.5, Math.PI*2 + 0.1); ctx.stroke();
+    ctx.fillStyle = 'rgba(78,107,58,.22)'; ctx.beginPath(); ctx.ellipse(15*T + 26*Math.cos(0.42), 190 + 26*Math.sin(0.42), 6, 4, 1.9, 0, 7); ctx.fill(); },
+  draw(){ const h = S.dead ? S.bite[2] : S.path.length - 1 - this.DELAY; if (h < 0) return;
+    if (S.dead) { if (S.dead > 60) return; ctx.globalAlpha = 1 - S.dead/60; }
+    for (let i = Math.max(0, h - this.LEN), k = 0; i <= h; i += 4, k++) { const [x, y] = S.path[i]; const last = i + 4 > h; ctx.fillStyle = last ? C.ink : (k % 2 ? '#4E6B3A' : '#6B8E4E'); ctx.beginPath(); ctx.ellipse(x + PW/2, y + PH - 9, last ? 11 : 9, last ? 9 : 7, 0, 0, 7); ctx.fill();
+      if (last) { ctx.fillStyle = C.gold; ctx.fillRect(x + PW/2 - 5, y + PH - 13, 3, 3); ctx.fillRect(x + PW/2 + 2, y + PH - 13, 3, 3); } }
+    ctx.globalAlpha = 1; } },
 
 /* 57. the sky sows where it aims, and stillness makes it grow */
 { id:'seed', start:2,
