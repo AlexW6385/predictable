@@ -32,7 +32,17 @@
   check('95 stay on the landing', run(94, () => N, {freshMem:true, max:900}), 'timeout');
   check('95 go in and wait', run(94, () => script([S.R(15), S.W(600)]), {freshMem:true, max:900}), 'dead');
   check('95 go in, and run out when it frays', run(94, () => script([S.R(15), S.U(() => g.S.in > 40, {}), S.L(2), S.W(300)]), {freshMem:true, max:900}), /dead|timeout/);
-  check('95 go in; once it falls, push off and float up round the ledge to the door', run(94, () => script([S.R(15), S.U(cut, {}), S.W(4), {until: () => g.P.y < 80, rule: P => P.on ? {jump:30, dir:0} : {k:{jump:true, right: cx() < 15*T}}}, {until: () => false, rule: () => ({k:{left:true}})}]), {freshMem:true, max:900}), /clear|win/);
+  const fallen = () => g.S.fall > 0;
+  const jumpFrom = (x, dir) => () => script([S.R(15), S.U(fallen, {}), dir < 0 ? S.R(Math.min(x + 2, 27.2)) : S.W(1), dir < 0 ? S.L(x) : to(x), S.J(30, dir), S.U(() => false, {})]);
+  check('95 go in; once it falls, jump straight up', run(94, () => script([S.R(15), S.U(fallen, {}), S.W(4), S.J(30, 0), S.W(300)]), {freshMem:true, max:900}), 'dead');
+  check('95 go in; once it falls, jump straight up under the door', run(94, () => script([S.R(15), S.U(fallen, {}), to(12.5), S.J(30, 0), S.W(300)]), {freshMem:true, max:900}), 'dead');
+  check('95 go in; once it falls, run back and push off toward the door from the far end', run(94, jumpFrom(27, -1), {freshMem:true, max:900}), 'dead');
+  check('95 go in; once it falls, run back and push off toward the door from the middle', run(94, jumpFrom(19, -1), {freshMem:true, max:900}), 'dead');
+  check('95 go in; once it falls, jump for the door from right beside the ledge', run(94, jumpFrom(15.5, -1), {freshMem:true, max:900}), 'dead');
+  check('95 go in; once it falls, jump on to the right', run(94, () => script([S.R(15), S.U(fallen, {}), S.J(30, 1), S.R(29), S.U(() => false, {k:{right:true}})]), {freshMem:true, max:900}), 'dead');
+  check('95 go in; once it falls, jump, and steer for the door in the air', run(94, () => script([S.R(17), S.U(fallen, {}), S.J(30, 0), S.U(() => false, {k:{left:true, jump:true}})]), {freshMem:true, max:900}), 'dead');
+  check('95 go in; once it falls, jump again and again, steering for the door', run(94, () => script([S.R(15), S.U(fallen, {}), {until: () => false, rule: P => P.on ? {jump:30, dir:-1} : {k:{left:true, jump:true}}}]), {freshMem:true, max:900}), 'dead');
+  for (const x of [22.2, 24, 25.2]) check(`95 go in; once it falls, go well to the right, run back and push off toward the door (${x})`, run(94, jumpFrom(x, -1), {freshMem:true, max:900}), /clear|win/);
   // ---- 96 twin: a moving clock runs slow; the door lets in the younger twin
   check('96 go in at once', run(95, () => Lk, {freshMem:true, max:900}), 'dead');
   check('96 stand at home', run(95, () => N, {freshMem:true, max:1500}), 'dead');
