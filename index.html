@@ -1028,11 +1028,12 @@ const LV = [
     ctx.strokeStyle = 'rgba(231,236,241,.35)'; ctx.lineWidth = 1; for (let x = 4.5*T + 4; x < 6.5*T; x += 23) { ctx.beginPath(); ctx.moveTo(x, GY - 3); ctx.lineTo(x + 6, GY - 9); ctx.stroke(); } } },
 
 /* 28. the one in the glass does what you do, the other way round; only a wall can part you */
-{ id:'double', start:14,
-  // your side: a low spiked ceiling, where you can't jump; its side: two gaps, and a step it can't walk through
-  build(){ Gd(0,14); R('b',3,8,2,11); Sp(3,8,12,'down');
-    Gd(15,16); Gd(18,23); R('b',23,23,13,13); Gd(25,29); S.door = Door(27.5,14);
-    S.tw = {x:W - P.x - PW, y:P.y, vx:0, vy:0, on:true}; },
+{ id:'double', start:7.5,
+  // a wide pit on each floor, each one a long jump; one jump has to carry both of you over, so the pits must line up
+  // it starts pressed against the glass, where only you can move
+  build(){ const F = (x0, x1) => E({t:'g', x:x0*T, y:14*T, w:(x1 - x0)*T, h:3*T, solid:true});
+    F(0, 2); F(6.5, 15); F(15, 20.1); F(24.6, 30); S.door = Door(27.5,14);
+    S.tw = {x:15*T, y:P.y, vx:0, vy:0, on:true}; },
   // your double: mirrored keys, its own floor, its own walls; the glass between you is a wall for both
   update(){ const t = S.tw, ax = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
     if (ax) t.vx = clamp(t.vx + ax*(t.on ? 0.9 : 0.6), -4.4, 4.4); else t.vx *= t.on ? 0.7 : 0.97; if (Math.abs(t.vx) < 0.05) t.vx = 0;

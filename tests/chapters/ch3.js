@@ -70,10 +70,15 @@
   check('27 next life, the window is where the painting was', run(26, life => script([...look27(life ? 8.0 : 8.0), S.R(29)]), {freshMem:true, lives:2}), 'clear');
   // ---- 28 double
   // jump when its box nears an edge: the first gap (col 17) and the step (col 23)
-  const at28 = (x0, x1) => g.S.tw.x + 22 > x0 && g.S.tw.x + 22 < x1;
+  const dc28 = () => g.S.tw.x + 11, edge28 = () => g.P.on && cx() < 7.2*T && cx() > 6.6*T;
   check('28 walk it to its door', run(27, () => Lf), 'dead');
-  check('28 jump at the first gap, then at the step', run(27, () => P => (P.on && (at28(17*T - 14, 17*T) || at28(23*T - 4, 23*T + 1))) ? {jump:30, dir:-1} : Lf(), {max:1200}), 'dead');
-  check('28 jump at the first gap, walk out from under the ceiling, then jump', run(27, () => P => (P.on && (at28(17*T - 14, 17*T) || (at28(23*T - 4, 23*T + 1) && cx() < 2.2*T))) ? {jump:30, dir:-1} : Lf(), {max:1200}), 'clear');
+  check('28 jump your pit', run(27, () => P => edge28() ? {jump:30, dir:-1} : Lf(), {max:900}), 'dead');
+  check('28 jump your pit, then jump its pit', run(27, () => P => edge28() || (P.on && dc28() > 19.6*T && dc28() < 20.2*T) ? {jump:30, dir:-1} : Lf(), {max:900}), 'dead');
+  check('28 wait for its pit, jump it', run(27, () => P => P.on && dc28() > 19.3*T && dc28() < 20.1*T ? {jump:30, dir:-1} : Lf(), {max:900}), 'dead');
+  check('28 walk right to the glass first, then jump both pits', run(27, () => script([S.R(14.6), S.W(10), S.L(7.1), S.J(30, -1), S.K({left:true}, 400)]), {max:900}), 'dead');
+  check('28 ... and jump them one at a time', run(27, () => { let st = 0; return P => { if (st === 0) { if (cx() < 14.6*T) return R(); st = 1; } return edge28() || (P.on && dc28() > 19.6*T && dc28() < 20.2*T) ? {jump:30, dir:-1} : Lf(); }; }, {max:900}), 'dead');
+  check('28 line its pit up with yours against the glass, then one jump', run(27, () => script([S.R(10.9), S.W(10), S.L(7.1), S.J(30, -1), S.K({left:true}, 400)]), {max:900}), 'clear');
+  check('28 ... lined up a little long, jumping early', run(27, () => script([S.R(11.3), S.W(10), S.L(7.6), S.J(30, -1), S.K({left:true}, 400)]), {max:900}), 'clear');
   // ---- 29 mime
   const climb29 = [S.R(1.9), S.J(30, 1), S.U(P => P.on), S.W(8), S.J(30, 1), S.U(P => P.on && cx() > 9.3*T, {right:true})];
   check('29 walk on', run(28, () => R, {max:600}), 'timeout');
