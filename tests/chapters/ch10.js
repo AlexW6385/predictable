@@ -27,22 +27,27 @@
   check('94 stand where you are', run(93, () => N, {freshMem:true, max:900}), 'dead');
   check('94 walk into one coming your way, and stop inside it', run(93, () => script([{until: () => Math.abs(dbx(1) - cx()) < 4, rule: () => R()}, S.U(() => !g.S.ov, {}), S.R(28)]), {freshMem:true, max:1500}), 'dead');
   check('94 get ahead of one, turn back, catch it up, stop inside it, let it carry the mark away', run(93, () => script([S.R(21), {until: () => g.S.mk !== -1 && !g.S.ov, rule: () => g.S.db[1].dir < 0 && cx() > dbx(1) + 1 ? Lk() : g.S.db[1].dir < 0 ? N() : R()}, S.W(10), S.R(28)]), {freshMem:true, max:1500}), /clear|win/);
-  // ---- 95 elevator: once you are in, the Eye cuts the rope; in the falling room you weigh nothing
-  const cut = () => g.S.cut > 0;
-  check('95 stay on the landing', run(94, () => N, {freshMem:true, max:900}), 'timeout');
-  check('95 go in and wait', run(94, () => script([S.R(15), S.W(600)]), {freshMem:true, max:900}), 'dead');
-  check('95 go in, and run out when it frays', run(94, () => script([S.R(15), S.U(() => g.S.in > 40, {}), S.L(2), S.W(300)]), {freshMem:true, max:900}), /dead|timeout/);
-  const fallen = () => g.S.fall > 0;
-  const jumpFrom = (x, dir) => () => script([S.R(15), S.U(fallen, {}), dir < 0 ? S.R(Math.min(x + 2, 27.2)) : S.W(1), dir < 0 ? S.L(x) : to(x), S.J(30, dir), S.U(() => false, {})]);
-  check('95 go in; once it falls, jump straight up', run(94, () => script([S.R(15), S.U(fallen, {}), S.W(4), S.J(30, 0), S.W(300)]), {freshMem:true, max:900}), 'dead');
-  check('95 go in; once it falls, jump straight up under the door', run(94, () => script([S.R(15), S.U(fallen, {}), to(12.5), S.J(30, 0), S.W(300)]), {freshMem:true, max:900}), 'dead');
-  check('95 go in; once it falls, run back and push off toward the door from the far end', run(94, jumpFrom(27, -1), {freshMem:true, max:900}), 'dead');
-  check('95 go in; once it falls, run back and push off toward the door from the middle', run(94, jumpFrom(19, -1), {freshMem:true, max:900}), 'dead');
-  check('95 go in; once it falls, jump for the door from right beside the ledge', run(94, jumpFrom(15.5, -1), {freshMem:true, max:900}), 'dead');
-  check('95 go in; once it falls, jump on to the right', run(94, () => script([S.R(15), S.U(fallen, {}), S.J(30, 1), S.R(29), S.U(() => false, {k:{right:true}})]), {freshMem:true, max:900}), 'dead');
-  check('95 go in; once it falls, jump, and steer for the door in the air', run(94, () => script([S.R(17), S.U(fallen, {}), S.J(30, 0), S.U(() => false, {k:{left:true, jump:true}})]), {freshMem:true, max:900}), 'dead');
-  check('95 go in; once it falls, jump again and again, steering for the door', run(94, () => script([S.R(15), S.U(fallen, {}), {until: () => false, rule: P => P.on ? {jump:30, dir:-1} : {k:{left:true, jump:true}}}]), {freshMem:true, max:900}), 'dead');
-  for (const x of [22.2, 24, 25.2]) check(`95 go in; once it falls, go well to the right, run back and push off toward the door (${x})`, run(94, jumpFrom(x, -1), {freshMem:true, max:900}), /clear|win/);
+  // ---- 95 elevator: the lever on the shelf lets go of the rope that holds the lift; falling with it, you weigh nothing
+  const cut95 = S.U(() => g.S.cut > 0, {left:true});
+  const up95 = (dir, keys) => ({until: () => false, rule: (P, k) => k === 1 ? {jump:30, dir} : {k:keys || {}}});
+  check('95 stand where you start', run(94, () => N, {freshMem:true, max:900}), 'timeout');
+  check('95 hold right', run(94, () => R, {freshMem:true, max:900}), 'timeout');
+  check('95 jump at the door, again and again', run(94, () => script([S.L(11.5), {until: () => false, rule: P => P.on ? {jump:30, dir:-1} : Lk()}]), {freshMem:true, max:1200}), 'timeout');
+  check('95 jump straight up beside the shelf, again and again', run(94, () => script([to(10.6), {until: () => false, rule: P => P.on ? {jump:30, dir:0} : N()}]), {freshMem:true, max:1200}), 'timeout');
+  check('95 lean on the lever, see the rope slip, and let go of it', run(94, () => script([S.L(10.4), S.K({left:true}, 40), S.R(16), S.W(400)]), {freshMem:true, max:1200}), 'timeout');
+  check('95 let the rope go, and stand', run(94, () => script([cut95, S.W(400)]), {freshMem:true, max:1200}), 'dead');
+  check('95 let the rope go, and keep leaning on the lever', run(94, () => script([cut95, S.U(() => false, {left:true})]), {freshMem:true, max:1200}), 'dead');
+  check('95 let the rope go, and run back to the far wall', run(94, () => script([cut95, S.R(22.5), S.W(400)]), {freshMem:true, max:1200}), 'dead');
+  check('95 let the rope go, run to the far wall and jump there', run(94, () => script([cut95, S.R(22.5), up95(0, {right:true})]), {freshMem:true, max:1200}), 'dead');
+  // falling, a jump floats you up, and you can drift where you like
+  check('95 lean on the lever until the rope goes; then jump', run(94, () => script([cut95, up95(0)]), {freshMem:true, max:1200}), /clear|win/);
+  check('95 ... jump while still leaning on it', run(94, () => script([cut95, up95(-1, {left:true})]), {freshMem:true, max:1200}), /clear|win/);
+  check('95 ... freeze for two seconds first', run(94, () => script([cut95, S.W(120), up95(0)]), {freshMem:true, max:1200}), /clear|win/);
+  check('95 ... freeze for three seconds first', run(94, () => script([cut95, S.W(180), up95(0)]), {freshMem:true, max:1200}), /clear|win/);
+  check('95 ... jump in a panic to the right, then steer back', run(94, () => script([cut95, {until: () => false, rule: (P, k) => k === 1 ? {jump:30, dir:1} : k < 50 ? R() : Lk()}]), {freshMem:true, max:1200}), /clear|win/);
+  check('95 ... walk a few steps off, then jump toward the door', run(94, () => script([cut95, S.R(14), S.W(20), up95(-1, {left:true})]), {freshMem:true, max:1200}), /clear|win/);
+  check('95 ... run back to the far wall, push off there, and drift home along the roof', run(94, () => script([cut95, S.R(22.5), up95(0, {left:true})]), {freshMem:true, max:1200}), /clear|win/);
+  check('95 ... run to the middle, wait, jump, and only then steer for the door', run(94, () => script([cut95, S.R(17), S.W(40), {until: () => false, rule: (P, k) => k === 1 ? {jump:30, dir:0} : k < 60 ? N() : Lk()}]), {freshMem:true, max:1200}), /clear|win/);
   // ---- 96 twin: a moving clock runs slow; the door lets in the younger twin
   check('96 go in at once', run(95, () => Lk, {freshMem:true, max:900}), 'dead');
   check('96 stand at home', run(95, () => N, {freshMem:true, max:1500}), 'dead');
@@ -56,11 +61,26 @@
   check('97 ... and come back slowly over the hot floor', run(96, () => script([S.R(26.5), S.L(18), {until: () => cx() < 13*T, rule: (P, k, st) => ({k:{left: (st.n = (st.n || 0) + 1) % 5 === 0}})}, S.L(2.5), S.W(20)]), {freshMem:true, max:1500}), 'dead');
   check('97 run in, get the key, run back, let go just before the gate and tap across', run(96, () => script([S.R(26.5), S.L(15.0), S.U(() => Math.abs(g.P.vx) < 0.3, {}), tapL(() => cx() < 14.2*T), S.L(2.5), S.W(20)]), {freshMem:true, max:1500}), /clear|win/);
   check('97 ... or brake in a low hop across it', run(96, () => script([S.R(26.5), S.L(15.3), {until: (P, k, st) => { if (!P.on) st.air = true; return st.air && P.on; }, rule: (P, k, st) => st.air ? {k:{right: Math.abs(P.vx) > 1.2 && P.vx < 0}} : {jump:3, dir:-1}}, S.L(2.5), S.W(20)]), {freshMem:true, max:1500}), /clear|win/);
-  // ---- 98 newcomb: the closed box holds the key only if it saw you take nothing on the way
-  const clean98 = [4, 8, 12, 16].flatMap(c => [to(c - 2.2), S.J(30, 1), S.U(P => P.on, {})]).concat([S.R(17.8)]);
-  check('98 take the coins on the way, then both boxes', run(97, () => script([S.R(27.5), S.W(20)]), {freshMem:true, max:1500}), 'dead');
-  check('98 leave the coins; take only the closed box', run(97, () => script([...clean98, {until: () => cx() > 21.6*T, rule: () => R()}, S.J(30, 1), S.U(P => P.on && cx() > 22.5*T, {}), S.R(27.5), S.W(20)]), {freshMem:true, max:1500}), 'dead');
-  check('98 leave the coins until it has decided; then take both', run(97, () => script([...clean98, S.R(27.5), S.W(20)]), {freshMem:true, max:1500}), /clear|win/);
+  // ---- 98 monty hall: choose a door and the real one runs from it; the host opens one of the others that is not it
+  const dc98 = i => g.S.dx[i] + 18, rem98 = () => 3 - g.S.pick - g.S.open;
+  const pick98 = i => [to(i*6 + 9.5), S.U(() => g.S.pick >= 0, {})];
+  const live98 = S.U(() => g.S.t >= 110, {});
+  // walk to door j, hopping over any other door on the way
+  const go98 = j => ({until: () => false, rule: P => { const tx = dc98(j), d = Math.sign(tx - cx()) || 1;
+    for (let i = 0; i < 3; i++) if (i !== j && (dc98(i) - cx())*d > 0 && Math.abs(dc98(i) - cx()) < 70 && P.on) return {jump:30, dir:d};
+    return {k: d > 0 ? {right:true} : {left:true}}; }});
+  check('98 hold right', run(97, () => R, {freshMem:true, max:1200}), 'timeout');
+  check('98 stand where you start', run(97, () => N, {freshMem:true, max:1200}), 'timeout');
+  check('98 walk straight to a door and wait there', run(97, () => script([to(9.5), S.W(1200)]), {freshMem:true, max:1200}), 'timeout');
+  check('98 walk into each door on the way, before choosing', run(97, () => script([S.R(10), S.L(8), S.R(16), S.L(14), S.R(22), S.W(20)]), {freshMem:true, max:1200}), 'timeout');
+  for (const i of [0, 1, 2]) check(`98 choose door ${i + 1} and stay with it (three lives)`, run(97, () => script([...pick98(i), live98, S.L(i*6 + 7.5), to(i*6 + 9.5), S.W(60)]), {freshMem:true, max:1200, lives:3}), 'dead');
+  for (const i of [0, 1, 2]) check(`98 choose door ${i + 1}, then go into the one the Eye opened`, run(97, () => script([...pick98(i), live98, {until: () => false, rule: P => go98(g.S.open).rule(P)}]), {freshMem:true, max:1200}), 'dead');
+  // switch: the door you did not choose and it did not open
+  for (const i of [0, 1, 2]) check(`98 choose door ${i + 1}, then switch to the other closed one (three lives)`, run(97, () => script([...pick98(i), live98, {until: () => false, rule: P => go98(rem98()).rule(P)}]), {freshMem:true, max:1200, lives:3}), /clear|win/);
+  for (let n = 0; n < 4; n++) check(`98 ... again, wherever the real one starts (${n + 1})`, run(97, () => script([...pick98(n % 3), live98, {until: () => false, rule: P => go98(rem98()).rule(P)}]), {freshMem:true, max:1200}), /clear|win/);
+  check('98 ... choose by hopping in front of a door', run(97, () => script([to(15.5), {until: () => g.S.pick >= 0, rule: P => P.on ? {jump:6, dir:0} : N()}, S.U(P => P.on, {}), live98, {until: () => false, rule: P => go98(rem98()).rule(P)}]), {freshMem:true, max:1200}), /clear|win/);
+  check('98 ... think it over for a few seconds first', run(97, () => script([...pick98(0), live98, S.W(240), {until: () => false, rule: P => go98(rem98()).rule(P)}]), {freshMem:true, max:1200}), /clear|win/);
+  check('98 ... walk over to it before it unlocks, and wait there', run(97, () => script([...pick98(2), S.U(() => g.S.t >= 75, {}), {until: () => Math.abs(cx() - dc98(rem98())) < 6, rule: P => go98(rem98()).rule(P)}, S.W(200)]), {freshMem:true, max:1200}), /clear|win/);
   // ---- 99 reflection: the Eye looks at you; behind the mirror, at its own height, it looks at itself
   const up99 = [S.R(17.4), to(19.0), S.J(30, 1), S.U(P => P.on, {}), to(20.4), S.JT(22.6, 320, {tol:10}), to(22.25)];
   check('99 run to the door', run(98, () => R, {freshMem:true, max:1200}), /dead|timeout/);

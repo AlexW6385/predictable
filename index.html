@@ -2556,41 +2556,58 @@ const LV = [
     const dd = ents.find(e => e.t === 'door'); if (dd) dd.teeth = S.mk < 0 ? clamp(1 - (dd.x - pcx())/160, 0, 1) : 0; } },
 
 /* 95. in a falling room, nothing weighs anything */
-{ id:'elevator', start:2,
-  build(){ S.land = Gd(0,9); R('b',10,28,1,1); R('b',10,10,2,11); R('b',28,28,2,13); R('b',10,28,14,14); R('b',11,13,8,8);
-    S.gate = R('b',10,10,12,13,{cond:() => S.cut > 0});
-    // a tall lift door on the shelf by the far wall
-    S.dr = {x:11*T + 2, y:8*T - 168, w:36, h:168};
-    S.in = 0; S.cut = 0; S.fall = 0; S.fvx = 0; S.wasOn = true; },
-  inside(){ return P.x > 11*T && P.x + PW < 28*T && P.y > T; },
-  float(){ return S.cut > 0 && S.fall > 0; },
-  extraG(){ return this.float() ? (P.on ? -0.53 : -0.55) : 0; },
-  // a push off a floor that is falling away is a gentle one
-  jumpV(){ return this.float() ? 3.5 : 10.6; },
-  // with nothing under you there is nothing to push against: you go on the way you pushed off, and you cannot turn
-  input(ax){ return this.float() && !P.on ? {ax:0, acc:0, max:4.4} : {ax, acc:P.on ? 0.9 : 0.6, max:4.4}; },
-  update(){
-    // the Eye cuts the rope once you are in
-    if (!S.cut) { S.in = this.inside() ? S.in + 1 : 0; if (S.in > 70) { S.cut = 1; shake = 6; S.entr = null; S.fvx = P.vx; } S.wasOn = P.on; return; }
-    S.fall++; S.land.y = 14*T - 0.275*S.fall*S.fall;
-    // in the falling room you fall as fast as it does: push off and you go on in a straight line, until something stops you; whatever you bump into holds you there
-    if (!P.on) { if (S.wasOn) S.fvx = P.vx; else if (P.vx === 0 || P.vy === 0) { S.fvx = 0; P.vx = 0; } else P.vx = S.fvx; }
-    S.wasOn = P.on;
-    const d = S.dr; if (ov(pbox(4), {x:d.x + 4, y:d.y + 4, w:d.w - 8, h:d.h - 4})) return levelClear();
-    if (S.fall > 230) { shake = 20; return die('crash'); } },
-  drawBack(){ const off = S.cut ? 0.275*S.fall*S.fall : 0;
-    // the shaft
-    ctx.fillStyle = 'rgba(30,43,71,.08)'; ctx.fillRect(9*T, -10, 21*T, H + 20);
-    ctx.strokeStyle = 'rgba(30,43,71,.25)'; ctx.lineWidth = 2; for (let i = -2; i < 20; i++) { const y = ((i*48 - off) % (20*48) + 20*48) % (20*48) - 48; ctx.beginPath(); ctx.moveTo(29*T, y); ctx.lineTo(30*T, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(T, y + 24); ctx.lineTo(9*T, y + 24); ctx.stroke(); }
-    if (S.fall > 190) { const y = GY + 80 + (230 - S.fall)*10; ctx.fillStyle = C.ink; for (let x = 9*T; x < 30*T; x += 16) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 8, y - 16); ctx.lineTo(x + 16, y); ctx.fill(); } } },
-  draw(){ // the rope, and the Eye with its scissors
-    const rx = 19.5*T, cut = S.cut ? 1 : Math.min(1, S.in/70);
-    ctx.strokeStyle = '#8A5A2B'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(rx, S.cut ? T - 60 : 0); ctx.lineTo(rx, T); ctx.stroke();
-    if (!S.cut) { drawEye(rx + 46, 22, 12, rx, 30, 0); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; const a = 0.6*(1 - cut); ctx.beginPath(); ctx.moveTo(rx + 26, 22); ctx.lineTo(rx - 4, 22 - 14*a); ctx.moveTo(rx + 26, 22); ctx.lineTo(rx - 4, 22 + 14*a); ctx.stroke();
-      if (S.in > 0) for (let i = 0; i < 3; i++) { ctx.strokeStyle = '#8A5A2B'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(rx, 22); ctx.lineTo(rx + (i - 1)*5*cut, 22 + 6*cut); ctx.stroke(); } }
-    const d = S.dr; ctx.save(); ctx.translate(d.x, d.y); ctx.scale(1, d.h/56); drawDoor(0, 0); ctx.restore();
-    if (S.cut && S.fall < 230) { ctx.fillStyle = 'rgba(30,43,71,.35)'; for (let i = 0; i < 6; i++) { const x = 9*T + ((i*97) % (12*T)), y = (frame*14 + i*90) % H; ctx.fillRect(x, H - y, 2, 22); ctx.fillRect(9*T + ((i*61 + 300) % (19*T)), H - (y + 40) % H, 2, 22); } } },
-  drawPlayer(dx, dy, dw, dh){ drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false); } },
+{ id:'elevator', start:20,
+  build(){ R('b',5,23,6,6); R('b',5,5,7,14); R('b',23,23,7,14); R('b',6,22,14,14);
+    // a high shelf by the left wall, with the door on it, out of reach of any jump
+    R('b',6,9,9,13); S.fx = 10*T; S.dr = {x:S.fx - 38, y:9*T - 56, w:36, h:56};
+    // the rope that holds the lift comes down through the roof to a clamp on the shelf, and the clamp has a lever
+    S.rx = S.fx + 6; S.push = 0; S.cut = 0; S.fall = 0; },
+  // once it falls you fall with it: nothing presses you to the floor, a push off it is a gentle one, and you drift on
+  extraG(){ return S.cut ? (P.on ? -0.53 : -0.55) : 0; },
+  jumpV(){ return S.cut ? 3 : 10.6; },
+  input(ax){ return S.cut && !P.on ? {ax, acc:0.22, max:3} : {ax, acc:P.on ? 0.9 : 0.6, max:4.4}; },
+  update(){ const d = S.dr;
+    if (ov(pbox(2), {x:d.x - 10, y:d.y, w:d.w + 24, h:d.h})) return levelClear();
+    if (!S.cut) {
+      // lean on the lever long enough and the clamp lets the rope go; let go of it and it springs back
+      const lean = P.on && keys.left && P.x <= S.fx + 1 && P.y > 9*T;
+      S.push = lean ? S.push + 1 : Math.max(0, S.push - 3);
+      if (S.push > 20 && frame % 9 === 0) { shake = Math.max(shake, 2); dust(S.rx, 12*T + 8); }
+      if (S.push >= 55) { S.cut = 1; shake = 10; }
+      return; }
+    // the lift falls with you in it, until it meets the bottom of the shaft
+    if (++S.fall >= 270) { shake = 24; dust(pcx(), GY); return die('crash'); } },
+  drawBack(){ const f = S.fall, off = 0.07*f*f, l = 5*T, r = 24*T;
+    // the shaft around the lift; once the rope is gone its walls rush up past you
+    ctx.fillStyle = 'rgba(30,43,71,.16)'; ctx.fillRect(0, -20, W, 6*T + 20); ctx.fillRect(0, 15*T, W, H); ctx.fillRect(0, 6*T, l, 9*T); ctx.fillRect(r, 6*T, W - r, 9*T);
+    ctx.fillStyle = hatch; ctx.fillRect(0, -20, 40, H + 40); ctx.fillRect(W - 40, -20, 40, H + 40);
+    ctx.strokeStyle = 'rgba(30,43,71,.6)'; ctx.lineWidth = 4;
+    for (let i = -1; i < 5; i++) { const y = ((i*150 - off) % 750 + 750) % 750 - 105; ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(l, y); ctx.moveTo(r, y); ctx.lineTo(W - 40, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(40, y + 14); ctx.lineTo(70, y); ctx.moveTo(W - 40, y + 14); ctx.lineTo(W - 70, y); ctx.stroke(); }
+    if (f > 0 && state === 'play') { ctx.strokeStyle = 'rgba(30,43,71,.25)'; ctx.lineWidth = 2; const v = Math.min(60, 4 + 0.14*f);
+      for (let i = 0; i < 8; i++) { const x = i < 4 ? 52 + i*26 : r + 12 + (i - 4)*26, y = ((i*131 - off*1.3) % H + H) % H; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + v); ctx.stroke(); } }
+    // the bottom of the shaft, coming up
+    if (f > 252) { const y = 15*T + (270 - f)*9; ctx.fillStyle = hatch; ctx.fillRect(0, y, W, H - y + 20); ctx.fillStyle = C.ink; ctx.fillRect(0, y, W, 3); } },
+  draw(){ const d = S.dr, rx = S.rx, cy = 12*T + 4, k = S.push/55;
+    drawDoor(d.x, d.y);
+    // the rope: from far above, through the roof, down to the clamp; cut, it whips away up the shaft
+    ctx.strokeStyle = '#8A5A2B'; ctx.lineWidth = 3; ctx.beginPath();
+    if (!S.cut) { ctx.moveTo(rx, -10); ctx.lineTo(rx, cy); }
+    else { const top = 6*T - S.fall*16; if (top > -40) { ctx.moveTo(rx, -10); ctx.lineTo(rx, Math.min(top, 6*T)); } }
+    ctx.stroke();
+    if (!S.cut && k > 0.3) { ctx.strokeStyle = 'rgba(138,90,43,.8)'; ctx.lineWidth = 1.5; for (let i = 0; i < 3; i++) { const y = cy - 10 - ((frame*2 + i*14) % 40); ctx.beginPath(); ctx.moveTo(rx - 3, y); ctx.lineTo(rx + 3, y - 4); ctx.stroke(); } }
+    // the hole in the roof it runs through
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(rx, 7*T - 3, 5, 0, 7); ctx.fill();
+    // the clamp on the shelf's face: its jaws open as the lever goes over
+    const o = S.cut ? 6 : 4*k; ctx.fillStyle = C.ink2; ctx.strokeStyle = C.ink; ctx.lineWidth = 2;
+    ctx.fillRect(S.fx, cy - 10, 4, 22); ctx.fillRect(rx - 9 - o, cy - 8, 6, 16); ctx.strokeRect(rx - 9 - o, cy - 8, 6, 16); ctx.fillRect(rx + 3 + o, cy - 8, 6, 16); ctx.strokeRect(rx + 3 + o, cy - 8, 6, 16); },
+  drawOver(){ // the lever, in front of whoever leans on it
+    const px = S.fx + 2, py = 13*T + 18, a = S.cut ? -0.85 : 0.8 - 1.65*S.push/55, tx = px + Math.sin(a)*30, ty = py - Math.cos(a)*30;
+    ctx.fillStyle = C.ink2; ctx.fillRect(S.fx - 10, 12*T + 18, 12, 32); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(S.fx - 10, 12*T + 18, 12, 32);
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(S.rx - 6, 12*T + 12); ctx.stroke();
+    ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(tx, ty); ctx.stroke(); ctx.lineCap = 'butt';
+    ctx.fillStyle = C.red; ctx.beginPath(); ctx.arc(tx, ty, 6, 0, 7); ctx.fill(); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(px, py, 4, 0, 7); ctx.fill(); } },
 
 /* 96. the one who goes away and comes back is the younger twin */
 { id:'twin', start:7,
@@ -2638,33 +2655,58 @@ const LV = [
     ctx.strokeStyle = '#4C78B5'; ctx.fillStyle = '#4C78B5'; ctx.beginPath(); ctx.moveTo(dx + 30, dy - 22); ctx.lineTo(dx - 20, dy - 22); ctx.stroke(); ctx.beginPath(); ctx.moveTo(dx - 26, dy - 22); ctx.lineTo(dx - 18, dy - 27); ctx.lineTo(dx - 18, dy - 17); ctx.fill();
     if (S.burn > 2) for (let i = 0; i < 2; i++) parts.push({x:P.x + Math.random()*PW, y:P.y + PH, vx:0, vy:-1 - Math.random(), life:16, r:2, col:'rgba(120,120,120,.6)'}); } },
 
-/* 98. the box was filled before you chose, by the one who knew how you would choose */
-{ id:'newcomb', was:[98], start:1.5,
+/* 98. the door runs from whoever chooses it; the host knows where it went, and shows you one place it is not */
+{ id:'newcomb', was:[98], start:2,
   build(){ Gd(0,29);
-    S.bait = [4, 8, 12, 16].map(c => ({x:c*T + 8, y:GY - 20, alive:true}));
-    S.seen = 0; S.filled = null; S.ft = 0; S.open = {x:20*T, coin:true}; S.shut = {x:23*T, opened:false};
-    Door(27,14,{slots:2, fill:() => (S.keys > 0 ? 1 : 0) + (S.coins > 0 ? 1 : 0), onEnter(d){ if (S.keys > 0 && S.coins > 0) levelClear(); else { d.bite = true; die('door'); } }}); },
+    // three doors on feet, one real; where it starts is new every life
+    const n = (prof.deaths*7 + (M.lives = (M.lives || 0) + 1)*5) % 9;
+    S.dx = [9, 15, 21].map(c => c*T - 2); S.real = [2, 0, 1, 1, 2, 0, 0, 1, 2][n];
+    S.pick = -1; S.ct = [0, 0, 0]; S.t = 0; S.open = -1; S.live = [false, false, false]; S.ign = [false, false, false]; S.bit = -1; S.lit = false; S.wob = [0, 0, 0]; },
+  rect(i){ return {x:S.dx[i], y:GY - 62, w:36, h:62}; },
   update(){ const pc = pcx();
-    // the bait: the Eye counts what you take
-    for (const c of S.bait) if (c.alive && ov(pbox(), {x:c.x, y:c.y, w:16, h:18})) { c.alive = false; S.coins++; if (S.filled == null) S.seen++; sparkle(c.x + 8, c.y + 9); }
-    // past this line it has made up its mind about you, and filled the closed box accordingly; nothing you do now changes what is in it
-    if (S.filled == null && pc > 17.5*T) { S.filled = S.seen === 0; S.ft = 1; shake = 3; }
-    if (S.ft) S.ft++;
-    const o = S.open; if (o.coin && ov(pbox(), {x:o.x, y:GY - 34, w:T, h:34})) { o.coin = false; S.coins++; sparkle(o.x + 16, GY - 20); }
-    const s = S.shut; if (!s.opened && ov(pbox(), {x:s.x, y:GY - 34, w:T, h:34})) { s.opened = true; if (S.filled) { S.keys++; sparkle(s.x + 16, GY - 40); } else dust(s.x + 16, GY - 30); } },
-  draw(){ for (const c of S.bait) if (c.alive) drawCoin(c.x, c.y);
-    // the line
-    ctx.strokeStyle = 'rgba(30,43,71,.4)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(17.5*T, GY); ctx.lineTo(17.5*T, GY - 120); ctx.stroke(); ctx.setLineDash([]);
-    // the open box (glass) and the closed one
-    const o = S.open; ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.fillStyle = 'rgba(200,220,240,.5)'; ctx.fillRect(o.x + 2, GY - 34, T - 4, 34); ctx.strokeRect(o.x + 2, GY - 34, T - 4, 34); if (o.coin) drawCoin(o.x + 8, GY - 26);
-    const s = S.shut; ctx.fillStyle = '#9C6A45'; ctx.fillRect(s.x + 2, GY - 34, T - 4, 34); ctx.strokeRect(s.x + 2, GY - 34, T - 4, 34);
-    if (s.opened) { ctx.fillStyle = C.ink; ctx.fillRect(s.x + 5, GY - 31, T - 10, 26); ctx.save(); ctx.translate(s.x + 2, GY - 34); ctx.rotate(-1.1); ctx.fillStyle = '#9C6A45'; ctx.fillRect(0, -6, T - 4, 6); ctx.strokeRect(0, -6, T - 4, 6); ctx.restore(); }
-    else { ctx.fillStyle = C.gold; ctx.fillRect(s.x + 13, GY - 22, 6, 6); }
-    // the one who knew: it watched what you took, and it decided at the line
-    const ex = 21.5*T, ey = 190, lk = S.ft && S.ft < 60 ? {x:s.x + 16, y:GY - 30} : {x:pcx(), y:P.y + 14};
-    drawEye(ex, ey, 18, lk.x, lk.y, S.filled === false && S.ft > 30 ? 0.4 : 0);
-    for (let i = 0; i < S.seen; i++) drawCoin(ex - 50 + i*20, ey - 52);
-    if (S.ft && S.ft < 60) { const k = S.ft/60; ctx.globalAlpha = 1 - k; if (S.filled) drawKey(s.x + 10, GY - 120 + 80*k); else { ctx.strokeStyle = C.red; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(ex - 10, ey + 30); ctx.lineTo(ex + 10, ey + 50); ctx.moveTo(ex + 10, ey + 30); ctx.lineTo(ex - 10, ey + 50); ctx.stroke(); } ctx.globalAlpha = 1; } } },
+    // a locked door rattles its padlock at whoever tries to walk in
+    for (let i = 0; i < 3; i++) { if (S.wob[i] > 0) S.wob[i]--; if (!S.live[i] && P.on && Math.abs(P.vx) > 0.3 && ov(pbox(6), this.rect(i))) S.wob[i] = 6; }
+    if (S.pick < 0) {
+      // the doors are locked; stand at one a while and it is yours
+      for (let i = 0; i < 3; i++) { const at = Math.abs(pc - (S.dx[i] + 18)) < 14 && P.y > GY - 90;
+        S.ct[i] = at ? S.ct[i] + 1 : 0;
+        if (S.ct[i] >= 40) { S.pick = i; S.t = 0;
+          // and the door runs from whoever chooses it: if it was this one, it slips into one of the others
+          if (S.real === i) S.real = (i + 1 + (prof.deaths + M.lives) % 2) % 3;
+          // the host knows where it is, and will open one of the others that it is not
+          S.open = [0, 1, 2].find(j => j !== i && j !== S.real); } }
+      return; }
+    S.t++;
+    const inside = i => P.x < S.dx[i] + 36 && P.x + PW > S.dx[i];
+    // the one you chose, and the one it opens, ignore you if they come alive around you, until you have stepped out of them
+    const wake = i => { S.live[i] = true; S.ign[i] = inside(i); };
+    if (S.t === 70) { wake(S.open); shake = 4; }
+    if (S.t === 110) { wake(S.pick); S.live[3 - S.pick - S.open] = true; for (const i of [S.pick, 3 - S.pick - S.open]) sparkle(S.dx[i] + 27, GY - 30); }
+    for (let i = 0; i < 3; i++) { if (S.ign[i] && !inside(i)) S.ign[i] = false;
+      if (S.live[i] && !S.ign[i] && P.on && ov(pbox(6), this.rect(i))) {
+        if (i === S.real) return levelClear();
+        // a fake bites, and the real one shows itself
+        S.bit = i; S.lit = true; return die('door'); } } },
+  draw(){ const t = S.t, picked = S.pick >= 0, pat = picked && t < 26;
+    for (let i = 0; i < 3; i++) { const x = S.dx[i] + (pat ? Math.sin(t*0.9 + i*2)*2 : 0) + (S.wob[i] ? Math.sin(S.wob[i]*2)*1.5 : 0), mouth = i === S.open && t >= 70, sw = mouth ? Math.min(1, (t - 70)/12) : 0, lit = S.lit && i === S.real;
+      if (lit) { ctx.strokeStyle = 'rgba(226,166,42,.7)'; ctx.lineWidth = 3; for (let k = 0; k < 9; k++) { const a = Math.PI*(0.1 + 0.8*k/8); ctx.beginPath(); ctx.moveTo(x + 18 - Math.cos(a)*30, GY - 34 - Math.sin(a)*30); ctx.lineTo(x + 18 - Math.cos(a)*62, GY - 34 - Math.sin(a)*62); ctx.stroke(); } }
+      // its feet: these doors can walk, and when you choose, they all scuffle at once
+      drawShy({x, y:0, walk:pat, open:lit, bite:S.bit === i || mouth});
+      if (mouth && S.bit !== i) { // its leaf swings open on the teeth behind it
+        ctx.save(); ctx.translate(x + 1.5, 0); ctx.scale(1 - 0.8*sw, 1); ctx.translate(-x - 1.5, 0); drawDoor(x, GY - 62); ctx.restore(); }
+      // locked: a padlock on the latch, which jiggles if you try it
+      if (!S.live[i]) { const lx = x + 23 + (S.wob[i] ? Math.sin(S.wob[i]*3)*2 : 0), ly = GY - 33; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(lx + 4, ly, 3.5, Math.PI, 0); ctx.stroke(); ctx.fillStyle = C.ink; ctx.fillRect(lx - 0.5, ly, 9, 8); }
+      // the one you chose wears a ring; while you choose, it fills
+      if (S.pick === i) { ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x + 18, GY - 82, 11, 4, 0, 0, 7); ctx.stroke(); }
+      else if (!picked && S.ct[i] > 0) { ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x + 18, GY - 82, 7, -Math.PI/2, -Math.PI/2 + Math.PI*2*S.ct[i]/40); ctx.stroke(); } }
+    // the host: it watches you choose, then looks over the others, and opens one that is not it
+    const ex = 15*T + 16, ey = 190, dc = i => ({x:S.dx[i] + 18, y:GY - 34});
+    let lk = {x:pcx(), y:P.y + 14};
+    if (S.lit) lk = dc(S.real);
+    else if (picked && t < 26) lk = dc(S.pick);
+    else if (picked && t < 60) { const o = [0, 1, 2].filter(j => j !== S.pick); lk = dc(o[Math.floor((t - 26)/9) % 2]); }
+    else if (picked && t < 110) lk = dc(S.open);
+    drawEye(ex, ey, 18, lk.x, lk.y, 0); } },
 
 /* 99. the eye that sees everything has never seen itself */
 { id:'reflection', was:[99], start:3.5,
