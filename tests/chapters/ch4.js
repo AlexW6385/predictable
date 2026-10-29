@@ -46,13 +46,14 @@
   check('37 step down slowly, run the brittle step and off its end', run(36, () => script([...down37, S.R(28)])), 'dead');
   check('37 step down slowly, run the brittle step, stop at its end', run(36, () => script([...down37, S.R(14.2), S.U(P => !P.on), S.U(P => P.on), S.R(28)])), 'clear');
   // ---- 38 wheel
-  const p38 = (a0, a1) => () => { let jumped = false; return P => { const w = g.S.wh, onW = P.stand && P.stand.wheel;
-    if (!jumped) { if (cx() < 5.3*T) return R(); if (Math.abs(P.vx) > 0.1) return N();
-      for (let k = 0; k < 4; k++) { const ang = ((w.a + k*Math.PI/2) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI); if (ang > a0 && ang < a1) { jumped = true; return {jump:30, dir:1}; } } return N(); }
-    if (onW) { const p = P.stand, ang = Math.atan2(p.y - w.cy, p.x + 32 - w.cx); return Math.abs(ang) < 0.25 ? {jump:30, dir:1} : N(); }
-    return R(); }; };
-  check('38 jump at the platform when it is in front of you', run(37, p38(3.65, 3.8), {max:900}), 'dead');
-  check('38 jump where it will be after it hurries', run(37, p38(2.95, 3.1), {max:1500}), 'clear');
+  const over38 = [S.R(5.6), S.JT(12.1, GY, {tol:10}), S.U(P => P.on), S.W(4)];
+  const top38 = [S.U(() => g.S.A.y <= 192), S.W(10), S.JT(15.5, 192, {tol:16}), S.U(P => P.on), S.R(28)];
+  check('38 walk on', run(37, () => R, {freshMem:true}), /dead|timeout/);
+  check('38 stand by the block', run(37, () => script([S.R(7.6), S.W(400)]), {max:700}), 'dead');
+  check('38 over the block, push the crate off the far side', run(37, () => script([...over38, S.R(13.5), S.W(200)]), {max:900}), /dead|timeout/);
+  check('38 no key: push the crate onto the block\'s tray, ride up', run(37, () => script([S.F(() => { for (const e of g.ents) if (e.t === 'key') e.alive = false; return {k:{}}; }, (P, k) => k >= 1), ...over38, S.F(() => ({k:{left:true}}), () => g.S.A.y < 446), ...top38]), {max:2000}), 'timeout');
+  check('38 key: push the crate onto the block\'s tray, ride up', run(37, () => script([...over38, S.F(() => ({k:{left:true}}), () => g.S.A.y < 446), ...top38]), {max:2000}), 'clear');
+  check('38 key: push the crate across and keep walking', run(37, () => script([...over38, S.L(7), S.W(300)]), {max:2000}), /dead|timeout/);
   // ---- 39 ferry
   const key39 = x => [x > 2 ? S.R(x) : S.L(x), S.K({}, 8), S.J(30, 0), S.U(P => P.on)];
   const ride39 = [S.R(7.6), S.W(20), S.U(() => g.S.g.x >= 20*T), S.R(28)];

@@ -1159,15 +1159,55 @@ const LV = [
       ctx.stroke(); ctx.globalAlpha = 1; }
     const b = S.ball; if (b.st !== 'gone') { ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); } } },
 
-/* 38. the wheel hurries away from whoever jumps at it */
+/* 38. a pip on the wheel weighs three on the axle */
 { id:'wheel', was:[36], start:2,
-  build(){ Gd(0,5); Sp(6,23,14,'up'); R('g',6,23,15,16); Gd(24,29); Door(27,14);
-    S.wh = {cx:15*T, cy:360, r:140, a:0.3, boost:0}; S.pl = [0,1,2,3].map(k => E({t:'b', wheel:true, x:0, y:0, w:64, h:12, solid:true, k})); this.place(); },
-  place(dx){ const w = S.wh; for (const p of S.pl) { const a = w.a + p.k*Math.PI/2, nx = w.cx + Math.cos(a)*w.r - 32, ny = w.cy + Math.sin(a)*w.r;
-      if (dx && P.on && P.stand === p) { P.x += nx - p.x; P.y += ny - p.y; } p.x = nx; p.y = ny; } },
-  onJump(){ if (P.vx > 0.5 && pcx() < S.wh.cx - 100) S.wh.boost = 26; },
-  update(){ S.wh.a += 0.012*(S.wh.boost > 0 ? 3.2 : 1); if (S.wh.boost > 0) S.wh.boost--; this.place(true); },
-  drawBack(){ const w = S.wh; ctx.strokeStyle = S.wh.boost ? C.red : C.grid2; ctx.lineWidth = 3; for (const p of S.pl) { ctx.beginPath(); ctx.moveTo(w.cx, w.cy); ctx.lineTo(p.x + 32, p.y + 6); ctx.stroke(); } ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(w.cx, w.cy, 8, 0, 7); ctx.fill(); } },
+  build(){ Gd(0,6); E({t:'g', x:10*T, y:458, w:3*T, h:H - 458, solid:true}); Sp(7,9,16,'up');
+    E({t:'g', x:14*T, y:192, w:16*T, h:H - 192, solid:true}); Door(27, 6, {slots:1, onEnter(){ if (S.keys > 0) levelClear(); }});
+    E({t:'key', x:4*T + 9, y:GY - 22, w:14, h:20});
+    // a big wheel and a small drum on one axle: the lift on the wheel's rim, and on the drum's rope the heavy block
+    S.A = E({t:'b', x:10*T, y:GY, w:3*T, h:10, solid:true, hidden:true}); S.B = E({t:'b', x:7*T, y:GY, w:3*T, h:10, solid:true, hidden:true});
+    S.blk = E({t:'b', x:7*T + 28, y:GY - 40, w:40, h:40, solid:true, hidden:true});
+    S.cr = E({t:'b', x:10*T + 2, y:GY - 28, w:28, h:28, solid:true, hidden:true}); S.cr.vy = 0; },
+  rests(o, X){ return o.alive && Math.abs(o.y + o.h - X.y) < 3 && o.x + o.w/2 > X.x && o.x + o.w/2 < X.x + X.w; },
+  update(){ const A = S.A, B = S.B, cr = S.cr, k = this;
+    // push the crate
+    const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    if (cr.alive && P.on && dir && P.y + PH > cr.y + 4 && P.y < cr.y + cr.h && (dir > 0 ? Math.abs(P.x + PW - cr.x) < 2 : Math.abs(cr.x + cr.w - P.x) < 2)) {
+      const t = {x:cr.x + dir*1.6, y:cr.y, w:cr.w, h:cr.h - 6}; if (!ents.some(o => o !== cr && isSolid(o) && ov(t, o))) cr.x = t.x; }
+    // what each side carries
+    const pOn = X => P.on && (P.stand === X || (P.stand === cr && k.rests(cr, X)) || (X === B && P.stand === S.blk));
+    const la = (pOn(A) ? 1 + S.keys : 0) + (k.rests(cr, A) ? 2 : 0), lb = 5 + (pOn(B) ? 1 + S.keys : 0) + (k.rests(cr, B) ? 2 : 0);
+    S.la = la; S.lb = lb;
+    const d = 3*la > lb ? 1.5 : 3*la < lb ? -1.5 : 0, ny = clamp(A.y + d, 192, GY), dy = ny - A.y;
+    const by = GY + (GY - ny)/3, dyb = by - B.y, onA = pOn(A), onB = pOn(B), onC = P.on && P.stand === cr;
+    A.y = ny; B.y = by; S.blk.y = B.y - 40; if (onA) P.y += dy; if (onB) P.y += dyb;
+    // the tray comes to rest on the thorns
+    if (onB && B.y > 525) { shake = 5; return die('spike'); }
+    // the crate falls, and rides whatever it rests on
+    // (it stands on whatever is under its middle)
+    if (cr.alive) { const y0 = cr.y, mx = cr.x + cr.w/2; let top = 1e9;
+      for (const o of ents) if (o !== cr && isSolid(o) && mx >= o.x && mx <= o.x + o.w && o.y >= y0 + cr.h - 8) top = Math.min(top, o.y);
+      cr.vy = Math.min(cr.vy + 0.6, 12); cr.y += cr.vy; if (cr.y + cr.h >= top) { cr.y = top - cr.h; cr.vy = 0; }
+      if (onC) P.y += cr.y - y0; if (cr.y > H + 40) cr.alive = false; } },
+  pips(n, cx, y, col){ ctx.fillStyle = col; for (let i = 0; i < n; i++) { ctx.beginPath(); ctx.arc(cx - (n - 1)*5 + i*10, y, 3.2, 0, 7); ctx.fill(); } },
+  drawBack(){ const A = S.A, B = S.B, a = (GY - A.y)/72;
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2;
+    // ropes: the lift hangs from the wheel's rim, the block's tray from the drum
+    ctx.beginPath(); ctx.moveTo(368, 136); ctx.lineTo(368, A.y - 30); ctx.lineTo(A.x + 4, A.y); ctx.moveTo(368, A.y - 30); ctx.lineTo(A.x + 92, A.y);
+    ctx.moveTo(272, 136); ctx.lineTo(272, B.y - 60); ctx.lineTo(B.x + 4, B.y); ctx.moveTo(272, B.y - 60); ctx.lineTo(B.x + 92, B.y); ctx.stroke();
+    // the wheel and the drum, turning together
+    ctx.fillStyle = C.white; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(296, 136, 72, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 6; i++) { const t = a + i*Math.PI/3; ctx.moveTo(296 + Math.cos(t)*24, 136 + Math.sin(t)*24); ctx.lineTo(296 + Math.cos(t)*72, 136 + Math.sin(t)*72); } ctx.stroke();
+    ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(296, 136, 24, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(296, 136, 5, 0, 7); ctx.fill();
+    ctx.fillStyle = C.ink; ctx.fillRect(292, 56, 8, 80); ctx.fillRect(250, 52, 92, 6); },
+  draw(){ const A = S.A, B = S.B, b = S.blk, cr = S.cr;
+    for (const X of [A, B]) { ctx.fillStyle = C.ink; ctx.fillRect(X.x, X.y, X.w, X.h); }
+    // the block, with its weight; the crate, with its own
+    ctx.fillStyle = C.ink2; ctx.fillRect(b.x, b.y, 40, 40); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(b.x + 1, b.y + 1, 38, 38);
+    ctx.fillStyle = C.white; for (const [px, py] of [[10,10],[30,10],[20,20],[10,30],[30,30]]) { ctx.beginPath(); ctx.arc(b.x + px, b.y + py, 3.2, 0, 7); ctx.fill(); }
+    if (cr.alive) { drawCrate(cr.x, cr.y, 28, 28); ctx.fillStyle = C.white; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; for (const [px, py] of [[8, 8], [20, 20]]) { ctx.beginPath(); ctx.arc(cr.x + px, cr.y + py, 3.6, 0, 7); ctx.fill(); ctx.stroke(); } }
+    // what each side carries, lit under it
+    this.pips(S.la || 0, A.x + 48, A.y + 5, C.gold); this.pips(Math.max(0, (S.lb || 5) - 5), B.x + 48, B.y + 5, C.gold); } },
 
 /* 39. what you take from the other side counts twice */
 { id:'ferry', was:[39], start:2, sy:324,
