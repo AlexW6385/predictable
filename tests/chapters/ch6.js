@@ -92,7 +92,7 @@
   check('60 birds to the second gap, then across to the sleeper', run(59, () => script([soft60(12.6), ...stamp60, soft60(28)]), {max:2000}), 'dead');
   check('60 wake him from the start bank', run(59, () => script([S.F(tap, () => cx() > 4.6*T), S.W(10), S.J(30, 0), S.W(300)]), {max:900}), 'timeout');
   check('60 birds across, wake him, birds back, across', run(59, () => script([soft60(12.6), ...stamp60, S.F(tap, () => cx() > 16.3*T), ...stamp60, S.U(() => g.S.gd.gone),
-    S.L(12.6), ...stamp60, soft60(28)]), {max:3000}), 'clear');
+    S.F(() => ({k:{left: Math.abs(g.P.vx) < 2.4}}), () => cx() < 12.6*T), ...stamp60, soft60(28)]), {max:3000}), 'clear');
 
   return out;
 })()
