@@ -1489,13 +1489,15 @@ const LV = [
   drawPlayer(dx, dy, dw, dh){ drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false); if (S.wet > 0) { ctx.fillStyle = `rgba(79,111,166,${0.15 + S.wet/400})`; ctx.fillRect(dx, dy, dw, dh); } } },
 
 /* 48. inside the bubble you float up until you are as heavy as what is around you; what you hold makes you heavier */
-{ id:'bubble', was:[34], start:4,
+{ id:'bubble', was:[34], start:2,
   get noJump(){ return !!(S && S.inB); },
-  build(){ Gd(0,29); Sp(16,26,2,'down'); R('b',16,26,1,1);
-    S.bub = {x0:16*T, x1:27*T, y0:56}; R('b',10,12,0,12); R('b',1,1,13,13); S.k = [[7, GY], [11, GY], [1, 416]].map(([c, y]) => ({x:c*T + 9, y:y - 24, alive:true}));
-    // the door floats in the bubble
-    S.door = {x:24*T, y:280, w:36, h:56}; },
-  eq(){ return 70 + 72*S.keys; },
+  build(){ Gd(0,29); R('b',10,12,0,12);
+    S.bub = {x0:16*T, x1:27*T, y0:56};
+    // one key in the open, one in the low passage you can't get round, and one inside the bubble, up where only the light float
+    S.k = [{x:7*T + 9, y:GY - 24}, {x:11*T + 9, y:GY - 24}, {x:18*T + 9, y:this.eq(1) + 4}].map(k => Object.assign(k, {alive:true}));
+    // the door floats in the bubble, at the height of whoever carries three
+    S.door = {x:24*T, y:this.eq(3) - 6, w:36, h:56}; },
+  eq(n){ return 70 + 72*(n ?? S.keys); },
   update(){ const b = S.bub, pc = pcx(); S.inB = pc > b.x0 && pc < b.x1 && P.y + 14 > b.y0;
     for (const k of S.k) if (k.alive && ov(pbox(), {x:k.x, y:k.y, w:14, h:20})) { k.alive = false; S.keys++; sparkle(k.x + 7, k.y + 10); }
     // in the bubble you rise or sink to the height your weight allows, and drift where you push
@@ -1504,12 +1506,10 @@ const LV = [
   extraG(){ return S.inB ? -0.55 : 0; },
   drawBack(){ const b = S.bub, rr = 60; ctx.fillStyle = 'rgba(226,166,42,.08)'; ctx.beginPath(); ctx.moveTo(b.x0, GY); ctx.lineTo(b.x0, b.y0 + rr); ctx.quadraticCurveTo(b.x0, b.y0, b.x0 + rr, b.y0); ctx.lineTo(b.x1 - rr, b.y0); ctx.quadraticCurveTo(b.x1, b.y0, b.x1, b.y0 + rr); ctx.lineTo(b.x1, GY); ctx.fill();
     ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([5,6]); ctx.stroke(); ctx.setLineDash([]);
-    // the gauge on its side: how high you float with nothing, one, two or three keys
-    const gx = b.x0 + 22; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(gx, 70); ctx.lineTo(gx, 70 + 72*3 + 28); ctx.stroke();
-    for (let k = 0; k <= 3; k++) { const y = 70 + 72*k + 14; ctx.beginPath(); ctx.moveTo(gx - 8, y); ctx.lineTo(gx + 8, y); ctx.stroke(); for (let i = 0; i < k; i++) { ctx.save(); ctx.translate(gx + 14 + i*12, y - 8); ctx.scale(0.6, 0.6); drawKey(0, 0); ctx.restore(); } if (!k) { ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(gx + 18, y, 4, 0, 7); ctx.stroke(); } }
     for (let i = 0; i < 6; i++) { const a = frame*0.01 + i; ctx.fillStyle = 'rgba(30,43,71,.18)'; ctx.beginPath(); ctx.arc((b.x0 + b.x1)/2 + Math.cos(a)*120, 250 + Math.sin(a*1.3)*120 - ((frame*0.6 + i*40) % 60), 3, 0, 7); ctx.fill(); } },
   draw(){ for (const k of S.k) if (k.alive) drawKey(k.x, k.y); const d = S.door; drawDoor(d.x, d.y, {});
-    ctx.strokeStyle = 'rgba(30,43,71,.3)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(d.x + 18, d.y); ctx.lineTo(d.x + 18, 16); ctx.stroke(); } },
+    ctx.strokeStyle = 'rgba(30,43,71,.3)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(d.x + 18, d.y); ctx.lineTo(d.x + 18, 16); ctx.stroke(); },
+  drawPlayer(dx, dy, dw, dh){ heavyPlayer(dx, dy, dw, dh); } },
 
 /* 49. a landing makes light for a while; the light stones hold only in light, the dark ones only in the dark */
 { id:'lightdark', was:[81], start:1.5,

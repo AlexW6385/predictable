@@ -76,12 +76,16 @@
   check('47 stop beside the first bubbles, then run for the fire', run(46, () => script([S.R(9), S.U(() => gy() && gy().st === 'bub'), S.F(R, () => cx() > gy().x - 45), S.U(() => !gy() || gy().st !== 'bub'), S.U(() => !gy()), S.R(28.5)]), {max:1500}), 'dead');
   check('47 wait by the fire, step aside toward it, run through', run(46, () => script([wary47(19.0), S.U(() => !gy()), S.U(() => gy() && gy().st === 'bub'), S.R(20.0), S.U(() => g.S.wet > 150), S.R(28.5), S.W(20)]), {max:2000}), 'clear');
   check('47 ... or step aside away from it, and go once the water falls', run(46, () => script([wary47(19.0), S.U(() => !gy()), S.U(() => gy() && gy().st === 'bub'), S.L(17.9), S.U(() => g.S.wet > 150), S.U(() => !gy()), S.R(28.5), S.W(20)]), {max:2000}), 'clear');
-  // ---- 48 bubble
-  const float48 = () => P => { if (cx() < 20*T) return R(); return (g.S.inB && Math.abs(P.vy) < 0.05) ? R() : N(); };
-  const back48 = [S.L(2.5), S.W(6), S.J(3, -1), S.U(P => P.on), S.R(2.2), S.U(P => P.on)];
-  check('48 walk on (two keys)', run(47, () => script([S.F(float48(), () => false)]), {max:1200}), 'timeout');
-  check('48 hop the first key (one)', run(47, () => script([S.R(5.9), S.J(8, 1), S.F(float48(), () => false)]), {max:1200}), 'timeout');
-  check('48 go back for the third key', run(47, () => script([...back48, S.F(float48(), () => false)]), {max:1500}), 'clear');
+  // ---- 48 bubble: come in light enough to reach the high key, then go back out for the weight you left
+  { const keys = () => g.S.keys, inB = () => g.S.inB;
+    const skip7 = [S.R(5.6), S.J(8, 1), S.U(P => P.on, {right:true})];
+    const enter = [S.R(16.6), S.U(() => Math.abs(g.P.vy) < 0.05 && inB(), {})];
+    const toDoor = S.F(P => ({k:{right: cx() < 24.6*T, left: cx() > 24.9*T}}), () => false);
+    const grab = S.F(() => ({k:{right: cx() < 18.6*T, left: cx() > 18.9*T}}), () => keys() >= 2);
+    check('48 walk on with both keys, float to the door', run(47, () => script([...enter, toDoor]), {max:1500}), 'timeout');
+    check('48 leave the open key, float up, take the high one, float to the door', run(47, () => script([...skip7, ...enter, grab, S.U(() => Math.abs(g.P.vy) < 0.05, {}), toDoor]), {max:1500}), 'timeout');
+    check('48 both keys, then go back out for nothing', run(47, () => script([...enter, S.L(14), S.L(2), S.R(16.6), S.U(() => Math.abs(g.P.vy) < 0.05 && inB(), {}), toDoor]), {max:2000}), 'timeout');
+    check('48 leave the open key, take the high one, go back out for it, float to the door', run(47, () => script([...skip7, ...enter, grab, S.L(14), S.L(6.6), S.R(16.6), S.U(() => Math.abs(g.P.vy) < 0.05 && inB(), {}), toDoor]), {max:2500}), 'clear'); }
   // ---- 49 light and dark
   const light49 = [S.R(4.3), S.W(5), S.J(10, 0), S.U(P => P.on)];
   const toGrey49 = [...light49, S.JT(7.5, 416, {tol:9}), S.U(P => P.on), S.JT(10.5, 416, {tol:9}), S.U(P => P.on), S.JT(13.7, 416, {tol:10}), S.U(P => P.on)];
