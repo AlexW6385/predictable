@@ -40,8 +40,8 @@
   const sneak = [S.F(slowR, () => cx() > 3.6*T), S.JT(7.6, GY, {tol:12}), S.F(slowR, () => cx() > 9.6*T), S.JT(13.6, GY, {tol:12}), S.F(slowR, () => cx() > 15.8*T)];
   check('54 run', run(53, () => R), 'dead');
   check('54 sneak, hop over the sleepers anywhere', run(53, () => script([S.F(slowR, () => cx() > 3.6*T), S.J(3, 1), S.F(slowR, () => cx() > 9.6*T), S.J(3, 1), S.F(slowR, () => cx() > 28*T)]), {max:1500}), 'dead');
-  check('54 sneak past them all, leave the bull asleep', run(53, () => script([...sneak, S.JT(21.6, GY, {tol:16}), S.F(slowR, () => cx() > 28*T)]), {max:1500}), /dead|timeout/);
-  check('54 sneak past the guards, wake the bull at the wall, dodge it', run(53, () => { const a = script([...sneak, S.JT(21.6, GY, {tol:16}), S.W(2)]); let done = false; return (P, f) => { if (!done) { const r = a(P, f); if (g.S.bull.st !== 'sleep' && P.on) done = true; return r; } return dodge()(P, f); }; }, {max:2000}), 'clear');
+  check('54 sneak past them all, leave the bull asleep', run(53, () => script([...sneak, S.JT(21.2, GY, {tol:16}), S.F(slowR, () => cx() > 28*T)]), {max:1500}), 'timeout');
+  check('54 sneak past the guards, wake the bull at the wall, dodge it', run(53, () => { const a = script([...sneak, S.JT(21.2, GY, {tol:16}), S.U(P => P.on), S.F(slowR, () => cx() > 22.1*T), S.W(8), S.J(30, 0), S.W(2)]); let done = false; return (P, f) => { if (!done) { const r = a(P, f); if (g.S.bull.st !== 'sleep' && P.on) done = true; return r; } return dodge()(P, f); }; }, {max:2000}), 'clear');
   // ---- 55 dream
   const sleepW = () => S.U(() => g.S.sleep, {});
   check('55 run', run(54, () => R), 'dead');

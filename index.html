@@ -1600,7 +1600,7 @@ const LV = [
 
 /* 54. they sleep until you make a sound; what charges at you can break what you cannot */
 { id:'sleepers', was:[38, 67], start:1.5,
-  build(){ Gd(0,29); for (const c of [7, 13]) R('g',c,c + 1,14,16,{carpet:true}); for (let r = 0; r <= 13; r++) R('bb',24,24,r,r); Door(27.5,14);
+  build(){ Gd(0,29); for (const c of [7, 13, 19]) R('g',c,c + 1 + (c === 19 ? 1 : 0),14,16,{carpet:true}); for (let r = 0; r <= 13; r++) R('bb',24,24,r,r); Door(27.5,14);
     S.gd = [5, 11].map(c => ({x:c*T + 4, y:GY - 24, awake:false})); S.rings = [];
     S.bull = {x:18*T, w:48, h:40, st:'sleep', t:0, dir:-1}; },
   noise(x, r){ if (r <= 0) return; S.rings.push({x, r, t:0}); for (const g of S.gd) if (Math.abs(g.x + 12 - x) < r) g.awake = true;
