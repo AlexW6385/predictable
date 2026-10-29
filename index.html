@@ -2194,7 +2194,12 @@ const LV = [
       const tx = L.seen > 0 ? gunsAhead(S.gs) : L.mode === 'search' && Math.abs(L.last.vx) > 0.5 ? runOn(L.last.x, Math.sign(L.last.vx)) : L.mode === 'search' ? L.last.x : pcx(), F = S.gs.F, ty = GY - 4;
       S.gs.sh.push({x:gn.x, y:gn.y, vx:(tx - gn.x)/F, vy:(ty - gn.y)/F - S.gs.G*(F + 1)/2, t:0, F, tx, ty, pred:true}); gn.kick = 8; }
     gunsStep(S.gs); },
-  draw(){ drawLamp(S.L); drawGuns(S.gs); drawLaw(); if (S.rep) { ctx.fillStyle = C.red; ctx.beginPath(); ctx.arc(S.gs.gun[0].x, S.gs.gun[0].y - 6, 4 + (30 - S.rep.t)/5, 0, 7); ctx.fill(); } } },
+  draw(){ drawLamp(S.L); drawGuns(S.gs); drawLaw();
+    // the state allows one offence: two strikes under the tablet, the first filled by your first offence
+    const cx0 = camX + W/2; for (let i = 0; i < 2; i++) { const x = cx0 - 13 + i*18, y = 66; ctx.strokeStyle = 'rgba(30,43,71,.45)'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, 10, 10); if ((S.crimes || 0) > i) { ctx.fillStyle = C.red; ctx.fillRect(x + 2, y + 2, 6, 6); } }
+    // the watchman reports to the gun: a dotted line from its lamp
+    if (S.rep) { const g = S.gs.gun[0]; ctx.strokeStyle = C.red; ctx.lineWidth = 1.5; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.moveTo(S.L.x, S.L.y); ctx.lineTo(g.x, g.y - 6); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = C.red; ctx.beginPath(); ctx.arc(g.x, g.y - 6, 4 + (30 - S.rep.t)/5, 0, 7); ctx.fill(); } } },
 
 /* ===================== IX. Art and faith ===================== */
 
