@@ -885,11 +885,12 @@ const LV = [
 
 /* 22. not every mark is a memory */
 { id:'forged', was:[16], start:1.5,
-  build(){ Gd(0,29); for (const c of [6,7,11,12,18,19,23,24]) HS(c); Door(27,14);
-    S.forged = [4,5,9,10,14,15].map(c => [c*T + 16, 430]).concat([18,19,23,24].map(c => [c*T + 16, 430])); },
+  build(){ Gd(0,29); for (const c of [6,7,8,13,14,15,19,20,24,25]) HS(c); Door(28,14);
+    // on the left the paint lures you into leaping early: three marks, three spikes, too far for one leap; on the right it is painted on the spikes, for whoever learned to walk through it
+    S.forged = [3,4,5,10,11,12].map(c => [c*T + 16, 430]).concat([19,20,24,25].map(c => [c*T + 16, 430])); },
   update(){ // walking through wet paint smears it
     for (const m of S.forged) if (P.on && Math.abs(pcx() - m[0]) < 12) m[2] = (m[2] || 0) + 1; },
-  drawBack(){ ctx.strokeStyle = C.grid2; ctx.lineWidth = 2; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(15*T, 60); ctx.lineTo(15*T + 6, 200); ctx.lineTo(15*T - 4, 330); ctx.lineTo(15*T + 3, GY); ctx.stroke(); ctx.setLineDash([]);
+  drawBack(){ ctx.strokeStyle = C.grid2; ctx.lineWidth = 2; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(17*T, 60); ctx.lineTo(17*T + 6, 200); ctx.lineTo(17*T - 4, 330); ctx.lineTo(17*T + 3, GY); ctx.stroke(); ctx.setLineDash([]);
     // painted marks: glossy, still wet, dripping; walked through, they smear
     for (const [x, y, sm] of S.forged) { const k = Math.min(1, (sm || 0)/8); ctx.save(); ctx.translate(x, y); ctx.scale(1 + k*1.6, 1 - k*0.5);
       ctx.globalAlpha = 0.85; cross(0, 0, 6, '#D8483B', 3); ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-4, -5); ctx.lineTo(-1, -2); ctx.stroke();

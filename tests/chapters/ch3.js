@@ -15,9 +15,10 @@
   check('21 follow the pencil lines', run(20, () => script([...pencil21, S.R(17.8), S.JT(20.6, GY, {tol:10}), S.U(P => P.on), S.R(23.4), S.J(30, 1), S.R(29), S.W(20)]), {max:900}), 'clear');
   // ---- 22 forged
   check('22 walk', run(21, () => R), 'dead');
-  check('22 avoid the X marks', run(21, () => script([S.R(3.3), S.JT(6.5), S.R(29)])), 'dead');
-  check('22 the marks lie everywhere', run(21, () => script([S.R(5.5), S.J(10, 1), S.R(10.5), S.J(10, 1), S.R(29)])), /dead@1[78]/);
-  check('22 left: the marks lie; right: the marks are true', run(21, () => script([S.R(5.5), S.J(10, 1), S.R(10.5), S.J(10, 1), S.R(17.5), S.J(10, 1), S.R(22.5), S.J(10, 1), S.R(27.5)])), 'clear');
+  const hop22 = (xs, h) => P => (P.on && xs.some(c => Math.abs(cx() - c*T) < 3)) ? {jump:h, dir:1} : R();
+  for (const h of [8, 14, 30]) for (const d of [0.1, 0.7]) check(`22 leap the marks (hold ${h}, ${d} early)`, run(21, () => hop22([3, 10, 19, 24].map(c => c - d), h), {max:900}), 'dead');
+  check('22 the marks lie everywhere', run(21, () => hop22([5.4, 12.4, 21.4, 26.4], 8), {max:900}), /dead@(18.9|19)/);
+  check('22 left: walk through the paint; right: it is painted on the spikes', run(21, () => hop22([5.4, 12.4, 18.4, 23.4], 8), {max:900}), 'clear');
   // ---- 23 fourth wall
   check('23 press jump when you die', run(22, () => P => g.S.over && g.S.over.kind === 'death' && g.S.over.t > 25 ? {jump:1} : R()), 'dead');
   check('23 wait out the death, press start on the title', run(22, () => P => g.S.over && g.S.over.kind === 'title' && g.S.over.t > 30 ? {jump:1} : R()), 'dead');
