@@ -24,19 +24,27 @@
   check('62 just pass over it, die; then run', run(61, life => life === 0 ? script([S.R(10.5), S.W(100)]) : script([S.R(9.4), S.J(30, 1), S.R(27.5), S.W(600)]), {freshMem:true, lives:2, max:900}), /timeout|dead/);
   check('62 hold it, die; then run', run(61, life => life === 0 ? script([S.R(4.5), S.W(240), S.R(10.5), S.W(100)]) : script([S.R(9.4), S.J(30, 1), S.R(27.5)]), {freshMem:true, lives:3, max:1500}), 'clear');
   // ---- 63 habit
-  check('63 run, jump each gap at its edge', run(62, () => P => (P.on && [5.6, 11.6, 17.6].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R(), {freshMem:true}), 'dead');
-  check('63 spam full jumps', run(62, () => P => P.on ? {jump:30, dir:1} : R(), {freshMem:true}), 'dead');
-  check('63 stop at every edge, then jump', run(62, () => script([S.R(5.4), S.W(25), S.J(30, 1), S.R(11.4), S.W(12), S.J(30, 1), S.R(17.4), S.W(40), S.J(30, 1), S.R(28.5)]), {freshMem:true}), 'clear');
+  const rhythm63 = P => (P.on && [5.6, 11.6, 17.6].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R();
+  check('63 hold right', run(62, () => R, {freshMem:true}), 'dead');
+  check('63 stop at every edge, then jump', run(62, () => script([S.R(5.4), S.W(25), S.J(30, 1), S.R(11.4), S.W(12), S.J(30, 1), S.R(17.4), S.W(40), S.J(30, 1), S.R(23.4), S.W(20), S.J(30, 1), S.R(45.5)]), {freshMem:true, max:1500}), 'dead');
+  check('63 run in rhythm, and jump the fourth yourself', run(62, () => P => (P.on && [5.6, 11.6, 17.6, 23.3].some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R(), {freshMem:true, max:1500}), 'dead');
+  check('63 run in rhythm, hands off over its gap, keep running', run(62, () => script([S.F(rhythm63, () => cx() > 45*T)]), {freshMem:true, max:1500}), 'dead');
+  check('63 run in rhythm, hands off over its gap, then stop', run(62, () => script([S.F(rhythm63, () => cx() > 30*T), S.U(P => P.on), S.W(20), S.R(45.5), S.W(30)]), {freshMem:true, max:1500}), 'clear');
+  check('63 run in rhythm, hands off over its gap, then a tap back', run(62, () => script([S.F(rhythm63, () => cx() > 27.5*T), S.K({left:true}, 2), S.R(45.5), S.W(30)]), {freshMem:true, max:1500}), 'clear');
   // ---- 64 habit and shadow
   const gaps64 = [5.6, 11.6, 17.6, 29.6, 35.6, 41.6];
   check('64 run and jump each gap', run(63, () => P => (P.on && gaps64.some(x => Math.abs(cx() - x*T) < 5)) ? {jump:30, dir:1} : R(), {freshMem:true, max:1500}), 'dead');
   check('64 break the rhythm, take it, walk under at the end', run(63, () => script([S.R(5.4), S.W(20), S.J(30, 1), S.R(11.4), S.W(8), S.J(30, 1), S.R(17.4), S.W(30), S.J(30, 1), S.R(29.5), S.J(30, 1), S.R(35.4), S.W(14), S.J(30, 1), S.R(41.5), S.W(5), S.J(30, 1), S.R(50.4)]), {freshMem:true, max:2000}), 'clear');
   check('64 take it, then wait to think', run(63, () => script([S.R(5.4), S.W(20), S.J(30, 1), S.R(11.4), S.W(8), S.J(30, 1), S.R(17.4), S.W(30), S.J(30, 1), S.R(29.5), S.W(120), S.J(30, 1), S.R(50.4)]), {freshMem:true, max:2000}), 'dead');
   // ---- 65 changed mind
-  const upper = () => script([S.JT(4.8, 384), S.JT(8.2, 352, {maxPeak:40, tol:14}), S.R(29)]);
-  g.prof.mem = null;
-  check('65 alternate corridors (L, U, L)', run(64, life => life % 2 === 0 ? R : upper(), {lives:3, freshMem:true}), 'dead');
-  check('65 go back where you died (L, L)', run(64, life => R, {lives:2, freshMem:true}), 'clear');
+  const hi1 = [S.R(4.0), S.JT(7.0, 384, {tol:14, minPeak:70}), S.R(13.5), S.U(P => P.on)], lo1 = [S.R(13.5)];
+  const hi2 = [S.R(13.6), S.JT(17.5, 384, {tol:10}), S.U(P => P.on), S.JT(19.9, 352, {tol:12}), S.R(28.5), S.W(30)];
+  const lo2 = [S.R(21.25), S.J(1, 1), S.R(28.5), S.W(30)];
+  check('65 hold right', run(64, () => R, {freshMem:true}), 'dead');
+  check('65 low, then high (where you must go)', run(64, () => script([...lo1, ...hi2]), {freshMem:true, max:1200}), 'dead');
+  check('65 high, then low', run(64, () => script([...hi1, ...lo2]), {freshMem:true, max:1200}), 'dead');
+  check('65 low, then low (the pit)', run(64, () => script([...lo1, ...lo2]), {freshMem:true, max:1200}), 'dead');
+  check('65 high (take the fist), then high again', run(64, () => script([...hi1, ...hi2]), {freshMem:true, max:1200}), 'clear');
   // ---- 66 mast
   const dock66 = [S.U(() => g.S.docked), S.W(45), S.R(28.5), S.W(60)];
   const dodge66 = () => P => { if (g.S.docked) return R(); const n = (g.S.notes || []).find(n => Math.abs(n.x - cx()) < 36 && Math.sign(cx() - n.x) === Math.sign(n.vx) && Math.abs(n.vx) > 0);

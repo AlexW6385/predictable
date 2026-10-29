@@ -70,8 +70,14 @@
   check('48 tiny hops', run(47, () => P => (P.on && cx() > 11.5*T && cx() < 13*T) ? {jump:1, dir:1} : (cx() < 12.5*T ? R() : N()), {max:600}), 'timeout');
   check('48 a measured jump from beside it', run(47, p48(20)), 'clear');
   // ---- 49 light and dark
+  const light49 = [S.R(4.3), S.W(5), S.J(10, 0), S.U(P => P.on)];
+  const toGrey49 = [...light49, S.JT(7.5, 416, {tol:9}), S.U(P => P.on), S.JT(10.5, 416, {tol:9}), S.U(P => P.on), S.JT(13.7, 416, {tol:10}), S.U(P => P.on)];
+  const end49 = [S.R(22.3), S.W(8), S.J(10, 0), S.U(P => P.on), S.JT(24.5, 416, {tol:9}), S.U(P => P.on), S.JT(26.8, GY, {tol:14}), S.R(28.5), S.W(30)];
   check('49 hop on every stone', run(48, () => P => (P.on && cx() > 3.3*T && cx() < 25*T) ? {jump:8, dir:1} : R()), 'dead');
-  check('49 find the moments', [(() => { const o = {beam:150, depth:150, len:8}; const r = SOLVE.solve(48, o); if (!r.ok) return 'nosol'; g.setLvl(48); return SOLVE.replay(SOLVE.strat(r.seq, o)); })()], 'clear');
+  check('49 jump for the first white stone in the dark', run(48, () => script([S.R(4.0), S.JT(7.5, 416, {tol:9}), S.W(100)]), {max:600}), 'dead');
+  check('49 light it; then on to the grey, and straight onto the black', run(48, () => script([...toGrey49, S.R(21.6), S.W(100)]), {max:1200}), 'dead');
+  check('49 light it; then to the grey, wait for the dark, walk the black', run(48, () => script([...toGrey49, S.W(185), ...end49]), {max:1500}), 'clear');
+  check('49 ... but jump onto the black', run(48, () => script([...toGrey49, S.W(185), S.JT(16.5, 416, {tol:9}), S.W(60)]), {max:1500}), 'dead');
   // ---- 50 storm
   const J50 = [[4.0, 30, 0], [11.2, 3, 1], [14.0, 30, 1], [20.2, 3, 1], [22.4, 30, 0]], roofs50 = [8.5, 19.3];
   const p50 = (letGo, shelter) => () => { let waitAt = -1; return P => { const x = cx();
