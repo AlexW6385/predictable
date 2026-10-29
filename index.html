@@ -1164,18 +1164,10 @@ const LV = [
 
 /* 35. up is a choice, and the floor of the world is the roof of the world */
 { id:'upchoice', was:[11, 4], start:2, flip:true, wrapY:true, vmax:9,
-  build(){ Gd(0,6); Gd(9,16); Gd(19,29); R('b',0,29,4,4); Sp(4,11,3,'up'); Sp(11,13,13,'up'); Sp(17,23,5,'down'); Door(26,4);
-    // a pebble rolls into the first hole, comes in again from the top, and sticks on the thorns on the roof
-    S.peb = {x:4.2*T, y:GY - 6, vy:0, st:'roll', t:0}; S.stuck = []; },
+  build(){ Gd(0,6); Gd(9,16); Gd(19,29); R('b',0,29,4,4); Sp(4,11,3,'up'); Sp(11,13,13,'up'); Sp(17,23,5,'down'); Door(26,4); },
   // upside down under the floor is outside the world
-  update(){ if (P.g < 0 && P.y > GY) die('fall');
-    const q = S.peb; q.t++;
-    if (q.st === 'roll') { if (q.t > 30) q.x += 1.5; if (q.x > 7*T + 6) q.st = 'fall'; }
-    else if (q.st === 'fall') { q.vy = Math.min(q.vy + 0.5, 10); q.y += q.vy; if (q.y > H + 10) q.y = -10;
-      if (q.y < 200 && q.y >= 4*T - 16 - 5 && q.vy > 0) { q.y = 4*T - 16 - 5; q.st = 'stuck'; shake = 2; S.stuck.push([q.x, q.y]); q.t = 0; } }
-    else if (q.st === 'stuck' && q.t > 360) Object.assign(q, {x:4.2*T, y:GY - 6, vy:0, st:'roll', t:0}); },
-  draw(){ ctx.fillStyle = C.ink2; for (const [x, y] of S.stuck.slice(-1)) { ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill(); }
-    const q = S.peb; if (q.st !== 'stuck') { ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 7); ctx.fill(); } } },
+  // falling off the bottom brings you in at the top; the first hole shows you that by itself
+  update(){ if (P.g < 0 && P.y > GY) die('fall'); } },
 
 /* 36. what falls in comes out going up, as fast as it went in */
 { id:'portal', was:[45], start:12, vmax:16,
