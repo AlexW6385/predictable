@@ -59,17 +59,27 @@
   check('64 take it, two hops in rhythm, then wait', run(63, () => script([...broke64, S.R(41.5), ...hops64(2), S.W(400)]), {freshMem:true, max:2000}), 'dead');
   check('64 take it, teach your body a rhythm, let it jump once for you, then let go', run(63, () => script([...broke64, S.R(41.5), ...hops64(3), S.U(() => g.S.sh.lost, {right:true}), S.W(500)]), {freshMem:true, max:2500}), 'clear');
   check('64 ... the same, with long hops', run(63, () => script([...broke64, S.R(41.5), ...Array(3).fill(0).map(() => S.J(30, 1)), S.U(() => g.S.sh.lost, {right:true}), S.W(500)]), {freshMem:true, max:2500}), 'clear');
-  // ---- 65 changed mind
-  const up65 = [S.R(17.3), S.JT(20.5, 352, {tol:14}), S.R(28.5), S.W(30)], onP1 = [S.R(2.6), S.JT(5.5, 384, {tol:14})];
-  check('65 hold right', run(64, () => R, {freshMem:true}), 'dead');
-  check('65 up on the first lane, over the hole, up at the second', run(64, () => script([...onP1, S.R(8.5), S.J(30, 1), ...up65]), {freshMem:true, max:1200}), 'dead');
-  check('65 jump at everything', run(64, () => P => P.on ? {jump:30, dir:1} : R(), {freshMem:true, max:1200}), 'dead');
-  check('65 up on the first lane, drop through the hole, climb at the second', run(64, () => script([...onP1, S.R(17.9), S.J(30, 1), S.R(28.5), S.W(30)]), {freshMem:true, max:1200}), 'dead');
-  check('65 walk under, stay low, climb at the second', run(64, () => script([S.R(18.0), S.W(10), S.J(30, 1), S.R(28.5), S.W(30)]), {freshMem:true, max:1200}), 'dead');
-  check('65 walk under, stay low, try the pit', run(64, () => script([S.R(20.9), S.J(30, 1), S.R(28.5)]), {freshMem:true, max:1200}), 'dead');
-  check('65 hop under the lane, then up through the hole, up at the second', run(64, () => script([S.R(6), S.J(30, 1), S.R(9.3), S.W(12), S.JT(12.9, 384, {tol:14}), ...up65]), {freshMem:true, max:1200}), 'dead');
-  check('65 walk under, up through the hole (into its fist), up at the second', run(64, () => script([S.R(9.3), S.W(12), S.JT(12.9, 384, {tol:14}), ...up65]), {freshMem:true, max:1200}), 'clear');
-  check('65 ... the same at a run', run(64, () => script([S.R(10), S.J(30, 1), ...up65]), {freshMem:true, max:1200}), 'clear');
+  // ---- 65 nerve
+  const gone65 = () => ['fall', 'gone'].includes(g.S.bst.st), bx65 = () => (g.S.bst.x + 26)/T, door65 = [S.R(28.6), S.W(30)];
+  check('65 hold right (run for the door)', run(64, () => R, {freshMem:true, max:900}), /dead@(1[6-9]|2[0-4])/);
+  check('65 stand still', run(64, () => N, {freshMem:true, max:900}), 'dead');
+  check('65 jump at everything', run(64, () => P => P.on ? {jump:30, dir:1} : R(), {freshMem:true, max:900}), 'dead');
+  check('65 turn, run at it and jump over it', run(64, () => script([S.L(13.6), S.J(30, -1), S.L(5), S.W(30)]), {freshMem:true, max:900}), 'dead');
+  check('65 let it come, then jump back over it', run(64, () => script([S.R(17), S.J(30, -1), S.L(5), S.W(60)]), {freshMem:true, max:900}), 'dead');
+  check('65 turn round and stand your ground', run(64, () => script([S.K({left:true}, 3), S.W(800)]), {freshMem:true, max:900}), 'timeout');
+  check('65 turn round and hop on the spot', run(64, () => script([S.K({left:true}, 3), S.W(10), S.J(30, 0), S.W(20), S.J(30, 0), S.W(600)]), {freshMem:true, max:900}), 'timeout');
+  check('65 walk at it a while, then turn and run', run(64, () => script([S.L(10), ...door65]), {freshMem:true, max:900}), 'dead');
+  check('65 walk it nearly to its den, then turn and run', run(64, () => script([S.U(() => bx65() < 4.0, {left:true}), ...door65]), {freshMem:true, max:900}), 'dead');
+  check('65 kite it: run, turn to face it, run again', run(64, () => script([S.F((P, k) => k % 40 < 22 ? R() : (k % 40 < 24 ? Lk() : N()), () => false)]), {freshMem:true, max:900}), 'dead');
+  check('65 kite it in the air: jump away, turn to face it in flight', run(64, () => P => P.on ? {jump:30, dir:1} : (P.vy > -2 ? Lk() : R()), {freshMem:true, max:900}), 'dead');
+  check('65 walk at it, with a hop on the way', run(64, () => script([S.L(11), S.J(30, -1), S.L(5), S.W(30)]), {freshMem:true, max:900}), 'dead');
+  check('65 turn round and walk at it until it backs into its den; then the door', run(64, () => script([S.U(gone65, {left:true}), S.W(20), ...door65]), {freshMem:true, max:1200}), 'clear');
+  check('65 ... turning round late', run(64, () => script([S.W(35), S.U(gone65, {left:true}), S.W(20), ...door65]), {freshMem:true, max:1200}), 'clear');
+  check('65 ... in taps, stopping to look', run(64, () => script([S.F((P, k) => ({k:{left: k % 30 < 12}}), gone65), S.W(20), ...door65]), {freshMem:true, max:1500}), 'clear');
+  check('65 ... after running first, turning when it is close', run(64, () => script([S.R(18), S.K({left:true}, 2), S.W(30), S.U(gone65, {left:true}), S.W(20), ...door65]), {freshMem:true, max:1500}), 'clear');
+  { const rs = []; for (let seed = 1; seed <= 6; seed++) { window.__NOISE = {seed, delay:10 + seed*2, jit:6}; rs.push(run(64, () => script([S.W(seed*7), S.U(gone65, {left:true}), S.W(20), ...door65]), {freshMem:true, max:1500})[0]); } window.__NOISE = null;
+    check('65 ... with human delays (6 tries)', [rs.filter(r => r === 'clear').length + '/6'], '6/6'); }
+  check('65 ... holding on into the rim, and waiting before the door', run(64, () => script([S.K({left:true}, 140), S.W(90), ...door65]), {freshMem:true, max:1500}), 'clear');
   // ---- 66 mast
   const dock66 = [S.U(() => g.S.docked), S.W(45), S.R(28.5), S.W(60)];
   const dodge66 = () => P => { if (g.S.docked) return R(); const n = (g.S.notes || []).find(n => Math.abs(n.x - cx()) < 36 && Math.sign(cx() - n.x) === Math.sign(n.vx) && Math.abs(n.vx) > 0);
