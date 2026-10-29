@@ -2052,7 +2052,166 @@ const LV = [
     const wob = S.ov ? Math.sin(frame*0.8)*5 : 0; ctx.strokeStyle = C.red; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(m.x + wob, m.y + 14, 20, 0, 7); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(m.x + wob - 26, m.y + 14); ctx.lineTo(m.x + wob - 14, m.y + 14); ctx.moveTo(m.x + wob + 14, m.y + 14); ctx.lineTo(m.x + wob + 26, m.y + 14); ctx.moveTo(m.x + wob, m.y - 12); ctx.lineTo(m.x + wob, m.y); ctx.stroke();
     if (S.st > 10) { ctx.strokeStyle = C.red; ctx.lineWidth = 3; ctx.globalAlpha = S.st/50; ctx.beginPath(); ctx.moveTo(ex, ey + 10); ctx.lineTo(m.x, m.y + 14); ctx.stroke(); ctx.globalAlpha = 1; }
-    const dd = ents.find(e => e.t === 'door'); if (dd) dd.teeth = S.mk < 0 ? clamp(1 - (dd.x - pcx())/160, 0, 1) : 0; } }
+    const dd = ents.find(e => e.t === 'door'); if (dd) dd.teeth = S.mk < 0 ? clamp(1 - (dd.x - pcx())/160, 0, 1) : 0; } },
+
+/* 95. in a falling room, nothing weighs anything */
+{ id:'elevator', start:2,
+  build(){ S.land = Gd(0,9); R('b',10,19,1,1); R('b',10,10,2,11); R('b',19,19,2,13); R('b',10,19,14,14); R('b',11,13,4,4);
+    S.gate = R('b',10,10,12,13,{cond:() => S.cut > 0}); S.dr = {x:12*T - 2, y:4*T - 56};
+    S.in = 0; S.cut = 0; S.fall = 0; },
+  inside(){ return P.x > 11*T && P.x + PW < 19*T && P.y > T; },
+  extraG(){ return S.cut > 0 && S.fall > 0 ? -0.53 : 0; },
+  update(){
+    // the Eye cuts the rope once you are in
+    if (!S.cut) { S.in = this.inside() ? S.in + 1 : 0; if (S.in > 70) { S.cut = 1; shake = 6; S.entr = null; } return; }
+    S.fall++; S.land.y = 14*T - 0.275*S.fall*S.fall;
+    // in the falling room you fall as fast as it does: push off and you go on, at the same speed, until something stops you
+    if (ov(pbox(4), {x:S.dr.x + 4, y:S.dr.y + 4, w:28, h:52})) return levelClear();
+    if (S.fall > 150) { shake = 20; return die('crash'); } },
+  drawBack(){ const off = S.cut ? 0.275*S.fall*S.fall : 0;
+    // the shaft
+    ctx.fillStyle = 'rgba(30,43,71,.08)'; ctx.fillRect(9*T, -10, 12*T, H + 20);
+    ctx.strokeStyle = 'rgba(30,43,71,.25)'; ctx.lineWidth = 2; for (let i = -2; i < 20; i++) { const y = ((i*48 - off) % (20*48) + 20*48) % (20*48) - 48; ctx.beginPath(); ctx.moveTo(20*T, y); ctx.lineTo(29*T, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(T, y + 24); ctx.lineTo(9*T, y + 24); ctx.stroke(); }
+    if (S.fall > 110) { const y = GY + 80 + (150 - S.fall)*10; ctx.fillStyle = C.ink; for (let x = 9*T; x < 21*T; x += 16) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 8, y - 16); ctx.lineTo(x + 16, y); ctx.fill(); } } },
+  draw(){ // the rope, and the Eye with its scissors
+    const rx = 14.5*T, cut = S.cut ? 1 : Math.min(1, S.in/70);
+    ctx.strokeStyle = '#8A5A2B'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(rx, S.cut ? T - 60 : 0); ctx.lineTo(rx, T); ctx.stroke();
+    if (!S.cut) { drawEye(rx + 46, 22, 12, rx, 30, 0); ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; const a = 0.6*(1 - cut); ctx.beginPath(); ctx.moveTo(rx + 26, 22); ctx.lineTo(rx - 4, 22 - 14*a); ctx.moveTo(rx + 26, 22); ctx.lineTo(rx - 4, 22 + 14*a); ctx.stroke();
+      if (S.in > 0) for (let i = 0; i < 3; i++) { ctx.strokeStyle = '#8A5A2B'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(rx, 22); ctx.lineTo(rx + (i - 1)*5*cut, 22 + 6*cut); ctx.stroke(); } }
+    drawDoor(S.dr.x, S.dr.y);
+    if (S.cut && S.fall < 150) { ctx.fillStyle = 'rgba(30,43,71,.35)'; for (let i = 0; i < 6; i++) { const x = 9*T + ((i*97) % (12*T)), y = (frame*14 + i*90) % H; ctx.fillRect(x, H - y, 2, 22); ctx.fillRect(20.5*T + ((i*61) % (8*T)), H - (y + 40) % H, 2, 22); } } },
+  drawPlayer(dx, dy, dw, dh){ drawPlayerAt(dx, dy, dw, dh, P.face, C.white, C.ink, false); } },
+
+/* 96. the one who goes away and comes back is the younger twin */
+{ id:'twin', start:7,
+  build(){ Gd(0,29); Door(5,14,{onEnter(d){ if (S.me <= S.tw - 0.36) levelClear(); else { d.bite = true; die('door'); } }}); S.me = 0; S.tw = 0; S.rate = 1; },
+  update(){ // a moving clock runs slow: the faster you go, the less you age
+    const v = Math.min(1, Math.hypot(P.vx, P.on ? 0 : P.vy*0.3)/4.4); S.rate = 1 - 0.85*v*v;
+    S.me += S.rate/1200; S.tw += 1/1200; if (S.me >= 1) return die('age'); },
+  clock(x, y, a, r, live){ ctx.fillStyle = C.white; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(207,62,50,.25)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, r - 2, -Math.PI/2, -Math.PI/2 + Math.min(1, a)*Math.PI*2); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = live ? C.red : C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.sin(a*Math.PI*2)*(r - 3), y - Math.cos(a*Math.PI*2)*(r - 3)); ctx.stroke(); },
+  draw(){ const tx = 3*T + 5; drawPlayerAt(tx, GY - PH, PW, PH, 1, C.white, C.ink, false);
+    // grey hair comes with the years
+    ctx.fillStyle = `rgba(150,150,160,${Math.min(1, S.tw)})`; ctx.fillRect(tx + 2, GY - PH + 2, PW - 4, 4);
+    this.clock(tx + 11, GY - PH - 18, S.tw, 11, false);
+    if (state === 'play') { this.clock(pcx(), P.y - 18, S.me, 11, S.rate < 0.5); ctx.fillStyle = `rgba(150,150,160,${Math.min(1, S.me)})`; ctx.fillRect(P.x + 2, P.y + 2, PW - 4, 4); } } },
+
+/* 97. a small demon keeps the wall: the quick may pass one way, the slow the other */
+{ id:'maxwell', was:[97], start:5,
+  build(){ Gd(0,13); S.hot = Gd(14,29); R('b',14,14,0,11); Door(2,14,{slots:1, fill:() => S.keys, onEnter(d){ if (S.keys) levelClear(); }});
+    S.key = {x:26*T, y:GY - 24, alive:true}; S.burn = 0; S.zap = 0; S.side = pcx() < 14.5*T ? -1 : 1;
+    S.balls = []; for (let i = 0; i < 9; i++) { const hot = i % 2 === 0, sp = hot ? 3.6 : 1.1, a = i*1.7; S.balls.push({x:(hot ? 20 : 7)*T + i*13, y:120 + i*30, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, hot}); } },
+  update(){ const gx = 14.5*T, pc = pcx(), side = pc < gx ? -1 : 1;
+    if (S.zap) S.zap--;
+    // the demon at the gate: the quick may go right, the slow may go left
+    if (side !== S.side) { const v = Math.abs(P.vx); if ((side > 0 && v < 3) || (side < 0 && v > 1.6)) { S.zap = 20; return die('demon'); } }
+    S.side = side;
+    // on the hot side the floor burns whoever is slow on it
+    if (pc > 15*T && P.on && P.stand === S.hot && Math.abs(P.vx) < 2) { if (++S.burn > 20) return die('burn'); } else S.burn = Math.max(0, S.burn - 2);
+    const k = S.key; if (k.alive && ov(pbox(), {x:k.x, y:k.y, w:14, h:20})) { k.alive = false; S.keys++; sparkle(k.x + 7, k.y + 10); }
+    // the gas it sorts
+    for (const b of S.balls) { b.x += b.vx; b.y += b.vy; if (b.y < 30 || b.y > GY - 8) b.vy = -b.vy;
+      const lo = b.hot ? 15*T + 8 : 8, hi = b.hot ? W - 8 : 14*T - 8; if (b.x < lo || b.x > hi) b.vx = -b.vx; } },
+  drawBack(){ ctx.fillStyle = 'rgba(207,62,50,.07)'; ctx.fillRect(15*T, 0, 15*T, GY); ctx.fillStyle = 'rgba(70,110,170,.07)'; ctx.fillRect(0, 0, 14*T, GY);
+    for (const b of S.balls) { ctx.fillStyle = b.hot ? 'rgba(207,62,50,.55)' : 'rgba(70,110,170,.5)'; ctx.beginPath(); ctx.arc(b.x, b.y, 7, 0, 7); ctx.fill();
+      if (b.hot) { ctx.strokeStyle = 'rgba(207,62,50,.3)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx*4, b.y - b.vy*4); ctx.stroke(); } }
+    // the floor that burns
+    for (let x = 15*T; x < W; x += 12) { const h = 3 + Math.sin(x*0.3 + frame*0.25)*2; ctx.fillStyle = 'rgba(207,62,50,.6)'; ctx.fillRect(x, GY - h, 6, h); } },
+  draw(){ const k = S.key; if (k.alive) drawKey(k.x, k.y);
+    // the demon, and what it lets through: the quick going right, above; the slow going left, below
+    const dx = 14.5*T, dy = 11*T + 6; ctx.fillStyle = S.zap ? C.red : C.ink; ctx.beginPath(); ctx.arc(dx, dy, 12, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(dx - 10, dy - 6); ctx.lineTo(dx - 13, dy - 18); ctx.lineTo(dx - 4, dy - 10); ctx.moveTo(dx + 10, dy - 6); ctx.lineTo(dx + 13, dy - 18); ctx.lineTo(dx + 4, dy - 10); ctx.fill();
+    const lk = Math.sign(pcx() - dx)*2; ctx.fillStyle = C.white; ctx.fillRect(dx - 7, dy - 4, 5, 5); ctx.fillRect(dx + 2, dy - 4, 5, 5); ctx.fillStyle = C.ink; ctx.fillRect(dx - 6 + lk, dy - 3, 2, 3); ctx.fillRect(dx + 3 + lk, dy - 3, 2, 3);
+    ctx.strokeStyle = C.red; ctx.fillStyle = C.red; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(dx - 40, dy - 34); ctx.lineTo(dx + 30, dy - 34); ctx.stroke(); ctx.beginPath(); ctx.moveTo(dx + 36, dy - 34); ctx.lineTo(dx + 28, dy - 39); ctx.lineTo(dx + 28, dy - 29); ctx.fill();
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(dx - 40 + i*12, dy - 40); ctx.lineTo(dx - 48 + i*12, dy - 40); ctx.stroke(); }
+    ctx.strokeStyle = '#4C78B5'; ctx.fillStyle = '#4C78B5'; ctx.beginPath(); ctx.moveTo(dx + 30, dy - 22); ctx.lineTo(dx - 20, dy - 22); ctx.stroke(); ctx.beginPath(); ctx.moveTo(dx - 26, dy - 22); ctx.lineTo(dx - 18, dy - 27); ctx.lineTo(dx - 18, dy - 17); ctx.fill();
+    if (S.burn > 2) for (let i = 0; i < 2; i++) parts.push({x:P.x + Math.random()*PW, y:P.y + PH, vx:0, vy:-1 - Math.random(), life:16, r:2, col:'rgba(120,120,120,.6)'}); } },
+
+/* 98. the box was filled before you chose, by the one who knew how you would choose */
+{ id:'newcomb', was:[98], start:1.5,
+  build(){ Gd(0,29);
+    S.bait = [4, 8, 12, 16].map(c => ({x:c*T + 8, y:GY - 20, alive:true}));
+    S.seen = 0; S.filled = null; S.ft = 0; S.open = {x:20*T, coin:true}; S.shut = {x:23*T, opened:false};
+    Door(27,14,{slots:2, fill:() => (S.keys > 0 ? 1 : 0) + (S.coins > 0 ? 1 : 0), onEnter(d){ if (S.keys > 0 && S.coins > 0) levelClear(); else { d.bite = true; die('door'); } }}); },
+  update(){ const pc = pcx();
+    // the bait: the Eye counts what you take
+    for (const c of S.bait) if (c.alive && ov(pbox(), {x:c.x, y:c.y, w:16, h:18})) { c.alive = false; S.coins++; if (S.filled == null) S.seen++; sparkle(c.x + 8, c.y + 9); }
+    // past this line it has made up its mind about you, and filled the closed box accordingly; nothing you do now changes what is in it
+    if (S.filled == null && pc > 17.5*T) { S.filled = S.seen === 0; S.ft = 1; shake = 3; }
+    if (S.ft) S.ft++;
+    const o = S.open; if (o.coin && ov(pbox(), {x:o.x, y:GY - 34, w:T, h:34})) { o.coin = false; S.coins++; sparkle(o.x + 16, GY - 20); }
+    const s = S.shut; if (!s.opened && ov(pbox(), {x:s.x, y:GY - 34, w:T, h:34})) { s.opened = true; if (S.filled) { S.keys++; sparkle(s.x + 16, GY - 40); } else dust(s.x + 16, GY - 30); } },
+  draw(){ for (const c of S.bait) if (c.alive) drawCoin(c.x, c.y);
+    // the line
+    ctx.strokeStyle = 'rgba(30,43,71,.4)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(17.5*T, GY); ctx.lineTo(17.5*T, GY - 120); ctx.stroke(); ctx.setLineDash([]);
+    // the open box (glass) and the closed one
+    const o = S.open; ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.fillStyle = 'rgba(200,220,240,.5)'; ctx.fillRect(o.x + 2, GY - 34, T - 4, 34); ctx.strokeRect(o.x + 2, GY - 34, T - 4, 34); if (o.coin) drawCoin(o.x + 8, GY - 26);
+    const s = S.shut; ctx.fillStyle = '#9C6A45'; ctx.fillRect(s.x + 2, GY - 34, T - 4, 34); ctx.strokeRect(s.x + 2, GY - 34, T - 4, 34);
+    if (s.opened) { ctx.fillStyle = C.ink; ctx.fillRect(s.x + 5, GY - 31, T - 10, 26); ctx.save(); ctx.translate(s.x + 2, GY - 34); ctx.rotate(-1.1); ctx.fillStyle = '#9C6A45'; ctx.fillRect(0, -6, T - 4, 6); ctx.strokeRect(0, -6, T - 4, 6); ctx.restore(); }
+    else { ctx.fillStyle = C.gold; ctx.fillRect(s.x + 13, GY - 22, 6, 6); }
+    // the one who knew: it watched what you took, and it decided at the line
+    const ex = 21.5*T, ey = 190, lk = S.ft && S.ft < 60 ? {x:s.x + 16, y:GY - 30} : {x:pcx(), y:P.y + 14};
+    drawEye(ex, ey, 18, lk.x, lk.y, S.filled === false && S.ft > 30 ? 0.4 : 0);
+    for (let i = 0; i < S.seen; i++) drawCoin(ex - 50 + i*20, ey - 52);
+    if (S.ft && S.ft < 60) { const k = S.ft/60; ctx.globalAlpha = 1 - k; if (S.filled) drawKey(s.x + 10, GY - 120 + 80*k); else { ctx.strokeStyle = C.red; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(ex - 10, ey + 30); ctx.lineTo(ex + 10, ey + 50); ctx.moveTo(ex + 10, ey + 30); ctx.lineTo(ex - 10, ey + 50); ctx.stroke(); } ctx.globalAlpha = 1; } } },
+
+/* 99. the eye that sees everything has never seen itself */
+{ id:'reflection', was:[99], start:3.5,
+  build(){ Gd(0,29); R('b',8,13,11,11); S.mir = R('b',16,16,3,12,{mirror:true});
+    R('b',20,21,12,13); R('b',22,23,10,13); R('b',17,18,8,8);
+    S.gate = R('b',27,27,0,13,{cond:() => S.trance <= 0}); Door(28.4,14);
+    S.ex = 2*T; S.ey = 8*T - 14; S.seen = 0; S.self = 0; S.trance = 0; S.path = []; },
+  // follow the Eye's gaze toward you: straight, off the mirror, until it meets something
+  trace(){ const tx = pcx(), ty = P.y + PH/2; let x = S.ex, y = S.ey, d = Math.hypot(tx - x, ty - y) || 1, ux = (tx - x)/d, uy = (ty - y)/d, bounced = false; const pts = [[x, y]];
+    for (let s = 0; s < 2200; s += 3) { x += ux*3; y += uy*3;
+      if (x > P.x + 3 && x < P.x + PW - 3 && y > P.y + 3 && y < P.y + PH - 3) { pts.push([x, y]); return {hit:'you', pts}; }
+      if (bounced && Math.hypot(x - S.ex, y - S.ey) < 16) { pts.push([x, y]); return {hit:'self', pts}; }
+      const m = S.mir; if (ux > 0 && x >= m.x && x < m.x + 6 && y > m.y && y < m.y + m.h) { pts.push([x, y]); ux = -ux; x = m.x - 1; bounced = true; continue; }
+      if (y > GY || x < 0 || x > W || y < 0) break;
+      if (ents.some(e => e.t === 'b' && isSolid(e) && x > e.x && x < e.x + e.w && y > e.y && y < e.y + e.h)) break; }
+    pts.push([x, y]); return {hit:null, pts}; },
+  update(){ if (S.trance > 0) { S.trance--; S.path = []; return; }
+    const r = this.trace(); S.path = r.pts;
+    // it shoots whoever it watches too long; and if what it watches is itself, it cannot look away
+    S.seen = r.hit === 'you' ? S.seen + 1 : Math.max(0, S.seen - 2); if (S.seen > 60) return die('eye');
+    S.self = r.hit === 'self' ? S.self + 1 : 0; if (S.self > 30) { S.trance = 420; shake = 6; } },
+  draw(){ const m = S.mir; ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(S.ex, S.ey + 18); ctx.lineTo(S.ex, GY); ctx.stroke();
+    // the mirror's face
+    ctx.fillStyle = '#CFE3F2'; ctx.fillRect(m.x - 3, m.y, 5, m.h); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; for (let y = m.y + 10; y < m.y + m.h; y += 40) { ctx.beginPath(); ctx.moveTo(m.x - 2, y + 14); ctx.lineTo(m.x - 2, y); ctx.stroke(); }
+    // its gaze
+    if (S.path.length > 1) { ctx.strokeStyle = `rgba(207,62,50,${0.25 + 0.6*S.seen/60})`; ctx.lineWidth = 2 + 2*S.seen/60; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.moveTo(S.path[0][0], S.path[0][1]); for (const [x, y] of S.path.slice(1)) ctx.lineTo(x, y); ctx.stroke(); ctx.setLineDash([]); }
+    if (S.trance > 0) { // it has seen itself: its pupil turns round and round
+      ctx.fillStyle = C.white; ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(S.ex, S.ey, 26, 17, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.beginPath(); for (let a = 0; a < 14; a += 0.2) { const r = a*0.9; ctx.lineTo(S.ex + Math.cos(a + frame*0.15)*r, S.ey + Math.sin(a + frame*0.15)*r*0.7); } ctx.stroke(); }
+    else drawEye(S.ex, S.ey, 16, pcx(), P.y + 14, 0);
+    if (S.self > 0 && S.trance <= 0) { ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(S.ex, S.ey, 30, -Math.PI/2, -Math.PI/2 + S.self/30*Math.PI*2); ctx.stroke(); } } },
+
+/* 100. the first one again: now you are the door */
+{ id:'circle', was:[100], start:24, noEntrance:true,
+  build(){ Gd(0,29); S.me = {x:3*T, vx:0, st:'chase', t:0, face:1}; S.won = false; },
+  hudOffset(){ return -99; },
+  update(){ const m = S.me, pc = pcx(), mc = m.x + PW/2, d = pc - mc, near = Math.abs(d), touch = near < PW && P.y + PH > GY - PH;
+    m.t++;
+    // the one you were at the start: it comes after you, as you came after the door
+    if (m.st === 'chase') { m.face = Math.sign(d) || m.face; m.vx = m.face*3; if (m.t > 300) { m.st = 'wait'; m.t = 0; } }
+    // then it stands still and watches you: letting go so that you will come, as you did
+    else if (m.st === 'wait') { m.face = Math.sign(d) || m.face; m.vx *= 0.7; if (near < 3*T && P.vx*d < -0.5) { m.st = 'lunge'; m.t = 0; } else if (m.t > 160) { m.st = 'leave'; m.t = 0; } }
+    else if (m.st === 'lunge') { m.vx = m.face*6.5; if (m.t > 22) { m.st = 'chase'; m.t = 0; } }
+    // and at last it gives up on you, turns its back, and goes home
+    else if (m.st === 'leave') { m.face = -(Math.sign(d) || 1); m.vx = m.face*1.2; if (m.t > 260) { m.st = 'chase'; m.t = 0; } }
+    m.x = clamp(m.x + m.vx, 0, W - PW); if (m.x <= 0 || m.x >= W - PW) m.vx = 0;
+    if (touch) { if (m.st === 'leave') return finalWin(); return die('caught'); } },
+  draw(){ const m = S.me; ctx.globalAlpha = 0.42; drawDoor(T, GY - 56, {open:true}); ctx.globalAlpha = 1;
+    // you, as you were
+    drawPlayerAt(m.x, GY - PH, PW, PH, m.st === 'leave' ? m.face : m.face, C.white, C.ink, false);
+    if (m.st === 'wait') { ctx.fillStyle = C.ink; ctx.fillRect(m.x - 2, GY - PH - 6, PW + 4, 3); }
+    if (m.st === 'lunge') for (let i = 0; i < 3; i++) { ctx.strokeStyle = 'rgba(30,43,71,.4)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(m.x - m.face*(8 + i*8), GY - 8 - i*7); ctx.lineTo(m.x - m.face*(20 + i*8), GY - 8 - i*7); ctx.stroke(); } },
+  drawPlayer(dx, dy, dw, dh){ // and you are the door
+    const ph = P.on && Math.abs(P.vx) > 0.5 ? Math.sin(frame*0.45)*4 : 0, x = P.x + PW/2 - 18, y = P.y + PH - 56;
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x + 11, y + 48); ctx.lineTo(x + 11 + ph, y + 56); ctx.moveTo(x + 25, y + 48); ctx.lineTo(x + 25 - ph, y + 56); ctx.stroke(); ctx.lineCap = 'butt';
+    drawDoor(x, y - 6, {});
+    const ex = x + 18 + P.face*4, ey = y + 18; ctx.fillStyle = C.white; ctx.fillRect(ex - 7, ey - 1, 5, 8); ctx.fillRect(ex + 2, ey - 1, 5, 8); ctx.fillStyle = C.ink; ctx.fillRect(ex - 6 + P.face, ey + 1, 3, 5); ctx.fillRect(ex + 3 + P.face, ey + 1, 3, 5); } }
 ];
 
 // ground that remembers your feet and grows thorns there

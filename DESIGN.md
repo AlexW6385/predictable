@@ -94,12 +94,12 @@ These come back through the whole game, each time doing something new.
 
 | Piece | First seen | Later forms |
 | --- | --- | --- |
-| **The door** | Runs from whoever chases it, comes to whoever lets go (1). | Bites whoever looks at it (5), brings things with it (8), sleeps (9), gets painted (27). Turns out to be alive (VI) and halved (X). The last level is the first one, answered. |
-| **The sky** | Cones fall where you are going (2). | Break bricks (12), plant stakes (13), aim at your reflection (18). Fall on your old ✕ (69), plant seeds (57), and meet Laplace (99). |
-| **The Eye** | Bites the door you look at (5). | Blinks (6), aims the sky (20), sweeps as a searchlight (73). Fills Newcomb's boxes (98). |
+| **The door** | Runs from whoever chases it, comes to whoever lets go (1). | Bites whoever looks at it (5), brings things with it (8), sleeps (9), gets painted (27). Turns out to be alive (VI), halved (91) and frozen in time (92). In 100 you are the door. |
+| **The sky** | Cones fall where you are going (2). | Break bricks (12), plant stakes (13), aim at your reflection (18). Fall on your old ✕ (69) and plant seeds (57). |
+| **The Eye** | Bites the door you look at (5). | Blinks (6), aims the sky (20), sweeps as a searchlight (73). Takes you for your double (94), fills Newcomb's boxes (98), and at last sees itself (99). |
 | **The ✕** | Your deaths stay where they happened. | Get forged (22), light the dark (41), become your bodies (61) and your coins (33), and draw the sky (69). |
-| **The ghost** | Your last attempt walks again (15). | Holds a plate for you (62), chases you (64), carries a key further (77). Becomes the ship of Theseus (93). |
-| **The entrance** | Every level starts in front of the open door you came in by. | Usually scenery. In 7 it is the way out, and in 100 it is the only one. |
+| **The ghost** | Your last attempt walks again (15). | Holds a plate for you (62), chases you (64), carries a key further (77). In 100 it is you who walks toward the one you were. |
+| **The entrance** | Every level starts in front of the open door you came in by. | Usually scenery. In 7 it is the way out; in 100 the one you were goes home to it. |
 
 ## The dialectic
 
@@ -287,20 +287,20 @@ The chapter ends on a joke: the Eye laughs, and nothing falls while it laughs.
 
 ## X. Reason (91–100)
 
-The classic paradoxes and thought experiments, each made into a level that can actually be solved. These are the deepest puzzles: most need a plan of several steps, or a rule from an earlier chapter applied in a new place. The last level is the first one again, answered.
+The classic paradoxes and thought experiments, each made into a level that can be solved: Zeno's runner and arrow, Copernicus, Theseus, Einstein's lift and twins, Maxwell's demon, Newcomb's predictor, and the Eye that sees itself. Most are about motion, time and identity; the last few turn to prediction itself. The last level is the first one again, and this time you are the door.
 
 | # | Level | What is in it | The idea you need | Without it |
 | --- | --- | --- | --- | --- |
-| 91 | **Achilles** | Your top speed shrinks as you near the door, so walking never arrives; in the air you keep the speed you left with. A tortoise carrying the key always stays a little ahead whenever you move, and the world wraps. | Go round the other way to meet the tortoise head-on; leap from far and high so you land at the door. | Chasing; walking up to the door. |
-| 92 | **River** | Logs drift by, and a log sinks if you land on it a second time. A bird dives at where you will be. | Never land on the same log twice; jump after the bird has committed. | Hopping back and forth; jumping as it dives. |
-| 93 | **Ship** | Your raft moves by taking its last plank to the front. The new planks sink and the old ones float, and come together again as the real ship. | Stand on the original planks, not on the ship you see. | Staying on the moving raft. |
-| 94 | **Copernicus** | Stand still and the room turns a quarter around you. The door only opens when the room is upright. | Turn the room until the door is below you, then turn it back upright. | Running and jumping in one orientation. |
-| 95 | **Buridan** | Two identical doors, equally far. The Eye bites the door you are heading for, and standing still between them starves you. | Arrive at one while heading for the other: the world wraps. | Walking straight to either; waiting. |
-| 96 | **Time** | Time passes only while you move, and faster when you run. Arrows freeze when you stop. The door opens only in one part of the clock's turn. | Stop to let nothing happen, walk to pass the arrows, run when you need the clock to hurry. | One speed everywhere. |
-| 97 | **Maxwell** | A small demon keeps a wall full of bouncing heat: quick things pass one way, slow things the other. | Come up to the line slowly, wait a moment, and the demon lets you through below. | Running at the gate. |
-| 98 | **Newcomb** | Two boxes were filled before you arrived, by the Eye that watched you all level. The open box holds a coin. The closed box holds the key only if the Eye saw you leave the bait coins along the way. | Be someone who leaves the coin, all level long, then take only the closed box. | Taking every coin; taking both boxes. |
-| 99 | **Laplace** | At each pit, a spike grows where you took off last time. Then a last climb on platforms made of all your ✕ marks from the whole game, in order. | Take off somewhere new, and climb your own history. | Jumping where you always jump. |
-| 100 | **Circle** | An endless corridor of biting doors to the right. The level number reads 01, and the door from level 1 waits where you began. | Stop going forward; let go, and the first door comes back to you. | Going on forever. |
+| 91 | **Achilles** | Near the door your walking speed is what is left of the way, so you creep toward a line just short of it, and hops shrink the same way. In the air you keep the speed you left with. A stepped tower stands behind you. | Climb the tower and leap from the top at a run: you fly in at full speed. | Walking or hopping to the door; walking off the tower. |
+| 92 | **Arrow** | The world moves only while you move: stand still and everything stops, the door too. The door runs from whoever comes after it, trails slowly after whoever leaves, and walks to whoever lets go. | Let go without standing still: hop in place, so that time passes and you go nowhere. | Chasing it; standing and waiting; walking away. |
+| 93 | **Copernicus** | Stand still and the room turns a quarter around you, and you fall to its new floor. Spikes line one wall; the door is in a closed box high up and works only when the room is upright. | Stand where four turns will drop you, step by step, into the box: on the high step. | Standing where you start (the first turn drops you on the spikes); standing on the low step. |
+| 94 | **Theseus** | Others who look exactly like you stroll toward the start and run back. The Eye marks you, shoots whoever it marks if they stand still in the open, and the door bites whoever it marks. It cannot tell you apart: when the one it marks meets another, it keeps whichever goes on the way the marked one was going. | Get ahead of one, turn back, catch it up and stop inside it: it walks on with the mark. Then go to the door. | Walking to the door; walking through them; stopping inside one coming your way. |
+| 95 | **Elevator** | A lift with the door on a high ledge inside. Once you are in, the Eye cuts the rope, and the lift falls. | In a falling room nothing weighs anything: push off the floor and float up round the ledge to the door before it lands. | Waiting in it; running out of it. |
+| 96 | **Twin** | You and your twin age by the clocks over your heads, and a moving clock runs slow. The door lets in only the younger twin. | Run to the far wall and back, again and again, and come home younger. | Going in at once; waiting at home; running off and staying away. |
+| 97 | **Maxwell** | A demon at the gate lets the quick through to the right and the slow through to the left. The key is on the hot side, whose floor burns whoever is slow on it. | Run in, take the key, run back, and be slow only as you cross: let go just before the gate and tap across, or brake in a low hop. | Running back through; walking slowly over the hot floor. |
+| 98 | **Newcomb** | Coins lie on the way, and the Eye counts the ones you take. At a line it fills the closed box: the key, only if it saw you take nothing. Past the line an open box holds a coin, and the door needs a key and a coin. | Leave the coins until it has decided; then take both boxes. | Taking the coins on the way; taking only the closed box. |
+| 99 | **Reflection** | The Eye watches you and shoots whoever it watches too long. A mirror stands between it and the door, with steps behind it and a ledge level with the Eye. Whatever the Eye looks at, it cannot look away from if it is itself, and while it stares, the gate is open. | Go behind the mirror and stand at the Eye's own height: its gaze comes back to it. Go while it stares. | Running to the door; waiting under the mirror; standing on the steps. |
+| 100 | **Circle** | The level number reads 01. You are the door, and the one you were at the start comes after you. It stops and watches you, letting go so that you will come; then it gives up, turns its back, and goes home. | Keep away while it chases, don't come when it only pretends, and go to it once it has really let go. | Standing; running to the wall; going to it while it watches. |
 
 ## Testing
 
