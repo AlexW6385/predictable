@@ -725,20 +725,26 @@ const LV = [
 
 /* ===================== II. Sky ===================== */
 
-/* 11. shelter is a habit too */
+/* 11. shelter is a habit too, and the sky learns habits */
 { id:'shelter', was:[24], start:1,
-  build(){ Gd(0,29); Door(27,14); S.roofs = [[5,2,false],[10,2,false],[15,2,false],[20,2,false],[24,2,true]].map(([c, w, p]) => R('b', c, c+w-1, 10, 10, {roof:true, fakeRoof:p, painted:p, killFall:true}));
-    S.uT = S.roofs.map(() => 0); S.lim = clamp(Math.round((avg(M.sh) ?? 90)*0.75), 45, 120); S.rt = 50; },
-  update(){ const pc = pcx();
-    S.roofs.forEach((r, i) => { const under = pc > r.x && pc < r.x + r.w && P.y > r.y && !r.fall && r.alive;
-      if (under && !r.painted) { if (++S.uT[i] > S.lim && r.ct == null) { r.crumble = 16; r.ct = 16; } r.shk = S.uT[i] > S.lim - 30; } else if (S.uT[i] > 0) { M.sh = M.sh || []; push(M.sh, S.uT[i], 6); S.uT[i] = 0; r.shk = false; } else r.shk = false; });
-    // a curtain of rain, every so often, centred on where you will be: in the open there is nowhere to go
-    if (--S.rt <= 0 && pc < 26*T) { S.rt = 54; const at = whereIn(36), bk = P.vx >= 0 ? 170 : 70, fw = P.vx >= 0 ? 70 : 170;
-      for (let x = Math.min(pc, at) - bk; x <= Math.max(pc, at) + fw; x += 30) drop(x, 36, {block:true}); }
-    updCones(); },
-  draw(){ // cracks spread through a roof the longer you shelter under it
-    S.roofs.forEach((r, i) => { const k = Math.min(1, S.uT[i]/S.lim); if (k <= 0 || r.painted || !r.alive || r.fall) return; ctx.strokeStyle = C.white; ctx.lineWidth = 1.5; ctx.beginPath();
-      for (let j = 0; j < Math.ceil(k*5); j++) { const x0 = r.x + 6 + j*11; ctx.moveTo(x0, r.y + 2); ctx.lineTo(x0 + 4, r.y + 12*k + 4); ctx.lineTo(x0 + 1, r.y + 28*k + 2); } ctx.stroke(); });
+  build(){ Gd(0,29); Door(28,14); S.roofs = [4,9,14,19,24].map(c => R('b', c, c, 8, 8, {roof:true, w:1.5*T}));
+    S.rt = 50; S.last = -1; S.streak = 0; },
+  under(){ const pc = pcx(); return S.roofs.findIndex(r => pc > r.x + 4 && pc < r.x + r.w - 4 && P.y > r.y); },
+  update(){ const pc = pcx(), u = this.under();
+    // it waits, a little, for a moment when where you are going is in the open
+    const at36 = whereIn(36), wait = Math.abs(P.vx) > 0.5 && S.roofs.some(r => at36 > r.x - 12 && at36 < r.x + r.w + 12) && S.rt > -40;
+    if (--S.rt <= 0 && !wait && pc < 26*T) { S.rt = 72;
+      // once you have stopped under two roofs in a row, it expects you under the next one, and rains through it
+      const nx = S.roofs[S.last + 1], lr = S.roofs[S.last], heading = S.streak >= 2 && nx && (u === S.last + 1 || (P.vx > 0.5 && pc > lr.x && pc < nx.x + nx.w));
+      if (heading) { S.rt = 90; for (const x of [nx.x + 12, nx.x + 36]) drop(x, 60, {heavy:nx}); }
+      else { const at = at36, bk = P.vx >= 0 ? 170 : 70, fw = P.vx >= 0 ? 70 : 170;
+        for (let x = Math.min(pc, at) - bk; x <= Math.max(pc, at) + fw; x += 30) drop(x, 36, {block:true}); } }
+    for (const c of S.cones) if (c.heavy && c.st === 'fall' && !c.thru && c.y + 40 >= c.heavy.y) { c.thru = true; c.heavy.cracked = true; shake = Math.max(shake, 4); dust(c.x, c.heavy.y); }
+    const n0 = S.cones.filter(c => c.st === 'fall').length;
+    if (updCones()) return;
+    // rain that comes down while you are under a roof: you sheltered there
+    if (S.cones.filter(c => c.st === 'fall').length < n0 && u >= 0 && u !== S.last) { S.streak = u === S.last + 1 ? S.streak + 1 : 1; S.last = u; } },
+  draw(){ for (const r of S.roofs) if (r.cracked) { ctx.strokeStyle = C.white; ctx.lineWidth = 1.5; ctx.beginPath(); for (const x0 of [r.x + 10, r.x + 32]) { ctx.moveTo(x0, r.y + 1); ctx.lineTo(x0 + 5, r.y + 12); ctx.lineTo(x0 + 1, r.y + 30); } ctx.stroke(); }
     drawCones(); } },
 
 /* 12. its aim is your tool */

@@ -7,19 +7,22 @@
   // a person who reads each shadow: if it would land on you, step back from it
   const dodge = P => { for (const c of fc()) { const m = left(c); if (Math.abs(cx() + g.P.vx*m - c.x) < 34) return g.P.vx > 0.5 ? Lf() : R(); } return null; };
   // ---- 11 shelter
-  const sheltered = () => g.S.roofs.some(r => !r.painted && r.alive && !r.fall && cx() > r.x + 6 && cx() < r.x + r.w - 6);
-  const inFlight = () => fc().length > 0;
-  // roof to roof: leave a real roof just after the rain lands on it; never trust the last one
-  const hop = skipPainted => { let leave = false; return P => { const pc = cx();
-      if (pc > 26.5*T) return R();
-      if (sheltered()) { if (inFlight()) { leave = true; return {k:{}}; } if (leave) { leave = false; return R(); } return R(); }
-      if (!skipPainted && pc > 24.3*T && pc < 25.6*T) return {k:{}};
-      return R(); }; };
-  check('11 hide under the first roof', run(10, () => script([S.R(6.5), S.W(3000)]), {max:900, freshMem:true}), 'dead');
+  // roof to roof: stop under each roof (except those in skip) until the rain has come down, then leave `d` frames later
+  const hop11 = (skip, d) => () => { let target = 0, seen = false, w = 0; return P => {
+      const r = g.S.roofs[target]; if (!r) return R();
+      if (skip.includes(target) && cx() > r.x) { target++; return R(); }
+      if (cx() < r.x + 18) return R();
+      if (fc().length) { seen = true; w = 0; return {k:{}}; }
+      if (seen && w++ >= d) { seen = false; target++; return R(); }
+      return {k:{}}; }; };
+  check('11 hide under the first roof', run(10, () => script([S.R(4.6), S.W(3000)]), {max:900}), 'timeout');
   check('11 just run', run(10, () => R), 'dead');
-  check('11 dodge the rain (and duck under roofs on the way)', run(10, () => P => dodge(P) || R(), {max:1500}), /dead|clear/);
-  check('11 roof to roof, resting under the last one', run(10, () => hop(false), {max:1500}), 'dead');
-  check('11 roof to roof, then straight past the last one', run(10, () => hop(true), {max:1500}), 'clear');
+  check('11 dodge the rain', run(10, () => P => dodge(P) || R(), {max:1500}), 'dead');
+  check('11 roof to roof, stopping under every one', run(10, hop11([], 0), {max:2500}), 'dead');
+  check('11 ... or stopping at the far edge of the third', run(10, () => { const h = hop11([], 0)(); return P => { const r = g.S.roofs[2]; if (cx() > r.x && cx() < r.x + 40 && g.S.streak >= 2) return R(); return h(P); }; }, {max:2500}), 'dead');
+  for (const d of [0, 15, 30]) check(`11 roof to roof, but run on past the third (leave after ${d})`, run(10, hop11([2], d), {max:2500}), 'clear');
+  check('11 skip the second instead, stop under the rest', run(10, hop11([1], 0), {max:2500}), 'dead');
+  check('11 skip the second and the fifth', run(10, hop11([1, 4], 0), {max:2500}), 'clear');
   // ---- 12 hammer
   check('12 run across', run(11, () => R), 'dead');
   check('12 walk to the lid and stand on it', run(11, () => script([S.R(20.5), S.W(600)])), 'dead');
