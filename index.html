@@ -1344,37 +1344,73 @@ const LV = [
     t.forEach((y, i) => { ctx.globalAlpha = 0.3 + 0.6*(i + 1)/t.length; ctx.strokeStyle = C.red; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(26*T - 16, y); ctx.lineTo(26*T - 1, y); ctx.stroke(); ctx.globalAlpha = 1; }); } },
 /* ===================== V. Elements ===================== */
 
-/* 41. in the dark, only where you fell is lit; a sound shows you the way, and shows you to where you are going */
-{ id:'dark', was:[26, 56], start:1.5, dark:true, seeR:52,
-  // nothing here is invisible, only unlit: whatever a ring of sound lights, you see
-  build(){ Gd(0,4); Gd(7,13); Gd(16,29); Sp(10,10,13,'up'); R('b',7,12,9,9); Sp(7,12,10,'down'); Door(28,14);
-    S.rings = []; S.bat = {x:15*T, y:30, st:'roost', t:0}; },
-  ping(x, y){ S.rings.push({x, y, t:0}); },
-  onJump(){ this.ping(pcx(), P.y + PH); },
-  // the thud of a landing calls the bat; it dives at where you will be by the time it gets there
-  onLand(){ this.ping(pcx(), P.y + PH); const b = S.bat; if (b.st !== 'roost' && b.st !== 'back') return;
-    let tx = pcx(); for (let i = 0; i < 3; i++) tx = whereIn(Math.round(Math.hypot(tx - b.x, GY - 14 - b.y)/9));
-    b.st = 'dive'; b.tx = clamp(tx, 10, lvW() - 10); b.ty = GY - 14; },
-  update(){ for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 50);
-    batStep(S.bat, 15*T, 30); if (batHits(S.bat)) return die('bat'); },
-  lights(){ return S.rings.map(r => [r.x, r.y - 10, Math.min(250, 20 + r.t*9), 1 - r.t/50]); },
-  drawOver(){ drawRings(S.rings); ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(28*T + 25, GY - 22, 3, 0, 7); ctx.fill(); drawBat(S.bat); } },
+/* 41. it cannot see you, it can only hear you land; it goes where the sound was, and it lights its own way */
+{ id:'dark', was:[26, 56], start:3,
+  // the pits (in tiles); the floor is everything between them, and none of it is lit
+  pits: [[5.5,7.5],[10.5,12.5],[15.5,18.5],[22,25.5]],
+  build(){ let a = 0; for (const [l, r] of this.pits.concat([[30, 30]])) { E({t:'g', x:a*T, y:GY, w:(l - a)*T, h:3*T, solid:true}); a = r; }
+    Door(28.2,14); S.bat = {x:15*T, y:30, hx:15*T, hy:30, st:'roost', t:0, n:0, v:0}; S.rings = []; },
+  // a thud: it flies straight to where the sound was (a newer sound, and it turns for that one), and bites there
+  onLand(){ const b = S.bat; b.tx = pcx(); b.ty = GY - 16; b.v = Math.max(7, Math.hypot(b.tx - b.x, b.ty - b.y)/55); b.st = 'fly'; },
+  update(){ const b = S.bat;
+    if (b.st === 'fly') { const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy); if (d <= b.v) { b.x = b.tx; b.y = b.ty; b.st = 'bite'; b.t = 0; } else { b.x += dx/d*b.v; b.y += dy/d*b.v; } }
+    else if (b.st === 'bite') { if (++b.t >= 24) b.st = 'back'; }
+    else if (b.st === 'back') { const dx = b.hx - b.x, dy = b.hy - b.y, d = Math.hypot(dx, dy); if (d < 9) { b.x = b.hx; b.y = b.hy; b.st = 'roost'; } else { b.x += dx/d*9; b.y += dy/d*9; } }
+    // it screeches as it flies, and each screech lights the cave around it for a moment
+    if (b.st === 'roost') b.n = 0; else if (b.n++ % 10 === 0) S.rings.push({x:b.x, y:b.y, t:0});
+    for (const r of S.rings) r.t++; S.rings = S.rings.filter(r => r.t < 32);
+    if (b.st === 'bite' && Math.hypot(pcx() - b.x, P.y + 14 - b.y) < 28) return die('bat'); },
+  ringR(t){ return 176*Math.min(1, 0.2 + t/10); },
+  ringA(t){ return t < 10 ? 1 : Math.max(0, 1 - (t - 10)/22); },
+  draw(){ const b = S.bat;
+    // the rock it hangs from
+    ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.moveTo(b.hx - 34, 0); ctx.lineTo(b.hx + 30, 0); ctx.lineTo(b.hx + 14, 14); ctx.lineTo(b.hx + 4, 12); ctx.lineTo(b.hx - 8, 20); ctx.lineTo(b.hx - 20, 10); ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.translate(b.x, b.y); ctx.scale(1.5, 1.5); drawBat({x:0, y:0});
+    // biting: its jaws snap open and shut
+    if (b.st === 'bite') { const o = (b.t >> 2) % 2 ? 5 : 0; ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.moveTo(-5, 5); ctx.lineTo(5, 5); ctx.lineTo(0, 9 + o); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = C.white; ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(s*4, 5); ctx.lineTo(s*1.5, 5); ctx.lineTo(s*2.5, 8 + o*0.6); } ctx.fill(); }
+    ctx.restore(); },
+  // the dark: you see a little round yourself; everything else is lit only by its screeches
+  drawOver(){ const d = dark.getContext('2d'); d.globalCompositeOperation = 'source-over'; d.clearRect(0, 0, W, H); d.fillStyle = '#101628'; d.fillRect(0, 0, W, H);
+    d.globalCompositeOperation = 'destination-out';
+    const hole = (x, y, r, a, c) => { const g = d.createRadialGradient(x, y, r*c, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = g; d.beginPath(); d.arc(x, y, r, 0, 7); d.fill(); };
+    if (state !== 'dead') hole(pcx() - camX, P.y + 14, 40, 1, 0.55); else hole(pcx() - camX, clamp(P.y + PH/2, 20, GY - 6), 46, clamp(1 - deathT/90, 0, 1), 0.5);
+    for (const r of S.rings) { const a = this.ringA(r.t); if (a > 0.01) hole(r.x - camX, r.y, this.ringR(r.t), a, 0.75); }
+    d.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.setTransform(k, 0, 0, k, 0, 0); ctx.drawImage(dark, 0, 0, W, H); ctx.restore();
+    for (const r of S.rings) { ctx.strokeStyle = `rgba(226,166,42,${0.5*this.ringA(r.t)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(r.x, r.y, this.ringR(r.t), 0, 7); ctx.stroke(); } } },
 
-/* 42. the sun is moving, and so is every shade; on the boards, your own shadow is the hole you fall through */
-{ id:'sun', was:[37, 64], start:2,
-  build(){ S.pl = []; for (let c = 0; c <= 29; c++) { if ((this.boards || []).includes(c)) S.pl.push(E({t:'b', x:c*T, y:GY, w:T, h:10, solid:true, plank:true, hidden:true, cond:e => !e.shad})); else Gd(c, c); }
-    Door(28,14); S.pil = [[25,27,9],[17,19,5],[8,10,7]].map(([c0,c1,r]) => R('b',c0,c1,r,r)); S.lx = 940; S.burn = 0; },
-  boards: [14,15,16,17,18,22,23],
-  lit(x, y){ const lx = S.lx, ly = 40; for (let s = 0.02; s < 1; s += 0.02) { const px = lx + (x - lx)*s, py = ly + (y - ly)*s; for (const p of S.pil) if (px > p.x && px < p.x + p.w && py > p.y && py < p.y + p.h) return false; } return true; },
-  update(){ S.lx = Math.max(-200, S.lx - 0.5); const l = this.lit(pcx(), P.y + 14); S.burn = l ? S.burn + 1 : Math.max(0, S.burn - 2); if (S.burn > 40) return die('sun');
-    // in the light, where your head's shadow falls, the boards give way
-    S.sh = null; if (l) { const k = (GY - 40)/(P.y - 40); const a = S.lx + (P.x - S.lx)*k, b = S.lx + (P.x + PW - S.lx)*k; S.sh = [Math.min(a, b), Math.max(a, b)]; }
-    for (const e of S.pl) { if (S.sh && e.x < S.sh[1] - 3 && e.x + T > S.sh[0] + 3) e.dark = 10; else if (e.dark) e.dark--; e.shad = e.dark > 0; } },
-  drawBack(){ for (let x = 0; x < W; x += 8) { const l = this.lit(x + 4, GY - 6); ctx.fillStyle = l ? 'rgba(226,166,42,.28)' : 'rgba(30,43,71,.10)'; ctx.fillRect(x, 0, 8, GY); }
-    ctx.fillStyle = C.gold; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(S.lx, 40, 22, 0, 7); ctx.fill(); ctx.stroke(); },
-  draw(){ for (const e of S.pl) { if (e.shad) { ctx.strokeStyle = 'rgba(30,43,71,.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,4]); ctx.strokeRect(e.x + 1, e.y + 1, T - 2, 8); ctx.setLineDash([]); } else { ctx.fillStyle = C.door; ctx.fillRect(e.x + 1, e.y, T - 2, 10); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(e.x + 1, e.y + 1, T - 2, 8); } }
-    if (S.sh) { const [a, b] = S.sh; ctx.fillStyle = 'rgba(30,43,71,.45)'; ctx.beginPath(); ctx.ellipse((a + b)/2, GY + 2, (b - a)/2 + 3, 4, 0, 0, 7); ctx.fill(); }
-    if (S.burn > 0) { ctx.fillStyle = `rgba(207,62,50,${Math.min(0.8, S.burn/40)})`; ctx.fillRect(P.x, P.y, PW, PH); } } },
+/* 42. the flowers open to the sun and close in the shade, and the only shade here is the one you bring */
+{ id:'sun', was:[37, 64], start:0.9,
+  // a day is D frames of sun and N of night; it starts in the morning, the sun low on the left
+  D:720, N:90, t0:72, e1:35, ramp:1.5,
+  build(){ Gd(0,1); R('g',10,19,14,16); Gd(28,29); Door(28.2,14);
+    // a bridge of flowers in two halves, with a stone pillar between them
+    S.fl = []; for (const c of [2,3,4,5,6,7,8,9,20,21,22,23,24,25,26,27]) S.fl.push(E({t:'b', x:c*T, y:GY, w:T, h:10, solid:true, hidden:true, open:1, lit:99, cond:e => e.open > 0.5}));
+    S.t = 0; this.sky(); S.sh = null; },
+  sky(){ const ph = (S.t + this.t0) % (this.D + this.N); S.day = ph < this.D; S.th = S.day ? 180*ph/this.D : 180; },
+  // your shadow on the flowers, away from the sun: long when the sun is low, and when it is high, a short one right under you
+  shadow(){ if (!S.day || P.y > GY + 30) return null;
+    const ed = Math.min(S.th, 180 - S.th), dir = S.th < 90 ? 1 : -1, L = Math.min(96, 28/Math.tan(Math.max(ed, 0.5)*Math.PI/180));
+    const q = clamp((ed - this.e1)/this.ramp, 0, 1), n = 8 - 46*q, f = Math.max(11 + L, 38*q), pc = pcx();
+    return dir > 0 ? [pc + n, pc + f] : [pc - f, pc - n]; },
+  update(){ S.t++; this.sky(); const sh = S.sh = this.shadow();
+    // a flower folds as soon as shade falls on its heart, and opens again only once no shade touches it for a moment; at night they all fold
+    for (const e of S.fl) { const c = e.x + 16, cover = !S.day || (sh && c > sh[0] && c < sh[1]), touch = cover || (sh && e.x < sh[1] && e.x + T > sh[0]);
+      if (cover) { e.open = Math.max(0, e.open - 0.3); e.lit = 0; } else if (touch) e.lit = 0; else if (++e.lit > 6) e.open = Math.min(1, e.open + 0.125); } },
+  sunAt(th){ const a = th*Math.PI/180; return [480 - 470*Math.cos(a), 410 - 340*Math.sin(a)]; },
+  drawBack(){ ctx.strokeStyle = 'rgba(226,166,42,.4)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 8]); ctx.beginPath(); for (let th = 0; th <= 180; th += 3) { const [x, y] = this.sunAt(th); th ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); ctx.setLineDash([]);
+    if (S.day) { const [x, y] = this.sunAt(S.th); ctx.fillStyle = C.gold; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 20, 0, 7); ctx.fill(); ctx.stroke(); } },
+  draw(){ for (const e of S.fl) { const cx = e.x + 16, o = e.open;
+      ctx.strokeStyle = '#4E6B3A'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, GY + 6); ctx.lineTo(cx + Math.sin(cx)*3, H); ctx.stroke();
+      // petals that lie flat when it is open, and fold up into a bud when it shuts
+      ctx.fillStyle = C.gold; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5;
+      for (const s of [-1, 1]) { ctx.save(); ctx.translate(cx, GY + 5); ctx.rotate(-s*(1 - o)*1.35); ctx.beginPath(); ctx.ellipse(s*9, 0, 9, 5, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore(); }
+      ctx.beginPath(); ctx.ellipse(cx, GY + 3 - (1 - o)*8, 4.5, 4.5 + (1 - o)*5, 0, 0, 7); ctx.fill(); ctx.stroke();
+      if (o > 0.4) { ctx.fillStyle = C.red; ctx.beginPath(); ctx.arc(cx, GY + 2, 3*o, 0, 7); ctx.fill(); } }
+    // your shadow, lying across the flowers
+    const sh = S.sh; if (sh) { const r = 7, a = sh[0], b = Math.max(sh[1], a + 2*r); ctx.fillStyle = 'rgba(30,43,71,.55)'; ctx.beginPath(); ctx.moveTo(a + r, GY - 5); ctx.lineTo(b - r, GY - 5); ctx.arc(b - r, GY + 2, r, -Math.PI/2, Math.PI/2); ctx.lineTo(a + r, GY + 9); ctx.arc(a + r, GY + 2, r, Math.PI/2, Math.PI*1.5); ctx.fill(); } },
+  drawOver(){ if (!S.day) { ctx.fillStyle = 'rgba(16,22,40,.55)'; ctx.fillRect(0, 0, W, H); } } },
 
 /* 43. you can't hold your breath forever, and water lets you walk through fire, for a while */
 { id:'water', was:[41, 42], start:1.2, sy:228,
@@ -1470,19 +1506,27 @@ const LV = [
 
 /* 46. it blows against whatever you want; so want nothing, or want the other way */
 { id:'wind', was:[95], start:2,
-  build(){ Gd(0,6); Gd(9,16); Gd(21,29); Door(27,14); S.tk = 0; S.wp = []; },
+  // two gaps (in tiles): a narrow one and a wide one, and the wind over each (how hard it blows against what you press)
+  gA:[7, 9], gB:[17, 20.75], kA:4, kB:9, hold:2.2,
+  build(){ const a = this.gA, b = this.gB; for (const [x0, x1] of [[0, a[0]], [a[1], b[0]], [b[1], 30]]) E({t:'g', x:x0*T, y:GY, w:(x1 - x0)*T, h:3*T, solid:true});
+    Door(27,14); S.wp = []; },
   ax(){ return (keys.right ? 1 : 0) - (keys.left ? 1 : 0); },
-  zone(){ const pc = pcx(); return pc > 6*T && pc < 10*T ? 'A' : pc > 16*T && pc < 22*T ? 'B' : null; },
-  // one rule at both gaps: it blows against whatever you push, harder over the wide one
-  wind(z){ return z === 'A' ? -4.0*this.ax() : z === 'B' ? -7.0*this.ax() : 0; },
-  onJump(){ S.tk = P.vx; },
-  update(){ if (P.on) S.tk = P.vx;
-    const z = this.zone(); if (z && !P.on) P.x += this.wind(z);
-    for (const zz of ['A', 'B']) { const x0 = zz === 'A' ? 7*T : 17*T, wd = zz === 'A' ? 2*T : 4*T, w = this.wind(zz); if (Math.abs(w) > 0.2 && Math.random() < 0.9) S.wp.push({x: w > 0 ? x0 - 20 : x0 + wd + 20, y: 60 + Math.random()*370, v: w*3.2, x0, wd}); }
+  // the wind reaches a little beyond each gap
+  zone(){ const pc = pcx(), a = this.gA, b = this.gB; return pc > (a[0] - 1)*T && pc < (a[1] + 1)*T ? 'A' : pc > (b[0] - 2)*T && pc < (b[1] + 1)*T ? 'B' : null; },
+  // one rule at both gaps: it blows against whatever you press, harder over the wide one
+  wind(z){ return z === 'A' ? -this.kA*this.ax() : z === 'B' ? -this.kB*this.ax() : 0; },
+  update(){ const z = this.zone();
+    if (z && !P.on) { P.x += this.wind(z);
+      // over the wide gap, a wind at your back also holds you up: you sink slowly while it carries you, and against the far cliff it lifts you over the lip
+      if (z === 'B' && this.ax() < 0) { if (P.vy > 0) P.vy = Math.max(0, P.vy - this.hold);
+        if (P.x + PW >= this.gB[1]*T - 2 && P.y + PH > GY && P.y + PH < GY + 48) P.vy = Math.min(P.vy, -3); } }
+    for (const zz of ['A', 'B']) { const g = zz === 'A' ? this.gA : this.gB, x0 = g[0]*T, wd = (g[1] - g[0])*T, w = this.wind(zz); if (Math.abs(w) > 0.2 && Math.random() < 0.9) S.wp.push({x: w > 0 ? x0 - 20 : x0 + wd + 20, y: 90 + Math.random()*340, v: w*3.2, x0, wd}); }
     S.wp = S.wp.filter(p => { p.x += p.v; return p.x > p.x0 - 40 && p.x < p.x0 + p.wd + 40; }); },
   drawBack(){ ctx.strokeStyle = 'rgba(30,43,71,.3)'; ctx.lineWidth = 1.5; for (const p of S.wp) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.v*3, p.y); ctx.stroke(); }
-    for (const [x0, zz] of [[8*T, 'A'], [19*T, 'B']]) { const w = this.wind(zz); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, 30); ctx.lineTo(x0, 66); ctx.stroke();
-      ctx.fillStyle = zz === 'A' ? C.gold : C.red; const d = Math.abs(w) < 0.2 ? 0 : Math.sign(w); ctx.beginPath(); ctx.moveTo(x0, 30); ctx.lineTo(x0 + (d || 0.2)*22, 36 + (d ? 0 : 10)); ctx.lineTo(x0, 42); ctx.fill(); } } },
+    // a vane over each gap shows which way it blows
+    for (const zz of ['A', 'B']) { const g = zz === 'A' ? this.gA : this.gB, x0 = (g[0] + g[1])/2*T, w = this.wind(zz), d = Math.abs(w) < 0.2 ? 0 : Math.sign(w);
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, 76); ctx.lineTo(x0, 116); ctx.stroke();
+      ctx.fillStyle = zz === 'A' ? C.gold : C.red; ctx.beginPath(); ctx.moveTo(x0, 76); ctx.lineTo(x0 + (d || 0.2)*22, 82 + (d ? 0 : 10)); ctx.lineTo(x0, 88); ctx.fill(); } } },
 
 /* 47. it bursts where you will be; it scalds whoever is in it, and soaks whoever is beside it */
 { id:'geyser', start:2,
