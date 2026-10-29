@@ -834,10 +834,13 @@ const LV = [
 /* 17. on ice, where you will be is already decided */
 { id:'ice', was:[33], start:2,
   build(){ Gd(0,29,{ice:true}); Door(27.5,14); S.rt = 24; },
-  update(){ const pc = pcx(); if (pc > 3*T && pc < 22*T && --S.rt <= 0) { S.rt = 72; cone(clamp(pc + P.vx*60, 3*T, 25*T), {y:GY - 40 - 26*60}); }
+  update(){ const pc = pcx(); if (pc > 3*T && pc < 22*T && --S.rt <= 0) { S.rt = 62; cone(clamp(pc + P.vx*60, 3*T, 29*T), {y:GY - 40 - 26*60}); }
     // it keeps re-aiming at where your speed is taking you, and you can see it doing so; half a second from the ground it stops
     const ax = P.on ? P.vx - (S.pvx ?? P.vx) : 0; S.pvx = P.vx;
-    for (const c of S.cones) if (c.st === 'fall') { const left = (GY - (c.y + 40))/26; c.locked = left <= 30; if (!c.locked) c.x = clamp(pc + P.vx*left + 0.5*ax*left*left, 3*T, 25*T); }
+    for (const c of S.cones) if (c.st === 'fall') { const left = (GY - (c.y + 40))/26; c.locked = left <= 30; if (c.locked) continue;
+      // and at the height you will be when it gets there, if you are in the air
+      let f = left, y = P.y, vy = P.vy, on = P.on; for (let i = 1; i <= left; i++) { if (!on) { if (!keys.jump && vy < -3.5) vy = -3.5; vy = Math.min(vy + 0.55, 12); y = Math.min(GY - PH, y + vy); if (y >= GY - PH) on = true; } if (c.y + 40 + 26*i >= y + 3) { f = i; break; } }
+      let x = pc, vx = P.vx; for (let i = 0; i < f; i++) { vx = clamp(vx + ax, -4.4, 4.4); x += vx; } c.x = clamp(x, 3*T, 29*T); }
     updCones(); },
   // no marker of its own: its shadow slides after you, and stops
   draw(){ drawCones(); } },
