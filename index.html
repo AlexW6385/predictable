@@ -577,7 +577,7 @@ const LV = [
 /* 2. a bridge that only exists while you are moving; and it sees where you are going */
 { id:'becoming', was:[2], start:2,
   build(){ Gd(0,4); Gd(25,29); Door(27,14); S.mt = 0; R('mb',5,24,14,14,{h:16, cond:() => S.mt > 0});
-    S.cq = [{c:9, m:'v'}, {c:15, m:'v'}, {c:20, m:'v'}]; },
+    S.cq = [{c:8, m:'v'}, {c:12, m:'v'}, {c:16, m:'v'}, {c:20, m:'v'}]; },
   update(){ S.mt = Math.abs(P.vx) > 0.8 ? 6 : Math.max(0, S.mt - 1);
     const pc = pcx();
     for (const q of S.cq) if (!q.done && pc > q.c*T) { q.done = true;
