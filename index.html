@@ -1177,18 +1177,18 @@ const LV = [
   draw(){ ctx.fillStyle = C.ink2; for (const [x, y] of S.stuck.slice(-1)) { ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill(); }
     const q = S.peb; if (q.st !== 'stuck') { ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 7); ctx.fill(); } } },
 
-/* 36. what falls in comes out going up */
-{ id:'portal', was:[45], start:2, sy:100,
-  build(){ Gd(0,6); Gd(9,10); Gd(13,18); Gd(21,29); R('g',0,6,4,4); E({t:'g', x:22*T, y:336, w:7*T, h:112, solid:true}); Door(26,14,{y:336 - 56});
-    Sp(13,15,13,'up');
-    S.po = [{x:7*T, gold:true, to:19*T}, {x:19*T, gold:true, to:7*T}, {x:11*T, gold:false, to:null}]; S.cool = 0; },
+/* 36. what falls in comes out going up, as fast as it went in */
+{ id:'portal', was:[45], start:12, vmax:16,
+  // two gold mouths in the floor, each the other's way out; the door is high above the left one, a low ledge stands by the right one
+  build(){ Gd(0,7); Gd(10,19); Gd(23,29); R('g',0,6,9,9); E({t:'g', x:23*T, y:368, w:7*T, h:80, solid:true}); Door(2.5,9);
+    S.po = [{x:8*T, w:2*T}, {x:20*T, w:3*T}]; S.cool = 0; },
   update(){ if (S.cool > 0) { S.cool--; return; }
-    for (const p of S.po) if (P.vy > 0 && pcx() > p.x + 4 && pcx() < p.x + 60 && P.y + PH > GY + 6) {
-      const v = Math.max(3, Math.min(12, P.vy)); S.cool = 12;
-      if (p.gold) { P.x = p.to + 32 - PW/2 + (pcx() - p.x - 32); P.y = GY - PH - 2; P.vy = -v; P.noCutT = 60; }
-      else { S.chomp = 20; return die('portal'); }
+    for (const p of S.po) if (P.vy > 0 && pcx() > p.x + 4 && pcx() < p.x + p.w - 4 && P.y + PH > GY + 6) {
+      // out of the other one, from the same depth, as fast as you fell in
+      const v = Math.max(3, Math.min(16, P.vy)), q = S.po.find(o => o !== p); S.cool = 12;
+      P.x = clamp(q.x + (pcx() - p.x)*q.w/p.w, q.x + 12, q.x + q.w - 12) - PW/2; P.y = GY + 6 - PH; P.vy = -v; P.noCutT = 60;
       burst(pcx(), P.y + 14); return; } },
-  drawBack(){ for (const p of S.po) { ctx.fillStyle = p.gold ? C.gold : C.red; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x + 32, GY + 2, 30, 7, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(p.x + 32, GY + 2, 20, 4, 0, 0, 7); ctx.fill(); } } },
+  drawBack(){ for (const p of S.po) { ctx.fillStyle = C.gold; ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x + p.w/2, GY + 2, p.w/2 - 2, 7, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(p.x + p.w/2, GY + 2, p.w/2 - 12, 4, 0, 0, 7); ctx.fill(); } } },
 
 /* 37. the ground hits back as hard as you fall */
 { id:'hardlanding', was:[35], start:2, sy:68,
