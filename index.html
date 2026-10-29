@@ -1887,16 +1887,17 @@ const LV = [
 
 /* 67. the harder you want it, the better it knows where you will be */
 { id:'wanting', was:[55], start:2, noJump:true, noCut:true, vmax:14,
-  build(){ Gd(0,29); R('b',10,10,10,13); R('g',22,29,11,13); Door(26,11); S.ch = 0; S.cd = 1; S.charging = false; S.slab = {x:23*T, w:7*T, y:240}; },
+  build(){ Gd(0,29); R('b',10,10,10,13); R('g',22,29,11,13); Door(26,11); S.ch = 0; S.cd = 1; S.charging = false; S.slab = {x:13*T, w:17*T, y:240}; },
   vOf(c){ return 5 + 8*c; },
   rise(c){ let v = this.vOf(c), r = 0; while (v > 0) { v -= 0.55; if (v > 0) r += v; } return r; },
   input(ax){ return (S.charging || (P.on && keys.jump)) ? {ax:0, acc:0, max:4.4} : {ax, acc:P.on ? 0.9 : 0.6, max:4.4}; },
   update(){ const sl = S.slab;
-    if (P.on && keys.jump) { S.charging = true; P.vx = 0; S.ch += S.cd/45; if (S.ch >= 1) { S.ch = 1; S.cd = -1; } if (S.ch <= 0) { S.ch = 0; S.cd = 1; } }
+    if (P.on && keys.jump) { S.charging = true; P.vx = 0; S.ch += S.cd > 0 ? 1/70 : -1/110; if (S.ch >= 1) { S.ch = 1; S.cd = -1; } if (S.ch <= 0) { S.ch = 0; S.cd = 1; } }
     else if (S.charging) { S.charging = false; if (P.on) { const v = this.vOf(S.ch); P.vy = -v; P.on = false; P.vx = ((keys.right ? 1 : 0) - (keys.left ? 1 : 0))*3.6; onJump(); } S.ch = 0; S.cd = 1; }
+    // while you charge it slides toward where you would peak; once you let go it has committed, and holds until you land
     if (S.charging) S.lock = P.y - this.rise(S.ch) + 10; else if (P.on) S.lock = null;
-    const tgt = S.lock != null ? S.lock : 230;
-    sl.y += clamp(tgt - sl.y, -4, 4); sl.y = clamp(sl.y, 60, 330);
+    const tgt = S.lock != null ? S.lock : P.y - 4;
+    if (S.charging || P.on) { sl.y += clamp(tgt - sl.y, -3.5, 1.1); sl.y = clamp(sl.y, 60, 416); }
     if (pcx() > sl.x + 4 && pcx() < sl.x + sl.w - 4 && P.y + 2 < sl.y) return die('slab'); },
   draw(){ const sl = S.slab; ctx.fillStyle = C.ink2; ctx.fillRect(sl.x, sl.y - 60, sl.w, 46); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(sl.x + 1, sl.y - 59, sl.w - 2, 44);
     ctx.strokeStyle = C.ink; ctx.beginPath(); ctx.moveTo(sl.x + sl.w/2, 0); ctx.lineTo(sl.x + sl.w/2, sl.y - 60); ctx.stroke();

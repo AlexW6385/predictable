@@ -75,8 +75,12 @@
   const p67 = (x, c) => () => script([S.R(8.3), S.W(10), charge67(() => g.S.ch > 0.97), S.R(x), S.W(10), charge67(() => g.S.ch > c), S.R(26.5)]);
   check('67 tap jump', run(66, () => P => P.on && cx() > 8*T ? {jump:1, dir:1} : R(), {freshMem:true, max:600}), 'timeout');
   check('67 all you have, at the foot of the ledge', run(66, p67(21.6, 0.97), {freshMem:true, max:2000}), 'dead');
-  check('67 less, at the foot of the ledge', run(66, p67(21.6, 0.75), {freshMem:true, max:2000}), 'clear');
-  check('67 all you have, from further back', run(66, p67(18.0, 0.97), {freshMem:true, max:2000}), 'clear');
+  check('67 less, at the foot of the ledge', run(66, p67(21.6, 0.75), {freshMem:true, max:2000}), 'dead');
+  check('67 all you have, from further back', run(66, p67(18.0, 0.97), {freshMem:true, max:2000}), 'dead');
+  const feint67 = c => () => script([S.R(8.3), S.W(10), charge67(() => g.S.ch > 0.97), S.R(21.6), S.W(10), charge67(() => g.S.cd < 0 && g.S.ch < c), S.R(26.5)]);
+  check('67 charge past it, let go as soon as it turns', run(66, feint67(0.95), {freshMem:true, max:2000}), 'dead');
+  check('67 charge past it, let go on the way down, still high enough', run(66, feint67(0.8), {freshMem:true, max:2000}), 'clear');
+  check('67 charge past it, let go too low', run(66, feint67(0.62), {freshMem:true, max:2000}), 'timeout');
   // ---- 68 regret (it rewinds instead of restarting, so these run as one long life)
   const life68 = (pol, max) => { g.prof.mem = null; g.setLvl(67); let deaths = 0, was = 'play';
     for (let f = 0; f < (max || 4000); f++) { const st = g.state; if (st === 'dead' && was !== 'dead') deaths++; was = st; if (st === 'clear') return `clear after ${deaths}`; window.LIB.frame(st === 'play' ? pol(g.P, deaths) : {k:{}}); }
