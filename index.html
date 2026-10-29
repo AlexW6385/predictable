@@ -864,12 +864,23 @@ const LV = [
 
 /* ===================== III. Seeming ===================== */
 
-/* 21. what you see is a little to the side of what is */
+/* 21. what you see is a little to the side of what is: the drawing is pinned in the middle, and each half has slid toward the pin */
 { id:'offset', was:[8], start:3,
-  build(){ for (const [a,b] of [[0,6],[11,21],[24,29]]) R('look',a,b,14,16);
-    Sp(13,13,13,'up',{look:true, kill:false}); Door(28,14,{look:true, inert:true});
-    for (const [a,b] of [[0,8],[13,19],[22,29]]) R('g',a,b,14,16,{shadow:true});
-    Sp(15,15,13,'up',{shadow:true}); Door(26,14,{shadow:true}); } },
+  build(){ // what is, in pencil underneath
+    for (const [a,b] of [[0,6],[9,9],[12,23],[27,29]]) R('g',a,b,14,16,{shadow:true});
+    Sp(20,20,13,'up',{shadow:true}); Door(27.5,14,{shadow:true});
+    // what is drawn in ink: the left half two tiles to the right, the right half two tiles to the left
+    for (const [a,b] of [[2,8],[11,11],[13,21],[25,27]]) R('look',a,b,14,16);
+    Sp(18,18,13,'up',{look:true, kill:false}); Door(25.5,14,{look:true, inert:true}); },
+  drawBack(){ // the sheet: pinned at the top in the middle, bunched there, and bare at both ends
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(2*T, 0, 26*T, GY); ctx.strokeStyle = 'rgba(30,43,71,.25)'; ctx.lineWidth = 1.5; ctx.strokeRect(2*T, -2, 26*T, GY + 4);
+    ctx.beginPath(); for (const d of [-14, -6, 6, 14]) { ctx.moveTo(15*T, 70); ctx.lineTo(15*T + d, GY); } ctx.stroke();
+    ctx.fillStyle = C.red; ctx.beginPath(); ctx.arc(15*T, 66, 6, 0, 7); ctx.fill(); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = 'rgba(30,43,71,.45)'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(2*T, 40); ctx.lineTo(2*T + 30, 40); ctx.moveTo(2*T + 30, 34); ctx.lineTo(2*T + 30, 46); ctx.moveTo(28*T, 40); ctx.lineTo(28*T - 30, 40); ctx.moveTo(28*T - 30, 34); ctx.lineTo(28*T - 30, 46); ctx.stroke(); ctx.setLineDash([]); },
+  // the pencil underneath shows through the ink, faintly
+  draw(){ ctx.strokeStyle = 'rgba(176,188,206,1)'; ctx.lineWidth = 2; ctx.setLineDash([4,4]); ctx.beginPath();
+    for (const e of ents) if (e.shadow && e.t === 'g') { ctx.moveTo(e.x + 1, GY + 30); ctx.lineTo(e.x + 1, GY + 1); ctx.lineTo(e.x + e.w - 1, GY + 1); ctx.lineTo(e.x + e.w - 1, GY + 30); }
+    ctx.stroke(); ctx.setLineDash([]); } },
 
 /* 22. not every mark is a memory */
 { id:'forged', was:[16], start:1.5,

@@ -5,10 +5,12 @@
   const hopAt = (xs, h) => P => (P.on && xs.some(c => Math.abs(cx() - c*T) < 3)) ? {jump:h, dir:1} : R();
   const solve = (L, o) => { const r = SOLVE.solve(L, Object.assign({beam:150, depth:120}, o || {})); if (!r.ok) return ['nosol']; if (o && o.setup) o.setup(); else g.setLvl(L); return [SOLVE.replay(SOLVE.strat(r.seq, o || {}))]; };
   // ---- 21 offset
+  const pencil21 = [S.R(6.4), S.JT(9.5, GY, {tol:6}), S.U(P => P.on), S.W(6), S.JT(12.8, GY, {tol:10}), S.U(P => P.on)];
   check('21 walk on what you see', run(20, () => R), 'dead');
-  check('21 jump the hole you see', run(20, () => script([S.R(6.2), S.J(30, 1), S.R(29)])), 'dead');
-  check('21 learned "+2": jump at true edge, then +2 again', run(20, () => script([S.R(8.6), S.J(30, 1), S.R(14.2), S.J(30,1), S.R(23.6), S.J(30,1), S.R(29)])), 'dead');
-  check('21 follow the dotted shadows', run(20, () => script([S.R(8.6), S.J(30, 1), S.R(14.0), S.J(30, 1), S.R(19.4), S.J(30, 1), S.R(26.6)])), 'clear');
+  check('21 jump the hole you see', run(20, () => script([S.R(8.4), S.J(30, 1), S.R(29)])), 'dead');
+  check('21 learned "two tiles back", hop the spike as drawn two back', run(20, () => script([...pencil21, S.R(15.0), S.J(12, 1), S.U(P => P.on), S.R(23.4), S.J(30, 1), S.R(29)]), {max:900}), 'dead');
+  check('21 hop the spike as drawn', run(20, () => script([...pencil21, S.R(16.6), S.J(14, 1), S.U(P => P.on), S.R(29)]), {max:900}), 'dead');
+  check('21 follow the pencil lines', run(20, () => script([...pencil21, S.R(18.8), S.JT(21.6, GY, {tol:10}), S.U(P => P.on), S.R(23.4), S.J(30, 1), S.R(27.6), S.W(20)]), {max:900}), 'clear');
   // ---- 22 forged
   check('22 walk', run(21, () => R), 'dead');
   check('22 avoid the X marks', run(21, () => script([S.R(3.3), S.JT(6.5), S.R(29)])), 'dead');
