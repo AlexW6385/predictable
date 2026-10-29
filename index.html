@@ -914,10 +914,13 @@ const LV = [
 { id:'mirror', start:1,
   build(){ S.tiles = Gt(0,29); for (const c of [5, 6, 17, 18]) S.tiles[c].alive = false;
     for (const c of [5, 6, 17, 18]) E({t:'g', x:c*T, y:GY, w:T, h:96, solid:false, falsef:true});
-    for (const c of [11, 12, 26]) HS(c);
+    for (const c of [11, 12, 27]) HS(c);
+    // a block hangs from the mirror over the stretch where it is late: under it you can only walk
+    R('b', 21, 24, 4, 12);
     S.pis = {x:23*T, up:false}; S.t = 0; S.hist = []; Door(28.5,14); },
-  pistonUp(t){ return Math.floor(t/60) % 2 === 1; },
-  update(){ S.t++; S.pis.up = this.pistonUp(S.t); S.hist.push([P.x, P.y, S.pis.up]); if (S.hist.length > 61) S.hist.shift();
+  // it lies down until you come under the slab, then it beats: up a while, down a while
+  pistonUp(t){ return t > 0 && Math.floor((t - 1)/60) % 2 === 0; },
+  update(){ if (S.t || pcx() > 20.2*T) S.t++; S.pis.up = this.pistonUp(S.t); S.hist.push([P.x, P.y, S.pis.up]); if (S.hist.length > 61) S.hist.shift();
     for (const e of ents) if (e.falsef && e.alive && ov(pbox(), {x:e.x, y:GY - 2, w:T, h:4})) { e.alive = false; }
     if (S.pis.up && ov(pbox(3), {x:S.pis.x + 4, y:GY - 18, w:T - 8, h:18})) return die('spike'); },
   // the mirror: the floor seen from the ceiling, upside down; between columns 18 and 23 it shows what was there 60 frames ago

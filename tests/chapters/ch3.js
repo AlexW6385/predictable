@@ -27,8 +27,11 @@
   // ---- 24 mirror
   const lagUp = () => g.S.hist.length ? g.S.hist[0][2] : false;
   check('24 walk on the floor', run(23, () => R), 'dead');
-  check('24 jump what the mirror shows, trust it everywhere', run(23, () => script([S.R(4.4), S.J(30, 1), S.R(10.3), S.J(30, 1), S.R(16.3), S.J(30, 1), S.R(22.0), S.U(() => !lagUp()), S.R(25.4), S.J(8, 1), S.R(29)]), {max:1500}), 'dead');
-  check('24 jump what it shows; where it lags, go when it shows the spike', run(23, () => script([S.R(4.4), S.J(30, 1), S.R(10.3), S.J(30, 1), S.R(16.3), S.J(30, 1), S.R(22.0), S.U(() => !lagUp()), S.U(() => lagUp()), S.R(25.4), S.J(8, 1), S.R(29)]), {max:1500}), 'clear');
+  const pre24 = [S.R(4.4), S.J(30, 1), S.R(10.3), S.J(30, 1), S.R(16.3), S.J(30, 1)];
+  check('24 jump what the mirror shows, walk on under the slab', run(23, () => script([...pre24, S.R(26.0), S.J(8, 1), S.R(29)]), {max:1500}), 'dead');
+  check('24 leap the stretch where the spike comes and goes', run(23, () => script([...pre24, S.R(20.2), S.J(30, 1), S.R(26.0), S.J(8, 1), S.R(29)]), {max:1500}), 'dead');
+  check('24 jump what the mirror shows, trust it everywhere', run(23, () => script([...pre24, S.R(21.0), S.U(() => !lagUp()), S.R(26.0), S.J(8, 1), S.R(29)]), {max:1500}), 'dead');
+  check('24 jump what it shows; where it lags, go when it shows the spike', run(23, () => script([...pre24, S.R(21.0), S.U(() => lagUp()), S.R(26.0), S.J(8, 1), S.R(29)]), {max:1500}), 'clear');
   // ---- 25 imitation
   const nearC = (c, a, b) => c.alive && c.x - g.P.x > a && c.x - g.P.x < b;
   check('25 just walk', run(24, () => R), 'dead');
