@@ -977,6 +977,8 @@ const LV = [
   build(){ Gd(0,29); R('b',16,16,0,13); Sp(19,23,13,'up'); Door(27,14);
     // three frames: a painting of the far room as it was, a window onto where you came in, and a window onto the far room as it is
     S.pics = [{x:7*T, to:22*T, src:[19*T, 9*T], old:true}, {x:9.8*T, to:1*T, src:[0, 9*T]}, {x:12.6*T, to:26*T, src:[23*T, 9*T]}];
+    // the gallery is rehung every time you come back, so only what a picture shows can tell you which it is
+    M.hang = ((M.hang ?? -1) + 1) % 3; const xs = S.pics.map(p => p.x); S.pics.forEach((p, i) => { p.x = xs[(i + M.hang) % 3]; });
     S.cool = 0; S.look = [0, 0, 0]; S.bird = {x:25.5*T, d:1, t:0, hop:0}; },
   update(){ if (S.cool) S.cool--;
     // a picture wakes for whoever stands still in front of it

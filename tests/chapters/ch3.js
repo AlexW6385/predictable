@@ -58,6 +58,9 @@
   check('27 stop and jump in front of the first picture', run(26, () => script([...look27(8.0)]), {freshMem:true}), 'dead');
   check('27 stop and jump in front of the second', run(26, () => script([...look27(10.8), S.R(29)]), {freshMem:true, max:900}), 'timeout');
   check('27 stop and jump in front of the window onto the door', run(26, () => script([...look27(13.6), S.R(29)]), {freshMem:true}), 'clear');
+  check('27 one picture a life, left to right (they are rehung)', run(26, life => script([...look27([8.0, 10.8, 13.6][life])]), {freshMem:true, lives:3}), 'dead');
+  check('27 after a death, the last picture (now the way back)', run(26, life => script([...look27(life ? 13.6 : 8.0), S.R(29)]), {freshMem:true, lives:2}), /dead|timeout/);
+  check('27 next life, the window is where the painting was', run(26, life => script([...look27(life ? 8.0 : 8.0), S.R(29)]), {freshMem:true, lives:2}), 'clear');
   // ---- 28 double
   // jump when its box nears an edge: the first gap (col 17) and the step (col 23)
   const at28 = (x0, x1) => g.S.tw.x + 22 > x0 && g.S.tw.x + 22 < x1;
